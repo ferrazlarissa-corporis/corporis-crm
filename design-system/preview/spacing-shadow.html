@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 32px 32px 36px; gap: 22px; background: #F2EEE6; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .item { display:flex; flex-direction: column; align-items: center; gap: 12px; }
+  .swatch { width: 120px; height: 80px; background: #FFFFFF; border-radius: 8px; }
+  .sm { box-shadow: 0 1px 2px rgba(58, 53, 48, 0.04); }
+  .md { box-shadow: 0 4px 16px rgba(58, 53, 48, 0.06); }
+  .lg { box-shadow: 0 12px 32px rgba(58, 53, 48, 0.08); }
+  .tok { font-family: var(--font-body); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--color-bege); }
+  .val { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); }
+  h3 { font-size: 18px; font-family: var(--font-display); color: var(--color-texto-escuro); }
+</style>
+</head><body>
+<div class="card">
+  <h3>Elevation — soft, low</h3>
+  <div class="row">
+    <div class="item"><div class="swatch sm"></div><span class="tok">shadow-sm</span><span class="val">resting card</span></div>
+    <div class="item"><div class="swatch md"></div><span class="tok">shadow-md</span><span class="val">hover · menu</span></div>
+    <div class="item"><div class="swatch lg"></div><span class="tok">shadow-lg</span><span class="val">modal · panel</span></div>
+  </div>
+</div>
+</body></html>

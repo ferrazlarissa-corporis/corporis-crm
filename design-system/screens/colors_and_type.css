@@ -1,0 +1,240 @@
+/* ============================================================
+   Corporis Design Language System — Primitives v1.0
+   Source: reference/DLS-Primitives.md
+   ============================================================ */
+
+/* ——— Type ——— */
+/* Olicy (display) is the brand typeface. Not on Google Fonts.
+   SUBSTITUTION FLAG: We are temporarily using Quicksand (Google Fonts)
+   as the closest rounded humanist sans available. Replace with the real
+   Olicy webfont when supplied — see /fonts/README.md. */
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Ubuntu:wght@300;400;500;700&display=swap");
+
+:root {
+  /* ——————————————————————————————————————————————————————
+     COLOR PRIMITIVES — paleta intencionalmente fechada e terrosa
+     —————————————————————————————————————————————————————— */
+
+  /* Alaranjado — cor principal da marca */
+  --color-alaranjado: #F08353;   /* wordmark, CTAs, destaques */
+  --color-tangerina:  #F6A958;   /* hover, gradientes suaves */
+
+  /* Dourados — accent premium */
+  --color-bege:       #D2B06E;   /* títulos de seção, setas */
+  --color-bege-claro: #EAD7AC;   /* bola do logo, cards, hover bg */
+
+  /* Verde — exclusivo saúde preventiva / fisio pélvica */
+  --color-verde:      #ACC095;
+
+  /* Neutros — base de trabalho */
+  --color-fundo-claro:   #FAFAF8;   /* NUNCA branco puro */
+  --color-cinza:         #D3D2CD;   /* bordas, divisores */
+  --color-texto-escuro:  #3A3530;   /* texto primário */
+  --color-texto-medio:   #7A6E68;   /* texto secundário */
+  --color-espresso:      #2A1F1A;   /* NUNCA preto puro */
+
+  /* Functional — UI states (aliases) */
+  --color-ui-success:     var(--color-verde);
+  --color-ui-error:       #C0504A;
+  --color-ui-border:      var(--color-cinza);
+  --color-ui-interactive: var(--color-alaranjado);
+  --color-ui-hover:       var(--color-tangerina);
+  --color-ui-disabled:    var(--color-cinza);
+
+  /* Semantic foreground / background aliases */
+  --fg-1: var(--color-texto-escuro);   /* primary text on light */
+  --fg-2: var(--color-texto-medio);    /* secondary text */
+  --fg-on-dark: var(--color-fundo-claro);
+  --bg-1: var(--color-fundo-claro);    /* canvas */
+  --bg-2: #F4EFE6;                     /* warm secondary surface */
+  --bg-card: #FFFFFF;                  /* card surface — ÚNICA exceção a #FFF, apenas cards */
+  --bg-dark: var(--color-espresso);
+  --bg-accent-soft: var(--color-bege-claro);
+  --border-1: var(--color-cinza);
+
+  /* ——————————————————————————————————————————————————————
+     TYPE PRIMITIVES
+     —————————————————————————————————————————————————————— */
+
+  /* Families
+     - Display = "Olicy Regular" (substituído por Quicksand) — headlines, wordmark, hero
+     - Body    = "Ubuntu"                                   — corpo, labels, UI
+     NUNCA introduzir uma terceira typeface. NUNCA usar Arial/Times/system fonts. */
+  --font-display: "Olicy", "Quicksand", system-ui, sans-serif;
+  --font-body:    "Ubuntu", system-ui, -apple-system, sans-serif;
+
+  /* Display scale — Olicy Regular (400) */
+  --type-display-xl-size:    72px;   /* hero / campanha / wordmark */
+  --type-display-xl-leading: 1.05;
+  --type-display-xl-track:   -0.01em;
+
+  --type-display-lg-size:    48px;   /* títulos de seção, abertura editorial */
+  --type-display-lg-leading: 1.1;
+  --type-display-lg-track:   -0.005em;
+
+  --type-display-md-size:    32px;   /* sub-header, pull quote, título de card */
+  --type-display-md-leading: 1.2;
+  --type-display-md-track:   0;
+
+  /* Body scale — Ubuntu */
+  --type-body-lg-size:    19px;      /* parágrafo de abertura, destaque    (Medium 500) */
+  --type-body-lg-leading: 1.55;
+  --type-body-lg-weight:  500;
+
+  --type-body-md-size:    16px;      /* corpo padrão                       (Regular 400) */
+  --type-body-md-leading: 1.6;
+  --type-body-md-weight:  400;
+
+  --type-body-sm-size:    14px;      /* apoio, footnote, legenda           (Regular 400) */
+  --type-body-sm-leading: 1.55;
+  --type-body-sm-weight:  400;
+
+  /* UI scale — Ubuntu */
+  --type-ui-label-size:    12px;     /* labels, tags, nav — ALL CAPS, +2–3px */
+  --type-ui-label-leading: 1.2;
+  --type-ui-label-weight:  500;
+  --type-ui-label-track:   2.4px;
+
+  --type-ui-value-size:    14px;     /* horários, endereços, contato */
+  --type-ui-value-leading: 1.4;
+  --type-ui-value-weight:  400;
+
+  --type-ui-micro-size:    10px;     /* CRP, avisos legais — ALL CAPS */
+  --type-ui-micro-leading: 1.3;
+  --type-ui-micro-weight:  400;
+  --type-ui-micro-track:   1.6px;
+
+  /* ——————————————————————————————————————————————————————
+     SPACING — grid base 8pt (+ exceção micro 4pt)
+     —————————————————————————————————————————————————————— */
+  --space-none:  0;
+  --space-micro: 4px;
+  --space-xs:    8px;
+  --space-sm:   16px;
+  --space-md:   24px;
+  --space-std:  32px;
+  --space-lg:   40px;
+  --space-xl:   64px;
+  --space-2xl:  96px;
+
+  /* ——————————————————————————————————————————————————————
+     RADIUS — soft, sem cantos vivos
+     —————————————————————————————————————————————————————— */
+  --radius-xs:    4px;   /* badges, labels */
+  --radius-sm:    6px;   /* cards de serviço */
+  --radius-md:    8px;   /* buttons, inputs */
+  --radius-lg:   12px;   /* hero cards, panels */
+  --radius-pill: 999px;  /* tags arredondadas, avatars */
+
+  /* ——————————————————————————————————————————————————————
+     SHADOW — soft, baixa elevação. Nunca drop shadow forte.
+     —————————————————————————————————————————————————————— */
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px rgba(58, 53, 48, 0.04);
+  --shadow-md: 0 4px 16px rgba(58, 53, 48, 0.06);
+  --shadow-lg: 0 12px 32px rgba(58, 53, 48, 0.08);
+
+  /* ——————————————————————————————————————————————————————
+     MOTION — easings calmos, sem bounces
+     —————————————————————————————————————————————————————— */
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast:  160ms;
+  --duration-base:  240ms;
+  --duration-slow:  420ms;
+}
+
+/* ============================================================
+   SEMANTIC TYPE — aplicação direta de tokens
+   ============================================================ */
+
+html, body {
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-leading);
+  font-weight: var(--type-body-md-weight);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, .h1, .type-display-xl {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--type-display-xl-size);
+  line-height: var(--type-display-xl-leading);
+  letter-spacing: var(--type-display-xl-track);
+  color: var(--fg-1);
+  margin: 0;
+}
+h2, .h2, .type-display-lg {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--type-display-lg-size);
+  line-height: var(--type-display-lg-leading);
+  letter-spacing: var(--type-display-lg-track);
+  color: var(--fg-1);
+  margin: 0;
+}
+h3, .h3, .type-display-md {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--type-display-md-size);
+  line-height: var(--type-display-md-leading);
+  color: var(--fg-1);
+  margin: 0;
+}
+
+p, .type-body-md {
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-leading);
+  font-weight: var(--type-body-md-weight);
+  color: var(--fg-1);
+  margin: 0;
+  text-wrap: pretty;
+}
+.type-body-lg {
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-leading);
+  font-weight: var(--type-body-lg-weight);
+}
+.type-body-sm {
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-leading);
+  color: var(--fg-2);
+}
+
+.type-ui-label {
+  font-family: var(--font-body);
+  font-size: var(--type-ui-label-size);
+  font-weight: var(--type-ui-label-weight);
+  letter-spacing: var(--type-ui-label-track);
+  text-transform: uppercase;
+  color: var(--color-bege);
+}
+.type-ui-value {
+  font-family: var(--font-body);
+  font-size: var(--type-ui-value-size);
+  font-weight: var(--type-ui-value-weight);
+  color: var(--fg-1);
+}
+.type-ui-micro {
+  font-family: var(--font-body);
+  font-size: var(--type-ui-micro-size);
+  font-weight: var(--type-ui-micro-weight);
+  letter-spacing: var(--type-ui-micro-track);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+a {
+  color: var(--color-ui-interactive);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: color var(--duration-fast) var(--ease-soft);
+}
+a:hover { color: var(--color-ui-hover); }
+
+::selection { background: var(--color-bege-claro); color: var(--color-texto-escuro); }

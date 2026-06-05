@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis CRM · Eduarda Bertotti</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Ficha do Lead — tokens locais
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+
+    --surface-raised: #FFFFFF;
+    --surface-sunken: var(--bg-2);
+
+    /* Estágios — mesma paleta do Funil/Dashboard */
+    --stage-novo:        var(--color-bege);
+    --stage-qual:        var(--color-tangerina);
+    --stage-agendada:    var(--color-alaranjado);
+    --stage-compareceu:  #C97448;
+    --stage-convertido:  var(--color-verde);
+    --stage-perdido:     var(--color-cinza);
+
+    /* Interesses */
+    --interest-pilates-bg:  rgba(240, 131, 83, 0.12);
+    --interest-pilates-fg:  #B85A2E;
+    --interest-gestante-bg: rgba(172, 192, 149, 0.22);
+    --interest-gestante-fg: #5F7948;
+    --interest-pelvica-bg:  rgba(210, 176, 110, 0.22);
+    --interest-pelvica-fg:  #7A5E1F;
+
+    /* Cores semânticas de evento na timeline */
+    --evt-msg-in:    var(--color-bege);
+    --evt-msg-out:   var(--color-alaranjado);
+    --evt-stage:     var(--color-tangerina);
+    --evt-booking:   var(--color-alaranjado);
+    --evt-handoff:   #7A5E1F;
+    --evt-note:      var(--color-texto-medio);
+    --evt-campaign:  #5F7948;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); overflow: hidden; }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ===== Sidebar (mesma do funil) ===== */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 24px 16px 16px;
+    gap: var(--space-md);
+  }
+  .sb-logo { padding: 8px 12px 4px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px; letter-spacing: 2.2px;
+    text-transform: uppercase; color: var(--color-bege);
+    font-weight: 500; padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 14px; font-weight: 400;
+    text-decoration: none; cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+    position: relative;
+  }
+  .sb-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active { background: var(--color-bege-claro); color: var(--color-texto-escuro); font-weight: 500; }
+  .sb-item.active::before {
+    content: ""; position: absolute; left: 0; top: 12px; bottom: 12px;
+    width: 2px; background: var(--color-alaranjado); border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado); color: #fff;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.4px;
+    padding: 2px 7px; border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+  .sb-user {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 10px;
+    border-top: 0.6px solid var(--color-cinza); margin-top: 8px;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 14px; font-weight: 400;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
+  .avatar.md { width: 32px; height: 32px; font-size: 13px; }
+  .avatar.tone-1 { background: var(--color-bege-claro); color: #6B5526; }
+  .avatar.tone-2 { background: rgba(240, 131, 83, 0.18); color: #B85A2E; }
+  .avatar.tone-3 { background: rgba(172, 192, 149, 0.30); color: #5F7948; }
+  .avatar.tone-4 { background: rgba(210, 176, 110, 0.30); color: #7A5E1F; }
+  .avatar.tone-5 { background: rgba(122, 110, 104, 0.18); color: var(--color-texto-medio); }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); line-height: 1.2; }
+  .sb-user-role { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent; border: 0;
+    color: var(--color-texto-medio); padding: 6px;
+    border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-user-action svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ============================================================
+     MAIN
+     ============================================================ */
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* ===== Topbar ===== */
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+  }
+  .crumbs {
+    display: inline-flex; align-items: center; gap: 14px;
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-medio);
+  }
+  .crumbs .back {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px 7px 10px;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    text-decoration: none;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    letter-spacing: 0.2px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .crumbs .back svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  .crumbs .back:hover {
+    color: var(--color-alaranjado);
+    border-color: var(--color-tangerina);
+    background: var(--color-bege-claro);
+  }
+  .crumbs .sep { color: var(--color-cinza); }
+  .crumbs .here {
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+    font-family: var(--font-body); font-size: 13px;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: color var(--duration-fast) var(--ease-soft),
+                background var(--duration-fast) var(--ease-soft);
+  }
+  .icon-btn svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .icon-btn:hover { color: var(--color-alaranjado); background: var(--color-bege-claro); }
+  .icon-btn .dot {
+    position: absolute; top: 8px; right: 9px;
+    width: 7px; height: 7px; border-radius: var(--radius-pill);
+    background: var(--color-alaranjado);
+    border: 1.5px solid var(--surface-raised);
+  }
+
+  /* ============================================================
+     CONTENT — duas colunas
+     ============================================================ */
+  .content-wrap {
+    overflow: auto;
+    padding: 24px 32px 48px;
+    min-height: 0;
+  }
+  .content-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
+  .content-wrap::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .content-wrap::-webkit-scrollbar-track { background: transparent; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 28px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1180px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  /* ============================================================
+     COLUNA PRINCIPAL — HEADER DA LEAD
+     ============================================================ */
+  .lead-header {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    padding: 28px 28px 22px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .lh-top {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .lh-avatar {
+    width: 72px; height: 72px;
+    border-radius: var(--radius-pill);
+    background: rgba(210, 176, 110, 0.24);
+    color: #7A5E1F;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+  }
+  .lh-meta { min-width: 0; }
+  .lh-name {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 36px;
+    line-height: 1.1;
+    letter-spacing: -0.005em;
+    color: var(--color-texto-escuro);
+    margin: 0 0 6px;
+    text-wrap: pretty;
+  }
+  .lh-contact {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 18px;
+    margin-top: 6px;
+  }
+  .lh-contact-item {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: "Ubuntu Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+  }
+  .lh-contact-item svg {
+    width: 13px; height: 13px; stroke-width: 1.6;
+    color: var(--color-bege);
+  }
+  .lh-contact-item .copy {
+    color: var(--color-cinza); cursor: pointer;
+    width: 14px; height: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: color var(--duration-fast) var(--ease-soft);
+  }
+  .lh-contact-item .copy:hover { color: var(--color-alaranjado); }
+
+  /* Badges row */
+  .lh-badges {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 14px;
+  }
+  .badge-stage {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 1.3px;
+    padding: 6px 12px 6px 10px;
+    border-radius: var(--radius-pill);
+    line-height: 1;
+    background: rgba(246, 169, 88, 0.16);
+    color: #8C4A1A;
+    border: 0.6px solid rgba(246, 169, 88, 0.5);
+  }
+  .badge-stage .dot {
+    width: 6px; height: 6px; border-radius: var(--radius-pill);
+    background: var(--stage-qual);
+  }
+  .badge-interest {
+    display: inline-flex; align-items: center;
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 1.3px;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    background: var(--interest-pelvica-bg);
+    color: var(--interest-pelvica-fg);
+    line-height: 1;
+  }
+
+  /* Ações */
+  .lh-actions {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 0.6px solid var(--color-cinza);
+  }
+  .btn {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-escuro);
+    border-radius: var(--radius-pill);
+    padding: 9px 16px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .btn svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  .btn:hover {
+    background: var(--color-bege-claro);
+    border-color: var(--color-tangerina);
+    color: var(--color-texto-escuro);
+  }
+  .btn.primary {
+    background: var(--color-alaranjado);
+    border-color: var(--color-alaranjado);
+    color: #fff;
+  }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); }
+  .btn.icon-only {
+    padding: 9px 11px;
+  }
+
+  /* ============================================================
+     TABS
+     ============================================================ */
+  .tabs-wrap {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .tabs {
+    display: flex; align-items: center;
+    border-bottom: 0.6px solid var(--color-cinza);
+    padding: 0 8px;
+    background: var(--surface-raised);
+  }
+  .tab {
+    appearance: none; border: 0; background: transparent;
+    padding: 16px 18px 14px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    color: var(--color-texto-medio);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color var(--duration-fast) var(--ease-soft),
+                border-color var(--duration-fast) var(--ease-soft);
+  }
+  .tab .count {
+    font-size: 10.5px;
+    color: var(--color-texto-medio);
+    background: var(--surface-sunken);
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+    font-weight: 400;
+  }
+  .tab:hover { color: var(--color-texto-escuro); }
+  .tab.active {
+    color: var(--color-texto-escuro);
+    border-bottom-color: var(--color-alaranjado);
+  }
+
+  /* ============================================================
+     TIMELINE
+     ============================================================ */
+  .tl-pane { padding: 28px 28px 24px; }
+  .tl-day {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-bege);
+    margin: 0 0 14px 44px;
+  }
+  .tl-day + .tl-list { margin-top: 0; }
+
+  .tl-list {
+    position: relative;
+    margin: 0 0 22px;
+    padding: 0;
+    list-style: none;
+  }
+  /* a linha contínua atrás dos ícones */
+  .tl-list::before {
+    content: "";
+    position: absolute;
+    left: 15px; top: 6px; bottom: 6px;
+    width: 1px;
+    background: linear-gradient(to bottom,
+      transparent 0,
+      var(--color-cinza) 6px,
+      var(--color-cinza) calc(100% - 6px),
+      transparent 100%);
+  }
+
+  .tl-event {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 14px;
+    padding: 4px 0 16px;
+    position: relative;
+  }
+  .tl-icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    border: 1.2px solid var(--color-cinza);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--evt-color, var(--color-texto-medio));
+    position: relative; z-index: 1;
+    flex-shrink: 0;
+  }
+  .tl-icon svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  /* variantes por tipo */
+  .tl-event.msg-in    .tl-icon { background: rgba(210, 176, 110, 0.18); border-color: rgba(210, 176, 110, 0.5); color: var(--evt-msg-in); }
+  .tl-event.msg-out   .tl-icon { background: rgba(240, 131, 83, 0.14);  border-color: rgba(240, 131, 83, 0.5);  color: var(--evt-msg-out); }
+  .tl-event.stage     .tl-icon { background: rgba(246, 169, 88, 0.16);  border-color: rgba(246, 169, 88, 0.5);  color: var(--evt-stage); }
+  .tl-event.booking   .tl-icon { background: rgba(240, 131, 83, 0.14);  border-color: rgba(240, 131, 83, 0.5);  color: var(--evt-booking); }
+  .tl-event.handoff   .tl-icon { background: rgba(210, 176, 110, 0.18); border-color: rgba(210, 176, 110, 0.5); color: var(--evt-handoff); }
+  .tl-event.note      .tl-icon { background: var(--bg-2);               border-color: var(--color-cinza);      color: var(--evt-note); }
+  .tl-event.campaign  .tl-icon { background: rgba(172, 192, 149, 0.22); border-color: rgba(172, 192, 149, 0.55);color: var(--evt-campaign); }
+
+  .tl-body { min-width: 0; padding-top: 4px; }
+  .tl-headline {
+    font-family: var(--font-body); font-size: 13.5px;
+    color: var(--color-texto-escuro);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+  .tl-headline strong { font-weight: 500; }
+  .tl-headline em {
+    font-style: normal;
+    background: var(--bg-2);
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+    font-size: 12px;
+    color: var(--color-texto-escuro);
+  }
+  .tl-quote {
+    margin-top: 8px;
+    background: var(--bg-2);
+    border-left: 2px solid var(--color-bege);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 10px 14px;
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-escuro);
+    line-height: 1.55;
+    max-width: 540px;
+    text-wrap: pretty;
+  }
+  .tl-quote.outbound {
+    background: rgba(240, 131, 83, 0.06);
+    border-left-color: var(--color-alaranjado);
+  }
+  .tl-meta {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 6px;
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-texto-medio);
+  }
+  .tl-meta .dot-sep {
+    width: 3px; height: 3px; border-radius: var(--radius-pill);
+    background: var(--color-cinza);
+  }
+  .tl-meta .who {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tl-meta .who .avatar { width: 18px; height: 18px; font-size: 8.5px; }
+
+  /* footer da timeline — fim */
+  .tl-end {
+    display: flex; align-items: center; gap: 10px;
+    margin-left: 8px; padding: 6px 0 0;
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+    letter-spacing: 0.2px;
+  }
+  .tl-end .ring {
+    width: 14px; height: 14px; border-radius: var(--radius-pill);
+    border: 1.2px solid var(--color-cinza);
+    background: var(--surface-raised);
+    margin-left: 1px;
+  }
+
+  /* ============================================================
+     COLUNA LATERAL — cards
+     ============================================================ */
+  .side-col {
+    display: flex; flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+  }
+  .side-card {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    padding: 22px 22px 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .side-card h3 {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-bege);
+    margin: 0 0 16px;
+  }
+  .side-card h3 .aside {
+    color: var(--color-texto-medio); font-weight: 400;
+    letter-spacing: 0.3px; text-transform: none;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  /* ----- Card Qualificação ----- */
+  .qual-top {
+    display: grid; grid-template-columns: auto 1fr; gap: 18px;
+    align-items: center; margin-bottom: 14px;
+  }
+  .qual-gauge {
+    --p: 82;
+    --gauge-color: var(--color-alaranjado);
+    width: 92px; height: 92px;
+    border-radius: var(--radius-pill);
+    background:
+      conic-gradient(var(--gauge-color) calc(var(--p) * 1%), var(--surface-sunken) 0);
+    display: grid; place-items: center;
+    position: relative;
+  }
+  .qual-gauge::after {
+    content: "";
+    position: absolute; inset: 8px;
+    background: var(--surface-raised);
+    border-radius: var(--radius-pill);
+  }
+  .qual-gauge .val {
+    position: relative; z-index: 1;
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 28px; color: var(--color-texto-escuro);
+    line-height: 1;
+    font-feature-settings: "tnum";
+  }
+  .qual-gauge .max {
+    position: relative; z-index: 1;
+    display: block; text-align: center;
+    font-family: var(--font-body); font-size: 10px;
+    color: var(--color-texto-medio);
+    margin-top: 2px;
+  }
+  .qual-label-block { min-width: 0; }
+  .qual-state {
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    margin-bottom: 4px;
+  }
+  .qual-state .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; letter-spacing: 1.3px;
+    font-weight: 500; text-transform: uppercase;
+    color: #B85A2E;
+    background: rgba(240, 131, 83, 0.12);
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    margin-left: 4px;
+    vertical-align: 1px;
+  }
+  .qual-sub {
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.4;
+  }
+  .qual-reason {
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-escuro);
+    line-height: 1.55;
+    text-wrap: pretty;
+    padding: 12px 14px;
+    background: var(--bg-2);
+    border-radius: var(--radius-md);
+    border-left: 2px solid var(--color-bege);
+  }
+  .qual-reason .ia-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9.5px; font-weight: 500;
+    letter-spacing: 1.4px; text-transform: uppercase;
+    color: #7A5E1F;
+    margin-bottom: 6px;
+  }
+  .qual-reason .ia-tag svg { width: 11px; height: 11px; stroke-width: 1.7; }
+
+  /* ----- Card Dados ----- */
+  .data-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 18px;
+  }
+  .data-item { min-width: 0; }
+  .data-label {
+    font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--color-texto-medio);
+    margin-bottom: 5px;
+  }
+  .data-value {
+    font-family: var(--font-body); font-size: 13.5px;
+    color: var(--color-texto-escuro);
+    line-height: 1.3;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-feature-settings: "tnum";
+  }
+  .data-value .avatar.sm { width: 22px; height: 22px; font-size: 9px; }
+  .data-value svg { width: 13px; height: 13px; stroke-width: 1.6; color: var(--color-bege); flex-shrink: 0; }
+  .data-value .ref {
+    font-size: 11.5px;
+    color: var(--color-texto-medio);
+    margin-left: 2px;
+  }
+
+  /* ----- Card Próximo passo ----- */
+  .next-step {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 6px 0 14px;
+  }
+  .ns-date {
+    background: var(--bg-2);
+    border-radius: var(--radius-md);
+    padding: 8px 0 10px;
+    text-align: center;
+    border: 0.6px solid var(--color-cinza);
+  }
+  .ns-date .dow {
+    font-family: var(--font-body); font-size: 9.5px; font-weight: 500;
+    letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--color-bege);
+    display: block;
+  }
+  .ns-date .day {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 26px; line-height: 1.1;
+    color: var(--color-texto-escuro);
+    margin-top: 1px;
+    font-feature-settings: "tnum";
+  }
+  .ns-date .mon {
+    font-family: var(--font-body); font-size: 10px;
+    color: var(--color-texto-medio);
+    text-transform: lowercase;
+    margin-top: 1px;
+    display: block;
+  }
+  .ns-meta { min-width: 0; }
+  .ns-title {
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .ns-line {
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.45;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ns-line svg { width: 11px; height: 11px; stroke-width: 1.7; color: var(--color-bege); flex-shrink: 0; }
+  .ns-actions {
+    display: flex; gap: 8px;
+    padding-top: 12px;
+    border-top: 0.6px solid var(--color-cinza);
+  }
+  .ns-actions .btn { font-size: 12px; padding: 7px 12px; }
+
+  /* ----- Card Adicionar nota ----- */
+  .note-area {
+    width: 100%;
+    background: var(--bg-2);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    padding: 11px 13px;
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-escuro);
+    line-height: 1.5;
+    min-height: 88px;
+    resize: vertical;
+    transition: border var(--duration-fast) var(--ease-soft),
+                box-shadow var(--duration-fast) var(--ease-soft);
+  }
+  .note-area::placeholder { color: var(--color-texto-medio); }
+  .note-area:focus {
+    outline: none;
+    border-color: var(--color-alaranjado);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.12);
+  }
+  .note-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px;
+  }
+  .note-hint {
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+  }
+  .note-hint kbd {
+    font-family: "Ubuntu Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10.5px;
+    padding: 1px 5px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-xs);
+    color: var(--color-texto-medio);
+    background: var(--surface-raised);
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="05 Ficha do Lead">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <nav>
+      <div class="sb-section-label">Operação</div>
+      <div class="sb-nav">
+        <a href="02 Dashboard.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+          Dashboard
+        </a>
+        <a href="03 Inbox WhatsApp.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+          </svg>
+          Inbox
+          <span class="sb-badge">7</span>
+        </a>
+        <a href="04 Funil.html" class="sb-item active" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Funil
+        </a>
+        <a href="#" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Agenda
+        </a>
+        <a href="#" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </div>
+    </nav>
+
+    <div class="sb-user">
+      <div class="avatar">LF</div>
+      <div class="sb-user-meta">
+        <span class="sb-user-name">Larissa Ferraz</span>
+        <span class="sb-user-role">Recepção · Corporis</span>
+      </div>
+      <button class="sb-user-action" aria-label="Mais opções">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <header class="topbar">
+      <div class="crumbs">
+        <a href="04 Funil.html" class="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Voltar ao funil
+        </a>
+        <span class="sep">·</span>
+        <span>Em qualificação</span>
+        <span class="sep">›</span>
+        <span class="here">Eduarda Bertotti</span>
+      </div>
+
+      <div class="topbar-right">
+        <button class="icon-btn" aria-label="Notificações">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="dot"></span>
+        </button>
+        <button class="icon-btn" aria-label="Ajuda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content-wrap">
+      <div class="two-col">
+
+        <!-- ============================================================
+             COLUNA PRINCIPAL
+             ============================================================ -->
+        <section class="main-col">
+
+          <!-- HEADER DA LEAD -->
+          <header class="lead-header">
+            <div class="lh-top">
+              <div class="lh-avatar">EB</div>
+              <div class="lh-meta">
+                <h1 class="lh-name">Eduarda Bertotti</h1>
+
+                <div class="lh-contact">
+                  <span class="lh-contact-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    +55 54 9 9612-4408
+                    <span class="copy" title="Copiar">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6">
+                        <rect x="9" y="9" width="13" height="13" rx="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                    </span>
+                  </span>
+                  <span class="lh-contact-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    eduarda.bertotti@gmail.com
+                  </span>
+                </div>
+
+                <div class="lh-badges">
+                  <span class="badge-stage" title="Estágio atual">
+                    <span class="dot"></span>
+                    Em qualificação
+                  </span>
+                  <span class="badge-interest">Fisio pélvica · pós-parto</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="lh-actions">
+              <a href="03 Inbox WhatsApp.html" class="btn primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+                Enviar mensagem
+              </a>
+              <button class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Agendar avaliação
+              </button>
+              <button class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                Mover no funil
+              </button>
+              <button class="btn icon-only" aria-label="Mais opções (arquivar)" title="Mais opções">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <!-- TABS -->
+          <div class="tabs-wrap">
+            <nav class="tabs" role="tablist">
+              <button class="tab active" role="tab" aria-selected="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" stroke-width="1.7">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Timeline
+                <span class="count">12</span>
+              </button>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" stroke-width="1.7">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                Conversa
+                <span class="count">38</span>
+              </button>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" stroke-width="1.7">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Agendamentos
+                <span class="count">1</span>
+              </button>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" stroke-width="1.7">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+                Notas
+                <span class="count">3</span>
+              </button>
+            </nav>
+
+            <!-- TIMELINE PANE -->
+            <div class="tl-pane">
+
+              <!-- ===== Hoje ===== -->
+              <p class="tl-day">Hoje · 24 mai</p>
+              <ul class="tl-list">
+
+                <li class="tl-event note">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline"><strong>Tainara</strong> adicionou uma nota interna</div>
+                    <div class="tl-quote">Disponibilidade dela é depois das 18h. Prefere sala mais reservada — combinei a sala 2 na avaliação. Falar com calma sobre rotina pós-parto.</div>
+                    <div class="tl-meta">
+                      <span class="who"><span class="avatar sm tone-2">TF</span>Tainara Fracasso</span>
+                      <span class="dot-sep"></span>
+                      <span>14:42</span>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="tl-event booking">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                      <line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline">Avaliação agendada para <strong>sex, 30 mai · 18h30</strong> com <strong>Tainara</strong></div>
+                    <div class="tl-meta">
+                      <span class="who"><span class="avatar sm tone-2">TF</span>Tainara Fracasso</span>
+                      <span class="dot-sep"></span>
+                      <span>14:38</span>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="tl-event msg-out">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline"><strong>Tainara</strong> respondeu pelo WhatsApp</div>
+                    <div class="tl-quote outbound">Que bom te ouvir, Eduarda 🤍 A avaliação leva uns 50 minutos, é tranquila e bem acolhedora — a gente conversa sobre o pós-parto e faz uma checagem inicial. Te encaixo sexta às 18h30?</div>
+                    <div class="tl-meta">
+                      <span class="who"><span class="avatar sm tone-2">TF</span>Tainara Fracasso</span>
+                      <span class="dot-sep"></span>
+                      <span>14:30</span>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="tl-event handoff">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17 11l5 5-5 5"/>
+                      <path d="M22 16H10"/>
+                      <path d="M7 13L2 8l5-5"/>
+                      <path d="M2 8h12"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline">Conversa assumida por <strong>Tainara</strong> — handoff da IA</div>
+                    <div class="tl-meta">
+                      <span class="who"><span class="avatar sm tone-4">IA</span>Agente IA</span>
+                      <span class="dot-sep"></span>
+                      <span>→</span>
+                      <span class="who"><span class="avatar sm tone-2">TF</span>Tainara</span>
+                      <span class="dot-sep"></span>
+                      <span>14:28</span>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="tl-event stage">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline">Movida de <em>Novo</em> para <em>Em qualificação</em></div>
+                    <div class="tl-meta">
+                      <span class="who"><span class="avatar sm tone-4">IA</span>Agente IA</span>
+                      <span class="dot-sep"></span>
+                      <span>14:12</span>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="tl-event msg-in">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline">Mensagem recebida no WhatsApp</div>
+                    <div class="tl-quote">Oi! A Renata, que faz pilates aí, indicou vocês. Tive nenê faz 4 meses e estou querendo cuidar de algumas coisas que ficaram do parto. Como funciona a avaliação?</div>
+                    <div class="tl-meta">
+                      <span>Eduarda Bertotti</span>
+                      <span class="dot-sep"></span>
+                      <span>14:08</span>
+                    </div>
+                  </div>
+                </li>
+
+              </ul>
+
+              <!-- ===== Ontem ===== -->
+              <p class="tl-day">Ontem · 23 mai</p>
+              <ul class="tl-list">
+
+                <li class="tl-event campaign">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline">Incluída na campanha <em>Pós-parto · maio</em></div>
+                    <div class="tl-meta">
+                      <span class="who"><span class="avatar sm tone-1">LF</span>Larissa Ferraz</span>
+                      <span class="dot-sep"></span>
+                      <span>09:14</span>
+                    </div>
+                  </div>
+                </li>
+
+              </ul>
+
+              <!-- ===== 19 mai ===== -->
+              <p class="tl-day">19 mai · seg</p>
+              <ul class="tl-list">
+
+                <li class="tl-event note">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline"><strong>Larissa</strong> adicionou uma nota interna</div>
+                    <div class="tl-quote">Indicação direta da Renata Oliveira (aluna de pilates há ~1 ano). Renata pediu para a gente cuidar bem — é amiga próxima.</div>
+                    <div class="tl-meta">
+                      <span class="who"><span class="avatar sm tone-1">LF</span>Larissa Ferraz</span>
+                      <span class="dot-sep"></span>
+                      <span>17:02</span>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="tl-event stage">
+                  <span class="tl-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                  </span>
+                  <div class="tl-body">
+                    <div class="tl-headline">Lead criada no funil — estágio <em>Novo</em></div>
+                    <div class="tl-meta">
+                      <span>Origem: indicação</span>
+                      <span class="dot-sep"></span>
+                      <span class="who"><span class="avatar sm tone-1">LF</span>cadastrada por Larissa</span>
+                      <span class="dot-sep"></span>
+                      <span>16:58</span>
+                    </div>
+                  </div>
+                </li>
+
+              </ul>
+
+              <div class="tl-end">
+                <span class="ring"></span>
+                Início da ficha · 19 mai 2026
+              </div>
+
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ============================================================
+             COLUNA LATERAL
+             ============================================================ -->
+        <aside class="side-col">
+
+          <!-- QUALIFICAÇÃO -->
+          <section class="side-card">
+            <h3>Qualificação <span class="aside">— score da IA</span></h3>
+            <div class="qual-top">
+              <div class="qual-gauge" style="--p: 82;">
+                <span class="val">82</span>
+                <span class="max">/100</span>
+              </div>
+              <div class="qual-label-block">
+                <div class="qual-state">
+                  Encaixe alto
+                  <span class="pill">
+                    <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                      <polyline points="18 15 12 9 6 15"/>
+                    </svg>
+                    +6
+                  </span>
+                </div>
+                <div class="qual-sub">subiu de 76 após a resposta de hoje</div>
+              </div>
+            </div>
+            <div class="qual-reason">
+              <div class="ia-tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/>
+                  <path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/>
+                </svg>
+                Análise da IA
+              </div>
+              Veio por indicação direta (sinal forte), respondeu rápido e foi específica sobre o cenário pós-parto. Faixa de atenção da clínica, agenda da Tainara compatível.
+            </div>
+          </section>
+
+          <!-- DADOS -->
+          <section class="side-card">
+            <h3>Dados</h3>
+            <div class="data-list">
+              <div class="data-item">
+                <div class="data-label">Origem</div>
+                <div class="data-value">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  Indicação
+                  <span class="ref">· Renata O.</span>
+                </div>
+              </div>
+              <div class="data-item">
+                <div class="data-label">Interesse</div>
+                <div class="data-value">Fisio pélvica<br/><span class="ref">pós-parto · 4 meses</span></div>
+              </div>
+              <div class="data-item">
+                <div class="data-label">Entrou em</div>
+                <div class="data-value">19 mai · 16:58</div>
+              </div>
+              <div class="data-item">
+                <div class="data-label">Responsável</div>
+                <div class="data-value">
+                  <span class="avatar sm tone-2">TF</span>
+                  Tainara F.
+                </div>
+              </div>
+              <div class="data-item">
+                <div class="data-label">Cidade</div>
+                <div class="data-value">Caxias do Sul · RS</div>
+              </div>
+              <div class="data-item">
+                <div class="data-label">Idade</div>
+                <div class="data-value">31 anos</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- PRÓXIMO PASSO -->
+          <section class="side-card">
+            <h3>Próximo passo</h3>
+            <div class="next-step">
+              <div class="ns-date">
+                <span class="dow">sex</span>
+                <span class="day">30</span>
+                <span class="mon">mai</span>
+              </div>
+              <div class="ns-meta">
+                <div class="ns-title">Avaliação inicial · 18h30</div>
+                <div class="ns-line">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  50 minutos · sala 2
+                </div>
+                <div class="ns-line">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                  </svg>
+                  com Tainara Fracasso
+                </div>
+              </div>
+            </div>
+            <div class="ns-actions">
+              <button class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>
+                </svg>
+                Reagendar
+              </button>
+              <button class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+                Confirmar
+              </button>
+            </div>
+          </section>
+
+          <!-- ADICIONAR NOTA -->
+          <section class="side-card">
+            <h3>Adicionar nota</h3>
+            <textarea class="note-area" placeholder="Anotação interna — só a equipe da Corporis vê."></textarea>
+            <div class="note-foot">
+              <span class="note-hint"><kbd>⌘</kbd> + <kbd>↵</kbd> para salvar</span>
+              <button class="btn primary" style="padding: 7px 14px; font-size: 12px;">
+                Salvar nota
+              </button>
+            </div>
+          </section>
+
+        </aside>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Tabs
+  document.querySelectorAll('.tabs .tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tabs .tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  // Sidebar nav
+  document.querySelectorAll('.sb-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (item.getAttribute('href') && item.getAttribute('href') !== '#') return;
+      e.preventDefault();
+    });
+  });
+</script>
+
+</body>
+</html>

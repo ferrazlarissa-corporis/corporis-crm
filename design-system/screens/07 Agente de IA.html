@@ -1,0 +1,1598 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis CRM · Agente de IA</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Agente de IA — tokens locais
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --toc-w: 232px;
+
+    --surface-raised: #FFFFFF;
+    --surface-sunken: var(--bg-2);
+
+    --form-max: 760px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); overflow: hidden; }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh; width: 100vw;
+  }
+
+  /* ===== Sidebar — idêntica às outras telas ===== */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 24px 16px 16px;
+    gap: var(--space-md);
+  }
+  .sb-logo { padding: 8px 12px 4px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px; letter-spacing: 2.2px;
+    text-transform: uppercase; color: var(--color-bege);
+    font-weight: 500; padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 14px; font-weight: 400;
+    text-decoration: none; cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+    position: relative;
+  }
+  .sb-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active {
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .sb-item.active::before {
+    content: ""; position: absolute; left: 0; top: 12px; bottom: 12px;
+    width: 2px; background: var(--color-alaranjado); border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado); color: #fff;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.4px;
+    padding: 2px 7px; border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+  .sb-user {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 10px;
+    border-top: 0.6px solid var(--color-cinza); margin-top: 8px;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 14px; font-weight: 400;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); line-height: 1.2; }
+  .sb-user-role { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent; border: 0;
+    color: var(--color-texto-medio); padding: 6px;
+    border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ============================================================
+     MAIN
+     ============================================================ */
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* ===== Topbar ===== */
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+  }
+  .topbar-left { display: flex; align-items: baseline; gap: 18px; }
+  .topbar-title {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 28px; line-height: 1;
+    color: var(--color-texto-escuro); letter-spacing: -0.005em;
+  }
+  .topbar-crumb {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+    display: inline-flex; align-items: center; gap: 8px;
+    letter-spacing: 0.2px;
+  }
+  .topbar-crumb .sep {
+    width: 3px; height: 3px; border-radius: var(--radius-pill);
+    background: var(--color-cinza);
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .ghost-btn {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    border-radius: var(--radius-pill);
+    padding: 7px 14px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .ghost-btn svg { width: 13px; height: 13px; stroke-width: 1.8; }
+  .ghost-btn:hover { background: var(--color-bege-claro); color: var(--color-alaranjado); border-color: var(--color-tangerina); }
+
+  /* ============================================================
+     CONTENT GRID — TOC + sections
+     ============================================================ */
+  .content {
+    display: grid;
+    grid-template-columns: var(--toc-w) 1fr;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .toc {
+    border-right: 0.6px solid var(--color-cinza);
+    padding: 32px 20px 32px 24px;
+    background: var(--bg-1);
+    overflow: auto;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .toc-label {
+    font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-bege);
+    padding: 0 12px;
+    margin-bottom: 8px;
+  }
+  .toc-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 12px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 13px;
+    text-decoration: none; cursor: pointer;
+    position: relative;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .toc-item .num {
+    font-feature-settings: "tnum";
+    font-size: 10px;
+    letter-spacing: 0.3px;
+    color: var(--color-bege);
+    min-width: 14px;
+  }
+  .toc-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .toc-item.active {
+    color: var(--color-texto-escuro);
+    background: var(--color-bege-claro);
+    font-weight: 500;
+  }
+  .toc-item.active .num { color: var(--color-alaranjado); }
+  .toc-item.active::before {
+    content: ""; position: absolute; left: 0; top: 10px; bottom: 10px;
+    width: 2px; background: var(--color-alaranjado); border-radius: 2px;
+  }
+  .toc-foot {
+    margin-top: auto;
+    padding: 14px 12px 4px;
+    border-top: 0.6px dashed var(--color-cinza);
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+  .toc-foot strong { color: var(--color-texto-escuro); font-weight: 500; }
+
+  /* ===== Sections scroll area ===== */
+  .sections {
+    overflow: auto;
+    padding: 32px 48px 64px;
+    background: var(--bg-1);
+    scroll-behavior: smooth;
+  }
+  .sections::-webkit-scrollbar { width: 10px; }
+  .sections::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .sections-inner { max-width: var(--form-max); margin: 0 auto; }
+
+  /* Section card */
+  .sec {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .sec-head {
+    padding: 22px 28px 18px;
+    display: flex; align-items: flex-start; gap: 16px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+  }
+  .sec-num {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 22px; line-height: 1;
+    color: var(--color-bege);
+    font-feature-settings: "tnum";
+    padding-top: 6px;
+    min-width: 28px;
+  }
+  .sec-titles { flex: 1; min-width: 0; }
+  .sec-title {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 22px; line-height: 1.15;
+    color: var(--color-texto-escuro);
+    letter-spacing: -0.005em;
+  }
+  .sec-sub {
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-medio);
+    line-height: 1.5;
+    margin-top: 6px;
+    text-wrap: pretty;
+  }
+  .sec-body { padding: 24px 28px; }
+  .sec-foot {
+    border-top: 0.6px solid var(--color-cinza);
+    padding: 14px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-1);
+  }
+  .saved-note {
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-texto-medio);
+    display: inline-flex; align-items: center; gap: 7px;
+    letter-spacing: 0.1px;
+  }
+  .saved-note .ok-dot {
+    width: 7px; height: 7px; border-radius: var(--radius-pill);
+    background: var(--color-verde);
+  }
+  .saved-note.success { color: var(--color-verde); font-weight: 500; }
+
+  /* Buttons */
+  .btn {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-escuro);
+    border-radius: var(--radius-pill);
+    padding: 8px 16px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .btn svg { width: 13px; height: 13px; stroke-width: 1.8; }
+  .btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); }
+  .btn.primary {
+    background: var(--color-alaranjado);
+    color: #fff;
+    border-color: var(--color-alaranjado);
+  }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--color-texto-medio); }
+  .btn.ghost:hover { background: var(--bg-2); color: var(--color-texto-escuro); border-color: transparent; }
+  .btn.danger-ghost { background: transparent; border-color: transparent; color: var(--color-texto-medio); padding: 6px 8px; }
+  .btn.danger-ghost:hover { color: var(--color-ui-error); background: rgba(192, 80, 74, 0.06); }
+  .btn.sm { padding: 5px 11px; font-size: 12px; }
+
+  /* ============================================================
+     SECTION 1 — Status
+     ============================================================ */
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr 0.6px 1fr;
+    gap: 28px;
+    align-items: stretch;
+  }
+  .status-divider { background: var(--color-cinza); width: 0.6px; }
+
+  /* Big toggle */
+  .big-toggle {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .bt-row {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .switch-lg {
+    --w: 52px; --h: 30px;
+    position: relative;
+    display: inline-block;
+    width: var(--w); height: var(--h);
+    flex-shrink: 0;
+  }
+  .switch-lg input { opacity: 0; width: 0; height: 0; }
+  .switch-lg .slider {
+    position: absolute; inset: 0;
+    background: var(--color-cinza);
+    border-radius: var(--radius-pill);
+    transition: background var(--duration-base) var(--ease-soft);
+    cursor: pointer;
+  }
+  .switch-lg .slider::before {
+    content: "";
+    position: absolute;
+    left: 3px; top: 3px;
+    width: 24px; height: 24px;
+    background: #fff;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 1px 3px rgba(58, 53, 48, 0.18);
+    transition: transform var(--duration-base) var(--ease-soft);
+  }
+  .switch-lg input:checked + .slider { background: var(--color-verde); }
+  .switch-lg input:checked + .slider::before { transform: translateX(22px); }
+
+  .bt-title {
+    font-family: var(--font-body); font-size: 16px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.2;
+  }
+  .bt-state {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--color-verde);
+    margin-top: 4px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .bt-state .pulse {
+    width: 7px; height: 7px; border-radius: var(--radius-pill);
+    background: var(--color-verde);
+    box-shadow: 0 0 0 4px rgba(172, 192, 149, 0.25);
+  }
+  .bt-desc {
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-medio);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+  .bt-desc strong { color: var(--color-texto-escuro); font-weight: 500; }
+
+  /* WhatsApp connection */
+  .wa-conn {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .wa-head {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-bege);
+  }
+  .wa-card {
+    background: var(--bg-2);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .wa-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-md);
+    background: rgba(172, 192, 149, 0.30);
+    color: #5F7948;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .wa-icon svg { width: 18px; height: 18px; stroke-width: 1.6; }
+  .wa-meta { flex: 1; min-width: 0; }
+  .wa-name {
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.2;
+  }
+  .wa-state {
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-texto-medio);
+    margin-top: 3px;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-feature-settings: "tnum";
+  }
+  .wa-state .dot {
+    width: 6px; height: 6px; border-radius: var(--radius-pill);
+    background: var(--color-verde);
+    box-shadow: 0 0 0 3px rgba(172, 192, 149, 0.25);
+  }
+  .wa-state .dot.offline { background: var(--color-ui-error); box-shadow: 0 0 0 3px rgba(192, 80, 74, 0.18); }
+  .wa-foot {
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+  .wa-foot a { color: var(--color-alaranjado); font-weight: 500; }
+
+  /* ============================================================
+     SECTION 2 — Persona
+     ============================================================ */
+  .persona-grid {
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: 24px;
+    align-items: stretch;
+  }
+  .field-label {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-bege);
+    margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .field-label .meta {
+    font-family: var(--font-body); font-size: 10.5px;
+    color: var(--color-texto-medio);
+    letter-spacing: 0.3px; text-transform: none;
+    font-weight: 400;
+    font-feature-settings: "tnum";
+  }
+  .textarea {
+    width: 100%;
+    min-height: 280px;
+    background: var(--bg-1);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    font-family: var(--font-body); font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--color-texto-escuro);
+    resize: vertical;
+    transition: border var(--duration-fast) var(--ease-soft),
+                box-shadow var(--duration-fast) var(--ease-soft);
+  }
+  .textarea:focus {
+    outline: none;
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.10);
+  }
+
+  .guidance {
+    background: var(--bg-2);
+    border-left: 2px solid var(--color-bege);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 16px 18px;
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-escuro);
+    line-height: 1.6;
+  }
+  .guidance h4 {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-bege);
+    margin: 0 0 10px;
+  }
+  .guidance ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .guidance li {
+    padding-left: 16px;
+    position: relative;
+    text-wrap: pretty;
+  }
+  .guidance li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 8px;
+    width: 6px; height: 6px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege);
+  }
+  .guidance li strong { font-weight: 500; color: var(--color-texto-escuro); }
+
+  /* small tag row above the textarea */
+  .persona-tags {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 14px;
+  }
+  .ptag {
+    font-family: var(--font-body); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    background: var(--bg-2);
+    color: var(--color-texto-medio);
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+  }
+  .ptag .dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege);
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* ============================================================
+     SECTION 3 — FAQ
+     ============================================================ */
+  .faq-list { display: flex; flex-direction: column; gap: 10px; }
+  .faq-item {
+    background: var(--bg-1);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    padding: 16px 18px 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: start;
+    transition: border var(--duration-fast) var(--ease-soft);
+  }
+  .faq-item:hover { border-color: var(--color-tangerina); }
+  .faq-content { min-width: 0; }
+  .faq-q {
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.4;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .faq-q .q-mark {
+    font-family: var(--font-display); font-size: 16px;
+    color: var(--color-alaranjado);
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .faq-a {
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.6;
+    margin-top: 6px;
+    padding-left: 16px;
+    border-left: 1.5px solid var(--color-bege-claro);
+    text-wrap: pretty;
+  }
+  .faq-actions { display: flex; gap: 2px; flex-shrink: 0; }
+  .icon-btn {
+    width: 28px; height: 28px;
+    border-radius: var(--radius-pill);
+    border: 0; background: transparent;
+    color: var(--color-texto-medio); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .icon-btn svg { width: 13px; height: 13px; stroke-width: 1.7; }
+  .icon-btn:hover { background: var(--color-bege-claro); color: var(--color-alaranjado); }
+  .icon-btn.danger:hover { background: rgba(192, 80, 74, 0.08); color: var(--color-ui-error); }
+
+  .add-row {
+    margin-top: 14px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .add-btn {
+    appearance: none;
+    border: 0.6px dashed var(--color-bege);
+    background: transparent;
+    color: var(--color-alaranjado);
+    border-radius: var(--radius-md);
+    padding: 11px 16px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .add-btn svg { width: 14px; height: 14px; stroke-width: 2; }
+  .add-btn:hover {
+    background: var(--color-bege-claro);
+    border-style: solid;
+    border-color: var(--color-tangerina);
+  }
+  .add-hint {
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-texto-medio);
+    font-style: italic;
+  }
+
+  /* Editing state (one open in-place) */
+  .faq-item.editing {
+    border-color: var(--color-alaranjado);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.08);
+    grid-template-columns: 1fr;
+  }
+  .faq-edit-grid {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .faq-edit-grid label {
+    font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--color-bege);
+  }
+  .faq-input, .faq-ans {
+    width: 100%;
+    background: var(--bg-1);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-family: var(--font-body); font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-texto-escuro);
+  }
+  .faq-input:focus, .faq-ans:focus {
+    outline: none;
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.08);
+  }
+  .faq-ans { min-height: 78px; resize: vertical; }
+  .faq-edit-actions {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 4px;
+  }
+
+  /* ============================================================
+     SECTION 4 — Handoff rules
+     ============================================================ */
+  .rules { display: flex; flex-direction: column; gap: 6px; }
+  .rule {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 4px;
+    border-bottom: 0.6px solid var(--color-cinza);
+  }
+  .rule:last-child { border-bottom: 0; }
+  .rule-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-md);
+    background: var(--bg-2);
+    color: var(--color-bege);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .rule-icon svg { width: 17px; height: 17px; stroke-width: 1.6; }
+  .rule-meta { min-width: 0; }
+  .rule-title {
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.3;
+  }
+  .rule-desc {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+    line-height: 1.5;
+    margin-top: 3px;
+    text-wrap: pretty;
+  }
+  /* Switch (rule) */
+  .switch {
+    --w: 38px; --h: 22px;
+    position: relative; display: inline-block;
+    width: var(--w); height: var(--h);
+    flex-shrink: 0;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider {
+    position: absolute; inset: 0;
+    background: var(--color-cinza);
+    border-radius: var(--radius-pill);
+    transition: background var(--duration-base) var(--ease-soft);
+    cursor: pointer;
+  }
+  .switch .slider::before {
+    content: "";
+    position: absolute;
+    left: 3px; top: 3px;
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 1px 2px rgba(58, 53, 48, 0.18);
+    transition: transform var(--duration-base) var(--ease-soft);
+  }
+  .switch input:checked + .slider { background: var(--color-verde); }
+  .switch input:checked + .slider::before { transform: translateX(16px); }
+
+  .handoff-target {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: var(--bg-2);
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; gap: 14px;
+    flex-wrap: wrap;
+  }
+  .handoff-target .label {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--color-bege);
+  }
+  .handoff-target .who {
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-escuro);
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    padding: 5px 11px 5px 5px;
+    border-radius: var(--radius-pill);
+  }
+  .who .avatar.sm { width: 22px; height: 22px; font-size: 9px; }
+  .who .avatar.tone-1 { background: var(--color-bege-claro); color: #6B5526; }
+  .who .avatar.tone-2 { background: rgba(240, 131, 83, 0.18); color: #B85A2E; }
+
+  /* ============================================================
+     SECTION 5 — Horários
+     ============================================================ */
+  .hours-table {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 0;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-1);
+  }
+  .hours-row {
+    display: contents;
+  }
+  .hours-row > div {
+    padding: 12px 16px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex; align-items: center;
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-escuro);
+  }
+  .hours-row.head > div {
+    background: var(--bg-2);
+    font-size: 10.5px; font-weight: 500;
+    letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--color-bege);
+    padding: 10px 16px;
+  }
+  .hours-row:last-child > div { border-bottom: 0; }
+  .hours-row.off > div { color: var(--color-texto-medio); }
+  .hours-row .day-name { font-weight: 500; }
+  .time-inputs {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-feature-settings: "tnum";
+  }
+  .time-pill {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    padding: 5px 12px;
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+    min-width: 60px;
+    text-align: center;
+  }
+  .time-pill:hover { border-color: var(--color-tangerina); cursor: text; }
+  .time-sep {
+    color: var(--color-texto-medio);
+    font-size: 12px;
+  }
+  .closed-tag {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--color-texto-medio);
+    background: var(--bg-2);
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+  }
+  .hours-toggle {
+    justify-content: flex-end;
+  }
+
+  .offhours-block {
+    margin-top: 22px;
+  }
+  .offhours-block .field-label .meta { color: var(--color-bege); }
+
+  /* ============================================================
+     Save bar (bottom of page)
+     ============================================================ */
+  .save-all {
+    margin-top: 8px;
+    padding: 18px 28px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-2);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 18px;
+  }
+  .save-all-meta {
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+  .save-all-meta strong { color: var(--color-texto-escuro); font-weight: 500; }
+
+  /* small page header above sections */
+  .page-intro {
+    max-width: var(--form-max);
+    margin: 0 auto 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px;
+  }
+  .page-intro-text {
+    font-family: var(--font-body); font-size: 13.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.55;
+    max-width: 520px;
+    text-wrap: pretty;
+  }
+  .page-intro-text strong { color: var(--color-texto-escuro); font-weight: 500; }
+  .agent-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    padding: 6px 14px 6px 6px;
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-escuro);
+    flex-shrink: 0;
+  }
+  .agent-badge .avatar { width: 26px; height: 26px; font-size: 10px; background: var(--color-alaranjado); color: #fff; font-family: var(--font-display); }
+  .agent-badge .label { color: var(--color-texto-medio); }
+  .agent-badge strong { font-weight: 500; }
+
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="07 Agente de IA">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <nav>
+      <div class="sb-section-label">Operação</div>
+      <div class="sb-nav">
+        <a href="02 Dashboard.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+          Dashboard
+        </a>
+        <a href="03 Inbox WhatsApp.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+          </svg>
+          Inbox
+          <span class="sb-badge">7</span>
+        </a>
+        <a href="04 Funil.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Funil
+        </a>
+        <a href="06 Agenda.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Agenda
+        </a>
+        <a href="#" class="sb-item active" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/>
+            <circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/>
+            <circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/>
+            <path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/>
+          </svg>
+          Agente IA
+        </a>
+        <a href="#" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </div>
+    </nav>
+
+    <div class="sb-user">
+      <div class="avatar">LF</div>
+      <div class="sb-user-meta">
+        <span class="sb-user-name">Larissa Ferraz</span>
+        <span class="sb-user-role">Gestão · Corporis</span>
+      </div>
+      <button class="sb-user-action" aria-label="Mais opções">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">Agente de IA</h1>
+        <span class="topbar-crumb">
+          <span>WhatsApp · Evolution API</span>
+          <span class="sep"></span>
+          <span>versão 3.2</span>
+        </span>
+      </div>
+
+      <div class="topbar-right">
+        <button class="ghost-btn" title="Ver últimas conversas do agente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.5 2.6"/>
+            <polyline points="21 3 21 8 16 8"/>
+          </svg>
+          Histórico
+        </button>
+        <button class="ghost-btn" title="Testar conversa com o agente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+          </svg>
+          Testar conversa
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== CONTENT ===== -->
+    <div class="content">
+
+      <!-- TOC -->
+      <nav class="toc" aria-label="Seções da configuração">
+        <div class="toc-label">Configurar</div>
+        <a href="#sec-status"  class="toc-item active"><span class="num">01</span>Status do agente</a>
+        <a href="#sec-persona" class="toc-item"><span class="num">02</span>Persona e tom</a>
+        <a href="#sec-faq"     class="toc-item"><span class="num">03</span>Perguntas frequentes</a>
+        <a href="#sec-handoff" class="toc-item"><span class="num">04</span>Regras de handoff</a>
+        <a href="#sec-hours"   class="toc-item"><span class="num">05</span>Horário de atendimento</a>
+
+        <div class="toc-foot">
+          <strong>Cada seção é salva separadamente.</strong> Mudanças entram em vigor na próxima mensagem recebida — conversas em andamento não são afetadas.
+        </div>
+      </nav>
+
+      <!-- SECTIONS -->
+      <div class="sections" id="sectionsScroll">
+        <div class="sections-inner">
+
+          <!-- Intro -->
+          <div class="page-intro">
+            <p class="page-intro-text">
+              O <strong>agente cuida do primeiro contato no WhatsApp</strong> — apresenta a clínica, responde dúvidas comuns e marca a avaliação inicial. Aqui você define o tom, o que ele sabe e quando ele deve te chamar.
+            </p>
+            <span class="agent-badge">
+              <span class="avatar">co</span>
+              <span><span class="label">agente</span> &nbsp;<strong>Corá</strong></span>
+            </span>
+          </div>
+
+          <!-- ============================================================
+               SECTION 1 — Status
+               ============================================================ -->
+          <section class="sec" id="sec-status">
+            <div class="sec-head">
+              <span class="sec-num">01</span>
+              <div class="sec-titles">
+                <h2 class="sec-title">Status do agente</h2>
+                <p class="sec-sub">Ligue para deixar o agente respondendo. Pause quando quiser atender pessoalmente todas as conversas.</p>
+              </div>
+            </div>
+
+            <div class="sec-body">
+              <div class="status-grid">
+                <!-- Big toggle -->
+                <div class="big-toggle">
+                  <div class="bt-row">
+                    <label class="switch-lg">
+                      <input type="checkbox" checked aria-label="Ativar agente"/>
+                      <span class="slider"></span>
+                    </label>
+                    <div>
+                      <div class="bt-title">Agente ativo</div>
+                      <div class="bt-state"><span class="pulse"></span> respondendo</div>
+                    </div>
+                  </div>
+                  <p class="bt-desc">
+                    A <strong>Corá</strong> está respondendo novos contatos no WhatsApp. Conversas com lead já em atendimento humano <strong>não</strong> são interrompidas.
+                  </p>
+                </div>
+
+                <div class="status-divider" aria-hidden="true"></div>
+
+                <!-- WhatsApp connection -->
+                <div class="wa-conn">
+                  <div class="wa-head">Conexão</div>
+                  <div class="wa-card">
+                    <div class="wa-icon">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.9-.4-1.7-1-2.4-1.7-.5-.5-1-1.1-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.2-.3.4-.4.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4 0-.1-.6-1.5-.9-2.1-.2-.5-.5-.4-.6-.4h-.6c-.2 0-.5.1-.7.4-.3.3-1 1-1 2.3 0 1.4 1 2.7 1.1 2.9.1.1 2 3 4.8 4.2.4.2.8.3 1.1.4.5.1.9.1 1.3.1.4-.1 1.2-.5 1.4-1 .2-.5.2-.9.1-1 0-.1-.1-.2-.3-.2zM12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/>
+                      </svg>
+                    </div>
+                    <div class="wa-meta">
+                      <div class="wa-name">+55 49 99183-1900</div>
+                      <div class="wa-state">
+                        <span class="dot"></span>
+                        Conectado · Evolution API · sincronizado há 2 min
+                      </div>
+                    </div>
+                    <button class="btn sm">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                      </svg>
+                      Reconectar
+                    </button>
+                  </div>
+                  <p class="wa-foot">
+                    Se a conexão cair, leads continuam chegando no <a href="03 Inbox WhatsApp.html">Inbox</a> — mas sem resposta automática.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="sec-foot">
+              <span class="saved-note"><span class="ok-dot"></span> Salvo automaticamente · há 4 min</span>
+              <div></div>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               SECTION 2 — Persona e tom
+               ============================================================ -->
+          <section class="sec" id="sec-persona">
+            <div class="sec-head">
+              <span class="sec-num">02</span>
+              <div class="sec-titles">
+                <h2 class="sec-title">Persona e tom</h2>
+                <p class="sec-sub">O texto-base que ensina o agente como falar. Pense que você está escrevendo um briefing para uma recepcionista nova.</p>
+              </div>
+            </div>
+
+            <div class="sec-body">
+              <div class="persona-grid">
+                <div>
+                  <div class="persona-tags">
+                    <span class="ptag"><span class="dot"></span> Cuidadosa</span>
+                    <span class="ptag"><span class="dot"></span> Técnica</span>
+                    <span class="ptag"><span class="dot"></span> Acolhedora</span>
+                  </div>
+                  <div class="field-label">
+                    <span>Prompt da persona</span>
+                    <span class="meta">487 / 2000 caracteres</span>
+                  </div>
+                  <textarea class="textarea" spellcheck="false">Você é a Corá, recepcionista virtual da Corporis Fisioterapia e Pilates, em Xanxerê (SC). Você fala em nome da Larissa e da Tainara — duas fisioterapeutas que fundaram a clínica.
+
+Tom: cuidadosa, técnica e acolhedora. Você escuta antes de informar. Você nunca promete cura, nunca diagnostica, nunca prescreve. Quando o assunto for clínico específico, encaminhe para uma das fisioterapeutas.
+
+Linguagem: trate quem chega por "você", nunca "paciente" — aqui dizemos "aluna". Fisioterapia pélvica é assunto íntimo: trate com discrição, sem eufemismos infantis e sem soar clínica demais.
+
+Objetivo principal: acolher o primeiro contato, entender o que a pessoa busca (pilates, gestante, fisio pélvica), oferecer a avaliação inicial gratuita de 50 minutos e ajudar a marcar um horário. Nunca venda pacote no primeiro contato.</textarea>
+                </div>
+
+                <aside class="guidance">
+                  <h4>Boas práticas</h4>
+                  <ul>
+                    <li><strong>Acolha antes de informar.</strong> Antes de mandar valor ou link, demonstre que entendeu o que a aluna trouxe.</li>
+                    <li><strong>Nunca prometa cura.</strong> Evite "vai resolver", "elimina a dor". Prefira "podemos te ajudar a entender melhor".</li>
+                    <li><strong>"Aluna", não "paciente".</strong> É um valor da marca.</li>
+                    <li><strong>Fisio pélvica é íntimo.</strong> Discrição sempre — sem eufemismo, sem clínica demais.</li>
+                    <li><strong>Sem venda forçada.</strong> O primeiro objetivo é a avaliação gratuita, não fechar pacote.</li>
+                  </ul>
+                </aside>
+              </div>
+            </div>
+
+            <div class="sec-foot">
+              <span class="saved-note"><span class="ok-dot"></span> Última edição há 2 dias · por Larissa</span>
+              <div style="display:flex; gap:8px;">
+                <button class="btn ghost">Pré-visualizar conversa</button>
+                <button class="btn primary">Salvar persona</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               SECTION 3 — FAQ
+               ============================================================ -->
+          <section class="sec" id="sec-faq">
+            <div class="sec-head">
+              <span class="sec-num">03</span>
+              <div class="sec-titles">
+                <h2 class="sec-title">Perguntas frequentes</h2>
+                <p class="sec-sub">Respostas curadas que o agente usa como fonte de verdade. Quando a pergunta da aluna casa com uma destas, ele responde com o texto exato — sem improvisar.</p>
+              </div>
+            </div>
+
+            <div class="sec-body">
+              <div class="faq-list">
+
+                <div class="faq-item">
+                  <div class="faq-content">
+                    <div class="faq-q"><span class="q-mark">“</span>Qual o valor da avaliação?</div>
+                    <p class="faq-a">A primeira avaliação é gratuita e dura cerca de 50 minutos. Nela a fisioterapeuta entende seu histórico, suas queixas e seu objetivo. Os valores das aulas só são apresentados depois da avaliação, porque dependem do plano que vamos desenhar para você.</p>
+                  </div>
+                  <div class="faq-actions">
+                    <button class="icon-btn" title="Editar">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    <button class="icon-btn danger" title="Remover">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="faq-item">
+                  <div class="faq-content">
+                    <div class="faq-q"><span class="q-mark">“</span>Vocês atendem gestantes?</div>
+                    <p class="faq-a">Atendemos sim — em qualquer trimestre e também no puerpério. Nossas fisioterapeutas têm especialização em pilates para gestantes e fisioterapia pélvica pós-parto. Você pode trazer o pedido médico se já tiver um, mas não é obrigatório para a avaliação inicial.</p>
+                  </div>
+                  <div class="faq-actions">
+                    <button class="icon-btn" title="Editar">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    <button class="icon-btn danger" title="Remover">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="faq-item">
+                  <div class="faq-content">
+                    <div class="faq-q"><span class="q-mark">“</span>Onde fica a clínica?</div>
+                    <p class="faq-a">Estamos no Centro Médico Xanxerê — Rua Castelo Branco, 295, sala 12, Centro. Tem estacionamento na frente e acesso por elevador. Se quiser, mando a localização no mapa.</p>
+                  </div>
+                  <div class="faq-actions">
+                    <button class="icon-btn" title="Editar">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    <button class="icon-btn danger" title="Remover">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Editing in-place -->
+                <div class="faq-item editing">
+                  <div class="faq-edit-grid">
+                    <div>
+                      <label>Pergunta</label>
+                      <input class="faq-input" value="Preciso de pedido médico?"/>
+                    </div>
+                    <div>
+                      <label>Resposta do agente</label>
+                      <textarea class="faq-ans">Para a avaliação inicial não é necessário pedido médico. Se você já tem um (do ginecologista, ortopedista ou obstetra), pode trazer — ajuda a fisioterapeuta a desenhar o plano. Para alguns convênios o pedido pode ser solicitado depois — a gente avisa.</textarea>
+                    </div>
+                    <div class="faq-edit-actions">
+                      <button class="btn ghost">Cancelar</button>
+                      <button class="btn primary">Salvar pergunta</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="faq-item">
+                  <div class="faq-content">
+                    <div class="faq-q"><span class="q-mark">“</span>Qual a diferença entre pilates clínico e pilates de academia?</div>
+                    <p class="faq-a">Aqui o atendimento é individual — no máximo 4 alunas por horário, cada uma com seu plano. Quem conduz é fisioterapeuta com formação específica, não professora de educação física. Pilates clínico parte de uma avaliação prévia e cada exercício é prescrito para o seu corpo e suas queixas.</p>
+                  </div>
+                  <div class="faq-actions">
+                    <button class="icon-btn" title="Editar">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    <button class="icon-btn danger" title="Remover">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="add-row">
+                <button class="add-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Adicionar pergunta
+                </button>
+                <span class="add-hint">5 perguntas cadastradas · usadas em 73% das conversas do mês</span>
+              </div>
+            </div>
+
+            <div class="sec-foot">
+              <span class="saved-note success"><span class="ok-dot"></span> Alterações salvas · agora</span>
+              <button class="btn primary">Salvar FAQ</button>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               SECTION 4 — Handoff
+               ============================================================ -->
+          <section class="sec" id="sec-handoff">
+            <div class="sec-head">
+              <span class="sec-num">04</span>
+              <div class="sec-titles">
+                <h2 class="sec-title">Regras de handoff</h2>
+                <p class="sec-sub">Quando o agente deve parar e te chamar. Cada gatilho liga ou desliga independente — a conversa vai para o Inbox e fica marcada como "humano necessário".</p>
+              </div>
+            </div>
+
+            <div class="sec-body">
+              <div class="rules">
+
+                <div class="rule">
+                  <div class="rule-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                    </svg>
+                  </div>
+                  <div class="rule-meta">
+                    <div class="rule-title">Lead pede para falar com uma pessoa</div>
+                    <p class="rule-desc">Frases como "quero falar com alguém", "tem uma humana aí?", "prefiro falar com a Larissa". Encaminha imediatamente.</p>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" checked aria-label="Ativar gatilho"/>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="rule">
+                  <div class="rule-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 14V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12.5l4.5-4.5H19a2 2 0 0 0 2-2z"/>
+                      <line x1="9" y1="9" x2="15" y2="9"/>
+                      <line x1="9" y1="13" x2="13" y2="13"/>
+                    </svg>
+                  </div>
+                  <div class="rule-meta">
+                    <div class="rule-title">Pergunta clínica específica</div>
+                    <p class="rule-desc">Dor persistente, sintoma novo, dúvida sobre diagnóstico médico, gestação de risco. A Corá nunca responde — sempre encaminha.</p>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" checked aria-label="Ativar gatilho"/>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="rule">
+                  <div class="rule-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <div class="rule-meta">
+                    <div class="rule-title">Reclamação ou insatisfação</div>
+                    <p class="rule-desc">Detecta tom negativo, palavras como "decepcionada", "horrível", "cancelar". Encaminha em até 1 minuto e marca como prioritário.</p>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" checked aria-label="Ativar gatilho"/>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="rule">
+                  <div class="rule-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                  </div>
+                  <div class="rule-meta">
+                    <div class="rule-title">Agente não sabe responder com confiança</div>
+                    <p class="rule-desc">Quando a IA não encontra resposta no FAQ ou na persona e teria que improvisar. Prefere passar para humano a inventar.</p>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" checked aria-label="Ativar gatilho"/>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="rule">
+                  <div class="rule-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                  </div>
+                  <div class="rule-meta">
+                    <div class="rule-title">Conversa passou de 8 mensagens sem agendar</div>
+                    <p class="rule-desc">Se o agente trocou muitas mensagens e a lead ainda não marcou avaliação, chama você para empurrar pessoalmente.</p>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" aria-label="Ativar gatilho"/>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+              </div>
+
+              <div class="handoff-target">
+                <span class="label">Encaminhar para</span>
+                <span class="who">
+                  <span class="avatar sm tone-1">LF</span>
+                  Larissa Ferraz
+                </span>
+                <span class="who">
+                  <span class="avatar sm tone-2">TF</span>
+                  Tainara Fracasso
+                </span>
+                <button class="btn sm ghost">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Adicionar pessoa
+                </button>
+              </div>
+            </div>
+
+            <div class="sec-foot">
+              <span class="saved-note"><span class="ok-dot"></span> 4 de 5 gatilhos ativos · salvo há 6 min</span>
+              <button class="btn primary">Salvar regras</button>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               SECTION 5 — Horários
+               ============================================================ -->
+          <section class="sec" id="sec-hours">
+            <div class="sec-head">
+              <span class="sec-num">05</span>
+              <div class="sec-titles">
+                <h2 class="sec-title">Horário de atendimento</h2>
+                <p class="sec-sub">Quando o agente responde imediatamente e quando ele responde com a mensagem fora do horário. O fuso é o da clínica (Brasília · GMT−3).</p>
+              </div>
+            </div>
+
+            <div class="sec-body">
+              <div class="hours-table">
+                <div class="hours-row head">
+                  <div>Dia</div>
+                  <div>Horário</div>
+                  <div>Aberto</div>
+                </div>
+
+                <div class="hours-row">
+                  <div class="day-name">Segunda</div>
+                  <div>
+                    <span class="time-inputs">
+                      <span class="time-pill">07:00</span>
+                      <span class="time-sep">até</span>
+                      <span class="time-pill">19:00</span>
+                    </span>
+                  </div>
+                  <div class="hours-toggle">
+                    <label class="switch">
+                      <input type="checkbox" checked aria-label="Aberto segunda"/>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="hours-row">
+                  <div class="day-name">Terça</div>
+                  <div>
+                    <span class="time-inputs">
+                      <span class="time-pill">07:00</span>
+                      <span class="time-sep">até</span>
+                      <span class="time-pill">19:00</span>
+                    </span>
+                  </div>
+                  <div class="hours-toggle">
+                    <label class="switch">
+                      <input type="checkbox" checked aria-label="Aberto terça"/>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="hours-row">
+                  <div class="day-name">Quarta</div>
+                  <div>
+                    <span class="time-inputs">
+                      <span class="time-pill">07:00</span>
+                      <span class="time-sep">até</span>
+                      <span class="time-pill">19:00</span>
+                    </span>
+                  </div>
+                  <div class="hours-toggle">
+                    <label class="switch">
+                      <input type="checkbox" checked aria-label="Aberto quarta"/>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="hours-row">
+                  <div class="day-name">Quinta</div>
+                  <div>
+                    <span class="time-inputs">
+                      <span class="time-pill">07:00</span>
+                      <span class="time-sep">até</span>
+                      <span class="time-pill">19:00</span>
+                    </span>
+                  </div>
+                  <div class="hours-toggle">
+                    <label class="switch">
+                      <input type="checkbox" checked aria-label="Aberto quinta"/>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="hours-row">
+                  <div class="day-name">Sexta</div>
+                  <div>
+                    <span class="time-inputs">
+                      <span class="time-pill">07:00</span>
+                      <span class="time-sep">até</span>
+                      <span class="time-pill">19:00</span>
+                    </span>
+                  </div>
+                  <div class="hours-toggle">
+                    <label class="switch">
+                      <input type="checkbox" checked aria-label="Aberto sexta"/>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="hours-row">
+                  <div class="day-name">Sábado</div>
+                  <div>
+                    <span class="time-inputs">
+                      <span class="time-pill">08:00</span>
+                      <span class="time-sep">até</span>
+                      <span class="time-pill">12:00</span>
+                    </span>
+                  </div>
+                  <div class="hours-toggle">
+                    <label class="switch">
+                      <input type="checkbox" checked aria-label="Aberto sábado"/>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="hours-row off">
+                  <div class="day-name">Domingo</div>
+                  <div><span class="closed-tag">fechado</span></div>
+                  <div class="hours-toggle">
+                    <label class="switch">
+                      <input type="checkbox" aria-label="Aberto domingo"/>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="offhours-block">
+                <div class="field-label">
+                  <span>Mensagem fora do horário</span>
+                  <span class="meta">enviada automaticamente quando estamos fechados</span>
+                </div>
+                <textarea class="textarea" style="min-height: 130px;" spellcheck="false">Oi! Aqui é a Corá, da Corporis 🌿 No momento estamos fora do horário de atendimento — a Larissa e a Tainara respondem pessoalmente assim que abrirmos.
+
+Se quiser, já me conta o que você procura (pilates, gestante ou fisio pélvica?) que deixo tudo encaminhado para a primeira hora da manhã.
+
+Voltamos a responder: segunda a sexta, 7h–19h · sábado, 8h–12h.</textarea>
+              </div>
+            </div>
+
+            <div class="sec-foot">
+              <span class="saved-note"><span class="ok-dot"></span> Atende 6 dias por semana · 70h semanais</span>
+              <button class="btn primary">Salvar horários</button>
+            </div>
+          </section>
+
+          <!-- bottom summary -->
+          <div class="save-all">
+            <div class="save-all-meta">
+              <strong>Tudo certo por aqui.</strong> Cada seção é salva separadamente — você pode sair desta página a qualquer momento sem perder nada.
+            </div>
+            <a href="02 Dashboard.html" class="btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Voltar para o Dashboard
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Highlight TOC item based on scroll position
+  const scroller = document.getElementById('sectionsScroll');
+  const tocLinks = Array.from(document.querySelectorAll('.toc-item'));
+  const sections = tocLinks.map(a => document.querySelector(a.getAttribute('href')));
+
+  function updateToc() {
+    const top = scroller.scrollTop + 80;
+    let activeIdx = 0;
+    sections.forEach((s, i) => { if (s && s.offsetTop <= top) activeIdx = i; });
+    tocLinks.forEach((l, i) => l.classList.toggle('active', i === activeIdx));
+  }
+  scroller.addEventListener('scroll', updateToc);
+
+  // Smooth scroll to section on TOC click
+  tocLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) scroller.scrollTo({ top: target.offsetTop - 16, behavior: 'smooth' });
+    });
+  });
+
+  // Live char counter on persona textarea
+  const personaArea = document.querySelector('#sec-persona .textarea');
+  const personaMeta = document.querySelector('#sec-persona .field-label .meta');
+  if (personaArea && personaMeta) {
+    const update = () => {
+      personaMeta.textContent = `${personaArea.value.length} / 2000 caracteres`;
+    };
+    personaArea.addEventListener('input', update);
+    update();
+  }
+</script>
+
+</body>
+</html>

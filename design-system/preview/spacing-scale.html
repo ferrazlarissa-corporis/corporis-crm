@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 28px 32px; gap: 10px; }
+  .row { display: grid; grid-template-columns: 110px 1fr 80px; gap: 16px; align-items: center; padding: 7px 0; }
+  .tok { font-family: var(--font-body); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--color-bege); }
+  .bar { background: var(--color-alaranjado); height: 14px; border-radius: 2px; }
+  .val { font-family: var(--font-body); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--color-texto-medio); text-align: right; }
+  h3 { font-size: 18px; font-family: var(--font-display); color: var(--color-texto-escuro); margin-bottom: 4px; }
+</style>
+</head><body>
+<div class="card">
+  <h3>Spacing scale — base 8pt</h3>
+  <div class="row"><span class="tok">space-micro</span><span class="bar" style="width:4px"></span><span class="val">4 pt</span></div>
+  <div class="row"><span class="tok">space-xs</span>   <span class="bar" style="width:8px"></span><span class="val">8 pt</span></div>
+  <div class="row"><span class="tok">space-sm</span>   <span class="bar" style="width:16px"></span><span class="val">16 pt</span></div>
+  <div class="row"><span class="tok">space-md</span>   <span class="bar" style="width:24px"></span><span class="val">24 pt</span></div>
+  <div class="row"><span class="tok">space-std</span>  <span class="bar" style="width:32px"></span><span class="val">32 pt</span></div>
+  <div class="row"><span class="tok">space-lg</span>   <span class="bar" style="width:40px"></span><span class="val">40 pt</span></div>
+  <div class="row"><span class="tok">space-xl</span>   <span class="bar" style="width:64px"></span><span class="val">64 pt</span></div>
+  <div class="row"><span class="tok">space-2xl</span>  <span class="bar" style="width:96px"></span><span class="val">96 pt</span></div>
+</div>
+</body></html>

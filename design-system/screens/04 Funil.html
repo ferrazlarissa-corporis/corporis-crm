@@ -1,0 +1,1014 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis CRM · Funil</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Funil — tokens locais
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+
+    --surface-raised: #FFFFFF;
+    --surface-sunken: var(--bg-2);
+
+    --col-w: 304px;
+    --col-w-tight: 232px;
+
+    /* Estágios — mesma paleta do Dashboard */
+    --stage-novo:        var(--color-bege);
+    --stage-qual:        var(--color-tangerina);
+    --stage-agendada:    var(--color-alaranjado);
+    --stage-compareceu:  #C97448;
+    --stage-convertido:  var(--color-verde);
+    --stage-perdido:     var(--color-cinza);
+
+    /* Interesses */
+    --interest-pilates-bg:  rgba(240, 131, 83, 0.12);
+    --interest-pilates-fg:  #B85A2E;
+    --interest-gestante-bg: rgba(172, 192, 149, 0.22);
+    --interest-gestante-fg: #5F7948;
+    --interest-pelvica-bg:  rgba(210, 176, 110, 0.22);
+    --interest-pelvica-fg:  #7A5E1F;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); overflow: hidden; }
+
+  /* ============================================================
+     SHELL — sidebar + main (idêntico)
+     ============================================================ */
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 24px 16px 16px;
+    gap: var(--space-md);
+  }
+  .sb-logo { padding: 8px 12px 4px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 14px; font-weight: 400;
+    text-decoration: none; cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+    position: relative;
+  }
+  .sb-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active { background: var(--color-bege-claro); color: var(--color-texto-escuro); font-weight: 500; }
+  .sb-item.active::before {
+    content: ""; position: absolute; left: 0; top: 12px; bottom: 12px;
+    width: 2px; background: var(--color-alaranjado); border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado); color: #fff;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.4px;
+    padding: 2px 7px; border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+
+  .sb-user {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 10px;
+    border-top: 0.6px solid var(--color-cinza);
+    margin-top: 8px;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 14px; font-weight: 400;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .avatar.md { width: 32px; height: 32px; font-size: 13px; }
+  .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
+
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); line-height: 1.2; }
+  .sb-user-role { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent; border: 0;
+    color: var(--color-texto-medio); padding: 6px;
+    border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-user-action svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ===== Main ============================================== */
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) auto 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* Topbar */
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+  }
+  .topbar-left {
+    display: flex; align-items: baseline; gap: 14px;
+  }
+  .topbar-title {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 28px; line-height: 1;
+    color: var(--color-texto-escuro); letter-spacing: -0.005em;
+  }
+  .topbar-sub {
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-medio);
+  }
+  .topbar-sub strong { color: var(--color-texto-escuro); font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  .search-field {
+    position: relative; display: flex; align-items: center;
+  }
+  .search-field svg {
+    position: absolute; left: 12px;
+    width: 14px; height: 14px;
+    stroke-width: 1.6;
+    color: var(--color-texto-medio);
+  }
+  .search-field input {
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    border-radius: var(--radius-pill);
+    padding: 8px 14px 8px 34px;
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-escuro);
+    width: 220px;
+    transition: border var(--duration-fast) var(--ease-soft),
+                box-shadow var(--duration-fast) var(--ease-soft);
+  }
+  .search-field input::placeholder { color: var(--color-texto-medio); }
+  .search-field input:focus {
+    outline: none;
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.15);
+  }
+
+  .filter-btn {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    border-radius: var(--radius-pill);
+    padding: 8px 14px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    letter-spacing: 0.2px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .filter-btn:hover {
+    background: var(--color-bege-claro);
+    border-color: var(--color-tangerina);
+  }
+  .filter-btn .filter-label { color: var(--color-texto-medio); font-weight: 400; }
+  .filter-btn svg { width: 12px; height: 12px; stroke-width: 1.6; color: var(--color-texto-medio); }
+
+  .primary-btn {
+    appearance: none;
+    border: 0;
+    background: var(--color-alaranjado);
+    color: #fff;
+    border-radius: var(--radius-pill);
+    padding: 9px 18px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background var(--duration-fast) var(--ease-soft);
+  }
+  .primary-btn svg { width: 14px; height: 14px; stroke-width: 1.8; }
+  .primary-btn:hover { background: var(--color-tangerina); }
+
+  /* ============================================================
+     CONTEXT BAR — pequena faixa logo abaixo do topbar
+     ============================================================ */
+  .context-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px 14px;
+    gap: 24px;
+  }
+  .context-stats {
+    display: flex; align-items: baseline; gap: 28px;
+  }
+  .stat {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .stat-val {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 22px; line-height: 1;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+  }
+  .stat-val .unit {
+    font-size: 14px; color: var(--color-texto-medio);
+    margin-left: 2px;
+  }
+  .stat-label {
+    font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-texto-medio);
+  }
+  .context-period {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+  }
+  .context-period svg { width: 14px; height: 14px; stroke-width: 1.6; color: var(--color-bege); }
+  .context-period strong { color: var(--color-texto-escuro); font-weight: 500; }
+
+  /* ============================================================
+     BOARD
+     ============================================================ */
+  .board-wrap {
+    overflow: auto;
+    padding: 6px 32px 32px;
+    background: var(--bg-1);
+    min-height: 0;
+  }
+  .board {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--col-w);
+    gap: 18px;
+    min-height: 100%;
+    align-items: start;
+  }
+  /* compressed columns */
+  .board .col.tight { width: var(--col-w-tight); }
+  .board > .col:nth-child(5),
+  .board > .col:nth-child(6) { width: var(--col-w-tight); }
+
+  /* ===== Column ============================================ */
+  .col {
+    display: flex; flex-direction: column;
+    min-height: 100%;
+  }
+  .col-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 4px 14px;
+    margin-bottom: 4px;
+  }
+  .col-dot {
+    width: 8px; height: 8px;
+    border-radius: var(--radius-pill);
+    flex-shrink: 0;
+  }
+  .col-name {
+    font-family: var(--font-body); font-size: 12px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
+    line-height: 1;
+  }
+  .col-count {
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+    background: var(--surface-sunken);
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    line-height: 1.4;
+  }
+  .col-actions {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 2px;
+  }
+  .col-action {
+    width: 24px; height: 24px;
+    appearance: none; border: 0; background: transparent;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .col-action svg { width: 13px; height: 13px; stroke-width: 1.7; }
+  .col-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  .col-list {
+    display: flex; flex-direction: column;
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* ============================================================
+     CARD — o componente central
+     ============================================================ */
+  .card {
+    background: var(--surface-raised);
+    border: 1px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    cursor: grab;
+    position: relative;
+    transition: transform var(--duration-base) var(--ease-soft),
+                box-shadow var(--duration-base) var(--ease-soft);
+  }
+  .card:active { cursor: grabbing; }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(58, 53, 48, 0.08);
+  }
+  .card::before {
+    content: "";
+    display: block;
+    height: 4px;
+    background: var(--stage-color, var(--color-bege));
+  }
+
+  .card-body {
+    padding: 14px 14px 12px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  /* row 1: name + drag handle */
+  .card-name-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 8px;
+  }
+  .card-name {
+    font-family: var(--font-body); font-size: 14px;
+    font-weight: 500; color: var(--color-texto-escuro);
+    line-height: 1.3;
+    text-wrap: pretty;
+  }
+  .card-drag {
+    color: var(--color-cinza);
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+  }
+  .card:hover .card-drag { opacity: 1; color: var(--color-texto-medio); }
+  .card-drag svg { width: 14px; height: 14px; stroke-width: 1.6; }
+
+  /* row 2: interest badge */
+  .interest-row {
+    display: flex; align-items: center; gap: 6px;
+    flex-wrap: wrap;
+  }
+  .badge-interest {
+    display: inline-flex; align-items: center;
+    font-family: var(--font-body); font-size: 9.5px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 1.3px;
+    padding: 3px 8px;
+    border-radius: var(--radius-xs);
+    line-height: 1.2;
+  }
+  .badge-interest.pilates  { background: var(--interest-pilates-bg);  color: var(--interest-pilates-fg); }
+  .badge-interest.gestante { background: var(--interest-gestante-bg); color: var(--interest-gestante-fg); }
+  .badge-interest.pelvica  { background: var(--interest-pelvica-bg);  color: var(--interest-pelvica-fg); }
+
+  /* row 3: origin (icon + label) */
+  .origin {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.2;
+  }
+  .origin svg { width: 12px; height: 12px; stroke-width: 1.6; flex-shrink: 0; color: var(--color-bege); }
+
+  /* row 4: score + time */
+  .card-meta-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+    padding-top: 2px;
+  }
+  .score-mini {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+  }
+  .score-mini-track {
+    width: 36px; height: 4px;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+  }
+  .score-mini-bar {
+    height: 100%;
+    background: var(--color-bege);
+    border-radius: var(--radius-pill);
+  }
+  .score-mini-bar.high { background: var(--color-alaranjado); }
+  .score-mini-bar.mid  { background: var(--color-tangerina); }
+  .score-mini-bar.low  { background: var(--color-cinza); }
+  .score-mini-val {
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+  }
+  .score-mini-val .max { color: var(--color-texto-medio); font-weight: 400; font-size: 10px; }
+
+  .time-in-stage {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+  }
+  .time-in-stage svg { width: 11px; height: 11px; stroke-width: 1.6; flex-shrink: 0; }
+  .time-in-stage.stale { color: var(--color-ui-error); }
+  .time-in-stage.stale svg { color: var(--color-ui-error); }
+
+  /* card foot: divider + responsible + last interaction */
+  .card-foot {
+    margin: 0;
+    padding: 10px 14px;
+    border-top: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-foot-left {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+  }
+  .card-foot-right {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: var(--color-texto-medio);
+  }
+  .last-action {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-body); font-size: 10.5px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+  }
+  .last-action svg { width: 11px; height: 11px; stroke-width: 1.7; color: var(--color-bege); }
+  .last-action.ia svg { color: var(--interest-pelvica-fg); }
+  .last-action.humano svg { color: var(--color-alaranjado); }
+
+  /* ===== compressed (tight) card ============================ */
+  .card-tight {
+    background: var(--surface-raised);
+    border: 1px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    cursor: grab;
+    display: grid;
+    grid-template-columns: 4px 28px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px 0 0;
+    transition: transform var(--duration-base) var(--ease-soft),
+                box-shadow var(--duration-base) var(--ease-soft);
+    overflow: hidden;
+  }
+  .card-tight:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(58, 53, 48, 0.08);
+  }
+  .card-tight .accent {
+    width: 4px; height: 48px;
+    background: var(--stage-color, var(--color-verde));
+  }
+  .card-tight .ct-meta { min-width: 0; padding: 10px 0; display: flex; flex-direction: column; gap: 2px; }
+  .card-tight .ct-name {
+    font-family: var(--font-body); font-size: 13px;
+    font-weight: 500; color: var(--color-texto-escuro);
+    line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-tight .ct-sub {
+    font-family: var(--font-body); font-size: 10.5px;
+    color: var(--color-texto-medio);
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .card-tight .ct-aside {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--font-body); font-size: 10.5px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+  }
+  .card-tight .ct-avatar {
+    width: 22px; height: 22px; font-size: 9px;
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    border-radius: var(--radius-pill);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    flex-shrink: 0;
+    margin: 0 auto;
+  }
+  .card-tight .ct-avatar.muted { background: var(--surface-sunken); color: var(--color-texto-medio); }
+
+  /* ===== empty column state ================================ */
+  .col-empty {
+    border: 0.6px dashed var(--color-cinza);
+    border-radius: var(--radius-md);
+    padding: 28px 18px;
+    text-align: center;
+    background: transparent;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .col-empty svg {
+    width: 22px; height: 22px; stroke-width: 1.4;
+    color: var(--color-bege);
+  }
+  .col-empty-title {
+    font-family: var(--font-display); font-size: 16px;
+    color: var(--color-texto-escuro);
+    line-height: 1.2;
+    margin-top: 2px;
+  }
+  .col-empty-body {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+    line-height: 1.5;
+    max-width: 220px;
+    text-wrap: pretty;
+  }
+
+  /* ===== add-row at the top of a column ===================== */
+  .col-add {
+    background: transparent;
+    border: 0.6px dashed transparent;
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .col-add:hover {
+    border-color: var(--color-cinza);
+    color: var(--color-alaranjado);
+    background: var(--color-bege-claro);
+  }
+  .col-add svg { width: 12px; height: 12px; stroke-width: 1.8; }
+
+  /* avatar tones */
+  .avatar.tone-1 { background: var(--color-bege-claro); color: #6B5526; }
+  .avatar.tone-2 { background: rgba(240, 131, 83, 0.18); color: #B85A2E; }
+  .avatar.tone-3 { background: rgba(172, 192, 149, 0.30); color: #5F7948; }
+  .avatar.tone-4 { background: rgba(210, 176, 110, 0.30); color: #7A5E1F; }
+  .avatar.tone-5 { background: rgba(122, 110, 104, 0.18); color: var(--color-texto-medio); }
+
+  /* scrollbar */
+  .board-wrap::-webkit-scrollbar { height: 10px; width: 10px; }
+  .board-wrap::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .board-wrap::-webkit-scrollbar-track { background: transparent; }
+
+  /* icon button */
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: color var(--duration-fast) var(--ease-soft),
+                background var(--duration-fast) var(--ease-soft);
+  }
+  .icon-btn svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .icon-btn:hover { color: var(--color-alaranjado); background: var(--color-bege-claro); }
+  .icon-btn .dot {
+    position: absolute; top: 8px; right: 9px;
+    width: 7px; height: 7px; border-radius: var(--radius-pill);
+    background: var(--color-alaranjado);
+    border: 1.5px solid var(--surface-raised);
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="04 Funil">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <nav>
+      <div class="sb-section-label">Operação</div>
+      <div class="sb-nav">
+        <a href="02 Dashboard.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+          Dashboard
+        </a>
+        <a href="03 Inbox WhatsApp.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+          </svg>
+          Inbox
+          <span class="sb-badge">7</span>
+        </a>
+        <a href="#" class="sb-item active" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Funil
+        </a>
+        <a href="#" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Agenda
+        </a>
+        <a href="#" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </div>
+    </nav>
+
+    <div class="sb-user">
+      <div class="avatar">LF</div>
+      <div class="sb-user-meta">
+        <span class="sb-user-name">Larissa Ferraz</span>
+        <span class="sb-user-role">Recepção · Corporis</span>
+      </div>
+      <button class="sb-user-action" aria-label="Mais opções">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">Funil</h1>
+        <span class="topbar-sub"><strong>62</strong> leads no funil · <strong>14</strong> ativos hoje</span>
+      </div>
+
+      <div class="topbar-right">
+        <div class="search-field">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" placeholder="Buscar por nome ou telefone"/>
+        </div>
+
+        <button class="filter-btn">
+          <span class="filter-label">Origem:</span> Todas
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+
+        <button class="filter-btn">
+          <span class="filter-label">Interesse:</span> Todos
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+
+        <button class="primary-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Novo lead
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== Context bar ===== -->
+    <div class="context-bar">
+      <div class="context-stats">
+        <div class="stat">
+          <span class="stat-val">62</span>
+          <span class="stat-label">No funil</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val">25<span class="unit">%</span></span>
+          <span class="stat-label">Conv. global</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val">2,4<span class="unit">d</span></span>
+          <span class="stat-label">Tempo médio</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val">R$ 18.4k</span>
+          <span class="stat-label">Pipeline estimado</span>
+        </div>
+      </div>
+
+      <div class="context-period">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Período: <strong>últimos 30 dias</strong>
+      </div>
+    </div>
+
+    <!-- ===== Board ===== -->
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =================================================
+     TEMPLATES — usados pelo JS abaixo
+     ================================================= -->
+
+<script>
+  // ============================================================
+  // DATA
+  // ============================================================
+
+  // Origens — ícones inline (lucide-style)
+  const ORIGINS = {
+    whatsapp: {
+      label: 'WhatsApp',
+      svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>'
+    },
+    instagram: {
+      label: 'Instagram',
+      svg: '<rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>'
+    },
+    indicacao: {
+      label: 'Indicação',
+      svg: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+    },
+    google: {
+      label: 'Google',
+      svg: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'
+    },
+    site: {
+      label: 'Site',
+      svg: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'
+    }
+  };
+
+  // Última interação — ícones
+  const LAST_KIND = {
+    msg_ia:    { svg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', cls: 'ia',     label: 'IA' },
+    msg_hum:   { svg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', cls: 'humano', label: 'Humano' },
+    call:      { svg: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>', cls: '', label: 'Ligação' },
+    booked:    { svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', cls: '', label: 'Agendou' },
+    no_show:   { svg: '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>', cls: '', label: 'No-show' }
+  };
+
+  // Avatares de equipe
+  const STAFF = {
+    LF: { name: 'Larissa Ferraz',   initials: 'LF', tone: 1 },
+    TF: { name: 'Tainara Fracasso', initials: 'TF', tone: 2 },
+    IA: { name: 'Agente IA',        initials: 'IA', tone: 4 }
+  };
+
+  // Estágios
+  const STAGES = [
+    { id: 'novo',       name: 'Novo',                color: 'var(--stage-novo)',       tight: false },
+    { id: 'qual',       name: 'Em qualificação',     color: 'var(--stage-qual)',       tight: false },
+    { id: 'agendada',   name: 'Avaliação agendada',  color: 'var(--stage-agendada)',   tight: false },
+    { id: 'compareceu', name: 'Compareceu',          color: 'var(--stage-compareceu)', tight: false },
+    { id: 'convertido', name: 'Convertido',          color: 'var(--stage-convertido)', tight: true  },
+    { id: 'perdido',    name: 'Perdido',             color: 'var(--stage-perdido)',    tight: true  }
+  ];
+
+  // Leads — distribuídos pelas colunas
+  const LEADS = [
+    // Novo (4)
+    { stage:'novo', name:'Beatriz Almeida',    interest:'pilates',  origin:'instagram', score:62, daysIn:1, owner:'IA', last:'msg_ia',  lastWhen:'há 30 min' },
+    { stage:'novo', name:'Camila Antunes',     interest:'gestante', origin:'whatsapp',  score:55, daysIn:1, owner:'IA', last:'msg_ia',  lastWhen:'há 2 h'    },
+    { stage:'novo', name:'Letícia Pereira',    interest:'pelvica',  origin:'site',      score:48, daysIn:0, owner:'IA', last:'msg_ia',  lastWhen:'há 4 h'    },
+    { stage:'novo', name:'Sofia Bertolini',    interest:'pilates',  origin:'indicacao', score:74, daysIn:0, owner:'LF', last:'msg_hum', lastWhen:'há 1 h'    },
+
+    // Em qualificação (4) — uma stale
+    { stage:'qual', name:'Renata Oliveira',    interest:'gestante', origin:'whatsapp',  score:68, daysIn:1, owner:'IA', last:'msg_ia',  lastWhen:'ontem'     },
+    { stage:'qual', name:'Helena Tartas',      interest:'pilates',  origin:'instagram', score:71, daysIn:2, owner:'IA', last:'msg_ia',  lastWhen:'há 3 h'    },
+    { stage:'qual', name:'Lúcia Andrade',      interest:'pilates',  origin:'google',    score:42, daysIn:5, owner:'LF', last:'msg_hum', lastWhen:'há 4 d',  stale:true },
+    { stage:'qual', name:'Vanessa Borba',      interest:'pelvica',  origin:'indicacao', score:81, daysIn:2, owner:'LF', last:'call',    lastWhen:'há 1 d'    },
+
+    // Avaliação agendada (3)
+    { stage:'agendada', name:'Mariana Schreiner', interest:'pilates',  origin:'instagram', score:78, daysIn:1, owner:'LF', last:'booked', lastWhen:'qui 14h'   },
+    { stage:'agendada', name:'Júlia Pellanda',    interest:'gestante', origin:'whatsapp',  score:84, daysIn:2, owner:'TF', last:'booked', lastWhen:'sex 10h'   },
+    { stage:'agendada', name:'Camila Ribeiro',    interest:'pelvica',  origin:'indicacao', score:72, daysIn:3, owner:'TF', last:'booked', lastWhen:'sex 16h30' },
+
+    // Compareceu (0 — empty state)
+
+    // Convertido (3) — tight
+    { stage:'convertido', name:'Bianca Marchetti',   interest:'pilates',  origin:'indicacao', score:92, daysIn:1, owner:'LF', last:'booked', lastWhen:'há 1 d' },
+    { stage:'convertido', name:'Aline Tessari',      interest:'gestante', origin:'whatsapp',  score:88, daysIn:3, owner:'TF', last:'booked', lastWhen:'há 3 d' },
+    { stage:'convertido', name:'Daniela Marquetti',  interest:'pilates',  origin:'instagram', score:85, daysIn:5, owner:'LF', last:'booked', lastWhen:'há 5 d' },
+
+    // Perdido (2) — tight
+    { stage:'perdido', name:'Patrícia Lima',       interest:'pilates', origin:'whatsapp',  score:34, daysIn:7, owner:'LF', last:'no_show', lastWhen:'há 7 d' },
+    { stage:'perdido', name:'Eliza Vasconcelos',   interest:'pelvica', origin:'google',    score:22, daysIn:9, owner:'IA', last:'msg_ia',  lastWhen:'há 9 d' }
+  ];
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+
+  function scoreClass(s) {
+    if (s >= 75) return 'high';
+    if (s >= 55) return 'mid';
+    if (s >= 40) return '';
+    return 'low';
+  }
+
+  function timeInStageStr(days, stale) {
+    if (days === 0) return 'hoje';
+    if (days === 1) return 'há 1 dia';
+    return `há ${days} dias`;
+  }
+
+  function renderCard(lead, stage) {
+    const origin = ORIGINS[lead.origin];
+    const last = LAST_KIND[lead.last];
+    const owner = STAFF[lead.owner];
+    const stale = lead.stale ? 'stale' : '';
+    const sCls = scoreClass(lead.score);
+    return `
+      <article class="card" style="--stage-color: ${stage.color};">
+        <div class="card-body">
+          <div class="card-name-row">
+            <div class="card-name">${lead.name}</div>
+            <span class="card-drag" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9"  cy="6"  r="1"/><circle cx="9"  cy="12" r="1"/><circle cx="9"  cy="18" r="1"/>
+                <circle cx="15" cy="6"  r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>
+              </svg>
+            </span>
+          </div>
+
+          <div class="interest-row">
+            <span class="badge-interest ${lead.interest}">${
+              lead.interest === 'pilates'  ? 'Pilates terapêutico' :
+              lead.interest === 'gestante' ? 'Pilates gestante'    :
+                                             'Fisio pélvica'
+            }</span>
+          </div>
+
+          <div class="origin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${origin.svg}</svg>
+            ${origin.label}
+          </div>
+
+          <div class="card-meta-row">
+            <span class="score-mini" title="Score de qualificação (IA)">
+              <span class="score-mini-track">
+                <span class="score-mini-bar ${sCls}" style="width: ${lead.score}%;"></span>
+              </span>
+              <span class="score-mini-val">${lead.score}<span class="max">/100</span></span>
+            </span>
+            <span class="time-in-stage ${stale}" title="Tempo neste estágio">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              ${timeInStageStr(lead.daysIn, lead.stale)}
+            </span>
+          </div>
+        </div>
+
+        <div class="card-foot">
+          <div class="card-foot-left">
+            <div class="avatar sm tone-${owner.tone}" title="${owner.name}">${owner.initials}</div>
+            <span>${owner.name.split(' ')[0]}</span>
+          </div>
+          <div class="card-foot-right">
+            <span class="last-action ${last.cls}" title="${last.label} · ${lead.lastWhen}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${last.svg}</svg>
+              ${lead.lastWhen}
+            </span>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderCardTight(lead, stage) {
+    const owner = STAFF[lead.owner];
+    return `
+      <article class="card-tight" style="--stage-color: ${stage.color};">
+        <span class="accent"></span>
+        <div class="ct-avatar tone-${owner.tone}" title="${owner.name}">${owner.initials}</div>
+        <div class="ct-meta">
+          <div class="ct-name">${lead.name}</div>
+          <div class="ct-sub">${
+            lead.interest === 'pilates'  ? 'Pilates' :
+            lead.interest === 'gestante' ? 'Gestante' :
+                                            'Pélvica'
+          } · ${ORIGINS[lead.origin].label}</div>
+        </div>
+        <div class="ct-aside">${lead.score}</div>
+      </article>
+    `;
+  }
+
+  function renderEmpty(stage) {
+    return `
+      <div class="col-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+        <div class="col-empty-title">Nada por aqui ainda.</div>
+        <div class="col-empty-body">Quando uma aluna comparecer à avaliação, o card aparece neste estágio.</div>
+      </div>
+    `;
+  }
+
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = STAGES.map(stage => {
+    const leads = LEADS.filter(l => l.stage === stage.id);
+    const cards = leads.length === 0
+      ? renderEmpty(stage)
+      : leads.map(l => stage.tight ? renderCardTight(l, stage) : renderCard(l, stage)).join('');
+
+    return `
+      <section class="col" data-stage="${stage.id}">
+        <header class="col-head">
+          <span class="col-dot" style="background: ${stage.color};"></span>
+          <span class="col-name">${stage.name}</span>
+          <span class="col-count">${leads.length}</span>
+          <div class="col-actions">
+            <button class="col-action" aria-label="Adicionar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
+            <button class="col-action" aria-label="Mais opções">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="col-list">
+          ${cards}
+        </div>
+      </section>
+    `;
+  }).join('');
+
+  // ============================================================
+  // INTERACTIONS
+  // ============================================================
+  // Sidebar nav
+  document.querySelectorAll('.sb-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (item.getAttribute('href') && item.getAttribute('href') !== '#') return;
+      e.preventDefault();
+      document.querySelectorAll('.sb-item').forEach(s => s.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

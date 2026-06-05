@@ -1,0 +1,45 @@
+/* Shared card chrome for Design System tab previews.
+   Each preview file is a self-contained HTML card targeting ~700×<height>px. */
+
+@import url("../colors_and_type.css");
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-1);
+  overflow: hidden;
+}
+
+.card {
+  width: 700px;
+  padding: 24px 28px;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card--dark {
+  background: var(--bg-dark);
+  color: var(--fg-on-dark);
+}
+
+.card--bege {
+  background: var(--bg-accent-soft);
+}
+
+/* tiny meta line at the top of any card if needed */
+.meta {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--color-bege);
+}
+
+.row { display: flex; align-items: center; gap: var(--space-sm); }
+.col { display: flex; flex-direction: column; gap: var(--space-xs); }

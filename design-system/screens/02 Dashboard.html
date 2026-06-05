@@ -1,0 +1,1287 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis CRM · Dashboard</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Dashboard — design tokens local (chart palette derived from DLS)
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --surface-raised: #FFFFFF;           /* card surface — único caso de #FFF */
+    --surface-sunken: var(--bg-2);       /* warm secondary, used for tracks */
+
+    /* Chart palette — paleta fechada, sem cor nova */
+    --chart-1: var(--color-alaranjado);  /* primary share */
+    --chart-2: var(--color-bege);        /* gold */
+    --chart-3: var(--color-tangerina);   /* warm */
+    --chart-4: var(--color-bege-claro);  /* soft */
+    --chart-5: var(--color-texto-medio); /* neutral */
+
+    /* Funnel stage tints */
+    --stage-novo: var(--color-bege);
+    --stage-qual: var(--color-tangerina);
+    --stage-agendada: var(--color-alaranjado);
+    --stage-compareceu: #C97448;          /* alaranjado deep — derived */
+    --stage-convertido: var(--color-verde);
+    --stage-perdido: var(--color-cinza);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); overflow: hidden; }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ===== Sidebar ============================================ */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 24px 16px 16px;
+    gap: var(--space-md);
+  }
+
+  .sb-logo {
+    padding: 8px 12px 4px;
+  }
+  .sb-logo img {
+    width: 132px;
+    height: auto;
+    display: block;
+  }
+
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    padding: 0 14px 8px;
+  }
+
+  .sb-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 400;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+    position: relative;
+  }
+  .sb-item svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5;
+    flex-shrink: 0;
+  }
+  .sb-item:hover {
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+  }
+  .sb-item.active {
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .sb-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: var(--color-alaranjado);
+    border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 10px;
+    border-top: 0.6px solid var(--color-cinza);
+    margin-top: 8px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 400;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .avatar.lg { width: 36px; height: 36px; }
+  .avatar.md { width: 32px; height: 32px; font-size: 13px; }
+  .avatar.sm { width: 28px; height: 28px; font-size: 11px; }
+
+  .sb-user-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+  .sb-user-name {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.2;
+  }
+  .sb-user-role {
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--color-texto-medio);
+    line-height: 1.3;
+    margin-top: 2px;
+  }
+  .sb-user-action {
+    background: transparent;
+    border: 0;
+    color: var(--color-texto-medio);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-user-action svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ===== Main ================================================ */
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* ===== Topbar ============================================== */
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+  }
+  .topbar-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+    letter-spacing: -0.005em;
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  /* Period selector */
+  .period {
+    display: inline-flex;
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    padding: 3px;
+  }
+  .period button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-texto-medio);
+    padding: 7px 16px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-soft);
+    letter-spacing: 0.2px;
+  }
+  .period button[aria-pressed="true"] {
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+  }
+  .period button:hover:not([aria-pressed="true"]) {
+    color: var(--color-texto-escuro);
+  }
+
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: color var(--duration-fast) var(--ease-soft),
+                background var(--duration-fast) var(--ease-soft);
+  }
+  .icon-btn svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .icon-btn:hover { color: var(--color-alaranjado); background: var(--color-bege-claro); }
+  .icon-btn .dot {
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-pill);
+    background: var(--color-alaranjado);
+    border: 1.5px solid var(--surface-raised);
+  }
+
+  /* ===== Canvas ============================================== */
+  .canvas {
+    overflow-y: auto;
+    padding: 32px;
+    background: var(--bg-1);
+  }
+  .canvas-inner {
+    display: grid;
+    gap: var(--space-std); /* 32px */
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  /* ============================================================
+     KPI ROW
+     ============================================================ */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md); /* 24px */
+  }
+  .kpi {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 156px;
+  }
+  .kpi-label {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--color-texto-medio);
+  }
+  .kpi-value {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 52px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+    letter-spacing: -0.01em;
+    font-feature-settings: "tnum";
+  }
+  .kpi-value .unit {
+    font-size: 28px;
+    color: var(--color-texto-medio);
+    margin-left: 2px;
+    letter-spacing: 0;
+  }
+  .kpi-foot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+  }
+  .kpi-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    font-feature-settings: "tnum";
+  }
+  .kpi-change svg { width: 14px; height: 14px; stroke-width: 1.8; }
+  .kpi-change.up   { color: var(--color-verde); }
+  .kpi-change.down { color: var(--color-ui-error); }
+  .kpi-change.flat { color: var(--color-texto-medio); }
+  .kpi-prev {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--color-texto-medio);
+  }
+
+  /* ============================================================
+     CARDS — generic
+     ============================================================ */
+  .card-block {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .card-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--color-texto-escuro);
+    line-height: 1.2;
+    margin: 0;
+  }
+  .card-sub {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--color-texto-medio);
+    margin-top: 4px;
+  }
+  .card-action {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-texto-medio);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px solid transparent;
+    padding-bottom: 1px;
+    transition: color var(--duration-fast) var(--ease-soft),
+                border-color var(--duration-fast) var(--ease-soft);
+  }
+  .card-action:hover {
+    color: var(--color-alaranjado);
+    border-bottom-color: var(--color-alaranjado);
+  }
+
+  /* ============================================================
+     FUNNEL
+     ============================================================ */
+  .funnel {
+    display: grid;
+    gap: 14px;
+  }
+  .funnel-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 64px;
+    align-items: center;
+    gap: 16px;
+  }
+  .funnel-stage {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+  }
+  .funnel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    flex-shrink: 0;
+  }
+  .funnel-track {
+    height: 26px;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+  }
+  .funnel-bar {
+    height: 100%;
+    border-radius: var(--radius-md);
+    transition: width var(--duration-slow) var(--ease-out);
+  }
+  .funnel-count {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--color-texto-escuro);
+    text-align: right;
+    font-feature-settings: "tnum";
+    line-height: 1;
+  }
+  .funnel-pct {
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--color-texto-medio);
+    text-align: right;
+    margin-top: 4px;
+    letter-spacing: 0.2px;
+    font-feature-settings: "tnum";
+  }
+
+  /* ============================================================
+     GRID ROW 3 — origem / agenda / atenção
+     ============================================================ */
+  .row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.25fr;
+    gap: var(--space-md);
+  }
+
+  /* Origem */
+  .origin-list {
+    display: grid;
+    gap: 18px;
+  }
+  .origin-row {
+    display: grid;
+    grid-template-columns: 96px 1fr 56px;
+    align-items: center;
+    gap: 14px;
+  }
+  .origin-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .origin-label svg { width: 14px; height: 14px; stroke-width: 1.6; flex-shrink: 0; }
+  .origin-track {
+    height: 8px;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+  }
+  .origin-bar {
+    height: 100%;
+    border-radius: var(--radius-pill);
+  }
+  .origin-val {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+    text-align: right;
+    font-feature-settings: "tnum";
+  }
+  .origin-val .muted {
+    color: var(--color-texto-medio);
+    font-weight: 400;
+    margin-left: 4px;
+    font-size: 11px;
+  }
+  .origin-total {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 0.6px dashed var(--color-cinza);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .origin-total-label {
+    font-family: var(--font-body);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.8px;
+    color: var(--color-texto-medio);
+    font-weight: 500;
+  }
+  .origin-total-val {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+  }
+
+  /* Agenda */
+  .agenda-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .agenda-item {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 0;
+    border-top: 0.6px solid var(--color-cinza);
+  }
+  .agenda-item:first-child { border-top: 0; padding-top: 4px; }
+  .agenda-time {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+    line-height: 1.2;
+  }
+  .agenda-meta {
+    min-width: 0;
+  }
+  .agenda-name {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .agenda-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--color-texto-medio);
+    margin-top: 4px;
+  }
+  .agenda-type::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege);
+  }
+  .agenda-type[data-kind="gestante"]::before { background: var(--color-tangerina); }
+  .agenda-type[data-kind="pelvica"]::before  { background: var(--color-verde); }
+  .agenda-type[data-kind="avaliacao"]::before { background: var(--color-alaranjado); }
+
+  .agenda-status {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    color: var(--color-texto-medio);
+    white-space: nowrap;
+  }
+  .agenda-status.confirmed {
+    color: #6F8A55;
+    border-color: rgba(172, 192, 149, 0.5);
+    background: rgba(172, 192, 149, 0.12);
+  }
+  .agenda-status.pending {
+    color: #B07532;
+    border-color: rgba(210, 176, 110, 0.5);
+    background: rgba(234, 215, 172, 0.35);
+  }
+
+  /* Empty state for agenda (kept for state docs, hidden by default) */
+  .agenda-empty {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--color-texto-medio);
+    gap: 8px;
+  }
+  .agenda-empty svg { width: 28px; height: 28px; stroke-width: 1.4; color: var(--color-bege); }
+  .agenda-empty h4 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+    margin: 4px 0 0;
+  }
+  .agenda-empty p {
+    font-family: var(--font-body);
+    font-size: 13px;
+    max-width: 220px;
+    line-height: 1.5;
+  }
+
+  /* Precisam de atenção */
+  .attention-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .attention-item {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 8px;
+    margin: 0 -8px;
+    border-top: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: background var(--duration-fast) var(--ease-soft);
+  }
+  .attention-item:first-child { border-top: 0; }
+  .attention-item:hover {
+    background: var(--color-bege-claro);
+  }
+  .attention-item .avatar {
+    background: var(--surface-sunken);
+    color: var(--color-texto-medio);
+    font-size: 12px;
+  }
+  .att-meta { min-width: 0; }
+  .att-name {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .att-reason {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--color-texto-medio);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.3;
+  }
+  .att-reason svg { width: 12px; height: 12px; stroke-width: 1.6; color: var(--color-bege); }
+  .att-tag {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    padding: 3px 8px;
+    border-radius: var(--radius-xs);
+    background: var(--surface-sunken);
+    color: var(--color-texto-medio);
+  }
+  .att-tag.urgent {
+    background: rgba(192, 80, 74, 0.10);
+    color: var(--color-ui-error);
+  }
+  .att-arrow {
+    color: var(--color-texto-medio);
+    display: flex;
+    align-items: center;
+    transition: color var(--duration-fast) var(--ease-soft),
+                transform var(--duration-fast) var(--ease-soft);
+  }
+  .att-arrow svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .attention-item:hover .att-arrow {
+    color: var(--color-alaranjado);
+    transform: translateX(2px);
+  }
+
+  /* ============================================================
+     FUNNEL HEADER LEGEND
+     ============================================================ */
+  .funnel-summary {
+    display: flex;
+    gap: 24px;
+    align-items: baseline;
+  }
+  .funnel-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .funnel-summary-val {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+    line-height: 1;
+  }
+  .funnel-summary-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--color-texto-medio);
+    font-weight: 500;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="02 Dashboard">
+
+  <!-- =====================================================
+       SIDEBAR
+       ===================================================== -->
+  <aside class="sidebar" aria-label="Navegação">
+
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <nav>
+      <div class="sb-section-label">Operação</div>
+      <div class="sb-nav">
+
+        <a href="#" class="sb-item active" aria-current="page">
+          <!-- lucide: layout-dashboard -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1"/>
+            <rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/>
+            <rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+          Dashboard
+        </a>
+
+        <a href="#" class="sb-item">
+          <!-- lucide: inbox -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+          </svg>
+          Inbox
+          <span class="sb-badge">7</span>
+        </a>
+
+        <a href="#" class="sb-item">
+          <!-- lucide: filter (funil) -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Funil
+        </a>
+
+        <a href="#" class="sb-item">
+          <!-- lucide: calendar -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Agenda
+        </a>
+
+        <a href="#" class="sb-item">
+          <!-- lucide: settings -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+
+      </div>
+    </nav>
+
+    <div class="sb-user">
+      <div class="avatar lg">LF</div>
+      <div class="sb-user-meta">
+        <span class="sb-user-name">Larissa Ferraz</span>
+        <span class="sb-user-role">Recepção · Corporis</span>
+      </div>
+      <button class="sb-user-action" aria-label="Mais opções">
+        <!-- lucide: more-horizontal -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"/>
+          <circle cx="19" cy="12" r="1"/>
+          <circle cx="5" cy="12" r="1"/>
+        </svg>
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- =====================================================
+       MAIN
+       ===================================================== -->
+  <div class="main">
+
+    <!-- ===== Topbar ======================================== -->
+    <header class="topbar">
+      <h1 class="topbar-title">Dashboard</h1>
+
+      <div class="topbar-right">
+        <div class="period" role="group" aria-label="Período">
+          <button type="button" data-period="hoje" aria-pressed="false">Hoje</button>
+          <button type="button" data-period="7d"   aria-pressed="true">7 dias</button>
+          <button type="button" data-period="30d"  aria-pressed="false">30 dias</button>
+        </div>
+
+        <button class="icon-btn" aria-label="Notificações">
+          <!-- lucide: bell -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="dot" aria-hidden="true"></span>
+        </button>
+
+        <div class="avatar md" title="Larissa Ferraz">LF</div>
+      </div>
+    </header>
+
+    <!-- ===== Canvas ======================================== -->
+    <main class="canvas">
+      <div class="canvas-inner">
+
+        <!-- ===== Row 1 — KPIs ================================ -->
+        <section class="kpi-row" aria-label="Indicadores de captação">
+
+          <div class="kpi">
+            <div class="kpi-label">Leads novos</div>
+            <div class="kpi-value">32</div>
+            <div class="kpi-foot">
+              <span class="kpi-change up">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 14 12 8 18 14"/>
+                </svg>
+                +14%
+              </span>
+              <span class="kpi-prev">vs. 7 dias anteriores</span>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi-label">Conversas em aberto</div>
+            <div class="kpi-value">11</div>
+            <div class="kpi-foot">
+              <span class="kpi-change down">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 10 12 16 18 10"/>
+                </svg>
+                −3
+              </span>
+              <span class="kpi-prev">vs. período anterior</span>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi-label">Avaliações agendadas</div>
+            <div class="kpi-value">14</div>
+            <div class="kpi-foot">
+              <span class="kpi-change up">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 14 12 8 18 14"/>
+                </svg>
+                +27%
+              </span>
+              <span class="kpi-prev">vs. período anterior</span>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi-label">Taxa de conversão</div>
+            <div class="kpi-value">25<span class="unit">%</span></div>
+            <div class="kpi-foot">
+              <span class="kpi-change down">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 10 12 16 18 10"/>
+                </svg>
+                −4 p.p.
+              </span>
+              <span class="kpi-prev">lead → convertida</span>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ===== Row 2 — FUNIL =============================== -->
+        <section class="card-block" aria-label="Funil de captação">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Funil de captação</h2>
+              <p class="card-sub">Últimos 7 dias · 32 leads iniciados, 8 convertidas</p>
+            </div>
+            <div class="funnel-summary">
+              <div class="funnel-summary-item">
+                <span class="funnel-summary-val">25%</span>
+                <span class="funnel-summary-label">Conv. global</span>
+              </div>
+              <div class="funnel-summary-item">
+                <span class="funnel-summary-val">2,4d</span>
+                <span class="funnel-summary-label">Tempo médio</span>
+              </div>
+              <a href="#" class="card-action">
+                Ver detalhes
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <div class="funnel" id="funnel"></div>
+        </section>
+
+        <!-- ===== Row 3 — ORIGEM / AGENDA / ATENÇÃO =========== -->
+        <section class="row-3">
+
+          <!-- Origem dos leads -->
+          <div class="card-block" aria-label="Origem dos leads">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Origem dos leads</h2>
+                <p class="card-sub">De onde a aluna chegou</p>
+              </div>
+            </div>
+
+            <div class="origin-list" id="originList"></div>
+
+            <div class="origin-total">
+              <span class="origin-total-label">Total no período</span>
+              <span class="origin-total-val">32</span>
+            </div>
+          </div>
+
+          <!-- Agenda de hoje -->
+          <div class="card-block" aria-label="Agenda de hoje">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Agenda de hoje</h2>
+                <p class="card-sub">Terça, 26 de maio · 5 avaliações</p>
+              </div>
+              <a href="#" class="card-action">
+                Abrir agenda
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </a>
+            </div>
+
+            <div class="agenda-list">
+
+              <div class="agenda-item">
+                <span class="agenda-time">08:30</span>
+                <div class="agenda-meta">
+                  <div class="agenda-name">Mariana Schreiner</div>
+                  <span class="agenda-type" data-kind="pilates">Pilates terapêutico</span>
+                </div>
+                <span class="agenda-status confirmed">Confirmada</span>
+              </div>
+
+              <div class="agenda-item">
+                <span class="agenda-time">10:00</span>
+                <div class="agenda-meta">
+                  <div class="agenda-name">Júlia Pellanda</div>
+                  <span class="agenda-type" data-kind="gestante">Pilates gestante</span>
+                </div>
+                <span class="agenda-status confirmed">Confirmada</span>
+              </div>
+
+              <div class="agenda-item">
+                <span class="agenda-time">14:00</span>
+                <div class="agenda-meta">
+                  <div class="agenda-name">Camila Ribeiro</div>
+                  <span class="agenda-type" data-kind="pelvica">Fisioterapia pélvica</span>
+                </div>
+                <span class="agenda-status pending">Aguardando</span>
+              </div>
+
+              <div class="agenda-item">
+                <span class="agenda-time">16:30</span>
+                <div class="agenda-meta">
+                  <div class="agenda-name">Bianca Marchetti</div>
+                  <span class="agenda-type" data-kind="pilates">Pilates terapêutico</span>
+                </div>
+                <span class="agenda-status confirmed">Confirmada</span>
+              </div>
+
+              <div class="agenda-item">
+                <span class="agenda-time">17:30</span>
+                <div class="agenda-meta">
+                  <div class="agenda-name">Helena Tartas</div>
+                  <span class="agenda-type" data-kind="avaliacao">Avaliação inicial</span>
+                </div>
+                <span class="agenda-status confirmed">Confirmada</span>
+              </div>
+
+            </div>
+
+            <!-- Empty state (oculto por padrão; mantido como referência de design) -->
+            <div class="agenda-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8"  y1="2" x2="8"  y2="6"/>
+                <line x1="3"  y1="10" x2="21" y2="10"/>
+              </svg>
+              <h4>Dia livre por aqui.</h4>
+              <p>Nenhuma avaliação marcada para hoje — bom momento para retomar conversas pendentes.</p>
+            </div>
+          </div>
+
+          <!-- Precisam de atenção -->
+          <div class="card-block" aria-label="Precisam de atenção">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Precisam de atenção</h2>
+                <p class="card-sub">Leads parados ou conversas sem resposta</p>
+              </div>
+              <a href="#" class="card-action">
+                Ver todas
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </a>
+            </div>
+
+            <div class="attention-list">
+
+              <a href="#" class="attention-item">
+                <div class="avatar md">FS</div>
+                <div class="att-meta">
+                  <div class="att-name">
+                    Fernanda Silva
+                    <span class="att-tag urgent">WhatsApp</span>
+                  </div>
+                  <div class="att-reason">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Aguardando resposta humana há 18h
+                  </div>
+                </div>
+                <div class="att-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </div>
+              </a>
+
+              <a href="#" class="attention-item">
+                <div class="avatar md">RO</div>
+                <div class="att-meta">
+                  <div class="att-name">
+                    Renata Oliveira
+                    <span class="att-tag">Em qualificação</span>
+                  </div>
+                  <div class="att-reason">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Sem movimentação há 4 dias
+                  </div>
+                </div>
+                <div class="att-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </div>
+              </a>
+
+              <a href="#" class="attention-item">
+                <div class="avatar md">PL</div>
+                <div class="att-meta">
+                  <div class="att-name">
+                    Patrícia Lima
+                    <span class="att-tag urgent">No-show</span>
+                  </div>
+                  <div class="att-reason">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Faltou na avaliação · há 2 dias
+                  </div>
+                </div>
+                <div class="att-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </div>
+              </a>
+
+              <a href="#" class="attention-item">
+                <div class="avatar md">SC</div>
+                <div class="att-meta">
+                  <div class="att-name">
+                    Sabrina Costa
+                    <span class="att-tag">Instagram</span>
+                  </div>
+                  <div class="att-reason">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Conversa em aberto há 3 dias
+                  </div>
+                </div>
+                <div class="att-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </div>
+              </a>
+
+            </div>
+          </div>
+
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // DATA
+  // ============================================================
+  const funnelData = [
+    { key: 'novo',        label: 'Novo',                count: 32, color: 'var(--stage-novo)' },
+    { key: 'qual',        label: 'Em qualificação',     count: 24, color: 'var(--stage-qual)' },
+    { key: 'agendada',    label: 'Avaliação agendada',  count: 14, color: 'var(--stage-agendada)' },
+    { key: 'compareceu',  label: 'Compareceu',          count: 11, color: 'var(--stage-compareceu)' },
+    { key: 'convertido',  label: 'Convertido',          count:  8, color: 'var(--stage-convertido)' },
+    { key: 'perdido',     label: 'Perdido',             count:  6, color: 'var(--stage-perdido)' }
+  ];
+
+  const originData = [
+    { key: 'wpp',   label: 'WhatsApp',   count: 13, color: 'var(--chart-1)',
+      icon: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>' },
+    { key: 'ig',    label: 'Instagram',  count: 11, color: 'var(--chart-2)',
+      icon: '<rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>' },
+    { key: 'ind',   label: 'Indicação',  count: 5,  color: 'var(--chart-3)',
+      icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
+    { key: 'goog',  label: 'Google',     count: 3,  color: 'var(--chart-5)',
+      icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' }
+  ];
+
+  // ============================================================
+  // RENDER — Funnel
+  // ============================================================
+  const funnelTop = funnelData[0].count;
+  const fEl = document.getElementById('funnel');
+  fEl.innerHTML = funnelData.map(s => {
+    const w = Math.max(6, (s.count / funnelTop) * 100);
+    const pct = Math.round((s.count / funnelTop) * 100);
+    return `
+      <div class="funnel-row">
+        <div class="funnel-stage">
+          <span class="funnel-dot" style="background:${s.color}"></span>
+          ${s.label}
+        </div>
+        <div class="funnel-track">
+          <div class="funnel-bar" style="width:${w}%; background:${s.color}"></div>
+        </div>
+        <div>
+          <div class="funnel-count">${s.count}</div>
+          <div class="funnel-pct">${pct}%</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // ============================================================
+  // RENDER — Origem
+  // ============================================================
+  const origTop = Math.max(...originData.map(o => o.count));
+  const origTotal = originData.reduce((s, o) => s + o.count, 0);
+  document.getElementById('originList').innerHTML = originData.map(o => {
+    const w = (o.count / origTop) * 100;
+    const pct = Math.round((o.count / origTotal) * 100);
+    return `
+      <div class="origin-row">
+        <div class="origin-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${o.icon}</svg>
+          ${o.label}
+        </div>
+        <div class="origin-track">
+          <div class="origin-bar" style="width:${w}%; background:${o.color}"></div>
+        </div>
+        <div class="origin-val">${o.count}<span class="muted">${pct}%</span></div>
+      </div>`;
+  }).join('');
+
+  // ============================================================
+  // INTERACTIONS
+  // ============================================================
+  // Period selector
+  const period = document.querySelector('.period');
+  period.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-period]');
+    if (!btn) return;
+    period.querySelectorAll('button').forEach(b =>
+      b.setAttribute('aria-pressed', String(b === btn))
+    );
+  });
+
+  // Sidebar nav (visual only)
+  document.querySelectorAll('.sb-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.sb-item').forEach(s => s.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

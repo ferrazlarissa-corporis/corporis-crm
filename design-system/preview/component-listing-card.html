@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 28px 32px; gap: 14px; }
+  .listing { background: #FFFFFF; border: 1px solid var(--color-cinza); border-radius: 12px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 16px rgba(58,53,48,0.04); }
+  .top { display:flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .label { font-family: var(--font-body); font-size: 10px; font-weight: 500; letter-spacing: 1.8px; text-transform: uppercase; color: var(--color-bege); }
+  .title { font-family: var(--font-display); font-size: 26px; color: var(--color-texto-escuro); line-height: 1.1; }
+  .meta-line { display:flex; gap: 16px; align-items: center; padding-top: 12px; border-top: 1px dashed rgba(58,53,48,0.1); }
+  .meta-line span { font-family: var(--font-body); font-size: 12px; color: var(--color-texto-medio); }
+  .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--color-bege); display: inline-block; }
+  .price { font-family: var(--font-display); font-size: 22px; color: var(--color-alaranjado); }
+  h3 { font-size: 18px; font-family: var(--font-display); color: var(--color-texto-escuro); }
+</style>
+</head><body>
+<div class="card">
+  <h3>Listing card</h3>
+  <div class="listing">
+    <div class="top">
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <span class="label">Aula experimental · Quarta · 07:00</span>
+        <span class="title">Pilates terapêutico</span>
+      </div>
+      <span class="price">Gratuita</span>
+    </div>
+    <p class="type-body-sm" style="color:var(--color-texto-medio); margin:0">Atendimento individual de 50 minutos com fisioterapeuta especializada. Avaliação postural e protocolo desenhado para o seu corpo.</p>
+    <div class="meta-line">
+      <span><span class="dot"></span>&nbsp; Larissa Ferraz</span>
+      <span>·</span>
+      <span>Sala 903 · Centro Médico Xanxerê</span>
+    </div>
+  </div>
+</div>
+</body></html>

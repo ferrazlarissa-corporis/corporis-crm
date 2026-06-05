@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 28px 32px; gap: 18px; }
+  .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .item { display:flex; flex-direction: column; align-items: center; gap: 10px; }
+  .swatch { width: 88px; height: 88px; background: var(--color-bege-claro); border: 1px solid rgba(58,53,48,0.1); }
+  .r-xs { border-radius: 4px; }
+  .r-sm { border-radius: 6px; }
+  .r-md { border-radius: 8px; }
+  .r-lg { border-radius: 12px; }
+  .r-pill { border-radius: 999px; }
+  .tok { font-family: var(--font-body); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--color-bege); }
+  .val { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); }
+  h3 { font-size: 18px; font-family: var(--font-display); color: var(--color-texto-escuro); }
+</style>
+</head><body>
+<div class="card">
+  <h3>Radius — soft, sem cantos vivos</h3>
+  <div class="row">
+    <div class="item"><div class="swatch r-xs"></div><span class="tok">xs</span><span class="val">4 · badges</span></div>
+    <div class="item"><div class="swatch r-sm"></div><span class="tok">sm</span><span class="val">6 · cards</span></div>
+    <div class="item"><div class="swatch r-md"></div><span class="tok">md</span><span class="val">8 · buttons</span></div>
+    <div class="item"><div class="swatch r-lg"></div><span class="tok">lg</span><span class="val">12 · panels</span></div>
+    <div class="item"><div class="swatch r-pill"></div><span class="tok">pill</span><span class="val">999 · tags</span></div>
+  </div>
+</div>
+</body></html>

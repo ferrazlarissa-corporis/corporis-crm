@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 32px 36px; gap: 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .btn { font-family: var(--font-body); font-weight: 500; font-size: 14px; letter-spacing: 0.2px; border-radius: 8px; padding: 12px 22px; cursor: pointer; transition: all 200ms cubic-bezier(0.4,0,0.2,1); border: none; }
+  .primary { background: var(--color-alaranjado); color: #FFFFFF; }
+  .secondary { background: transparent; color: var(--color-alaranjado); border: 1.2px solid var(--color-alaranjado); }
+  .disabled { background: var(--color-cinza); color: var(--color-texto-medio); cursor: not-allowed; }
+  .ghost { background: transparent; color: var(--color-texto-escuro); padding: 12px 14px; }
+  .ghost:hover { color: var(--color-alaranjado); }
+  h3 { font-size: 18px; font-family: var(--font-display); color: var(--color-texto-escuro); }
+  .label { font-family: var(--font-body); font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--color-texto-medio); margin-bottom: 6px; }
+</style>
+</head><body>
+<div class="card">
+  <h3>Botões</h3>
+  <div class="row">
+    <div><div class="label">primary</div><button class="btn primary">Agendar avaliação</button></div>
+    <div><div class="label">secondary</div><button class="btn secondary">Saiba mais</button></div>
+    <div><div class="label">disabled</div><button class="btn disabled" disabled>Indisponível</button></div>
+  </div>
+  <p class="type-body-sm" style="margin-top:4px">Primary só para ação principal. Secondary para navegação dentro de página. Radius 8pt em todos.</p>
+</div>
+</body></html>

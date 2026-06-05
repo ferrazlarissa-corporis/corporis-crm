@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 28px 32px; gap: 4px; }
+  .line { display: grid; grid-template-columns: 80px 1fr 96px; gap: 18px; align-items: baseline; padding: 10px 0; border-bottom: 1px dashed rgba(58,53,48,0.08); }
+  .line:last-child { border-bottom: none; }
+  .tok { font-family: var(--font-body); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--color-bege); }
+  .sample { font-family: var(--font-display); color: var(--color-texto-escuro); line-height: 1.05; }
+  .meta-r { font-family: var(--font-body); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--color-texto-medio); text-align: right; }
+  .xl  { font-size: 56px; }
+  .lg  { font-size: 40px; }
+  .md  { font-size: 28px; }
+  h3 { font-size: 18px; font-family: var(--font-display); color: var(--color-texto-escuro); margin-bottom: 8px; }
+</style>
+</head><body>
+<div class="card">
+  <h3>Display scale — Olicy Regular</h3>
+  <div class="line"><span class="tok">display-xl</span><span class="sample xl">Movimento</span><span class="meta-r">72 / 1.05</span></div>
+  <div class="line"><span class="tok">display-lg</span><span class="sample lg">Movimento</span><span class="meta-r">48 / 1.1</span></div>
+  <div class="line"><span class="tok">display-md</span><span class="sample md">Movimento</span><span class="meta-r">32 / 1.2</span></div>
+</div>
+</body></html>

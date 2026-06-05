@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 28px 32px; gap: 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .lab { font-family: var(--font-body); font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--color-texto-medio); }
+  .input, .select { background: #FFFFFF; border: 1px solid var(--color-cinza); border-radius: 8px; padding: 12px 14px; font-family: var(--font-body); font-size: 14px; color: var(--color-texto-escuro); }
+  .input:focus, .select:focus { outline: none; border-color: var(--color-alaranjado); box-shadow: 0 0 0 3px rgba(240,131,83,0.15); }
+  .placeholder { color: var(--color-texto-medio); }
+  .error { border-color: #C0504A; }
+  .err-msg { font-family: var(--font-body); font-size: 12px; color: #C0504A; }
+  h3 { font-size: 18px; font-family: var(--font-display); color: var(--color-texto-escuro); }
+</style>
+</head><body>
+<div class="card">
+  <h3>Form inputs</h3>
+  <div class="grid">
+    <div class="field">
+      <label class="lab">Nome</label>
+      <input class="input" value="Larissa Ferraz"/>
+    </div>
+    <div class="field">
+      <label class="lab">WhatsApp</label>
+      <input class="input placeholder" value="(49) 9 9999-9999"/>
+    </div>
+    <div class="field">
+      <label class="lab">Serviço</label>
+      <input class="input" value="Pilates terapêutico"/>
+    </div>
+    <div class="field">
+      <label class="lab">E-mail</label>
+      <input class="input error" value="invalid"/>
+      <span class="err-msg">Endereço de e-mail incompleto.</span>
+    </div>
+  </div>
+</div>
+</body></html>

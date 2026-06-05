@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 28px 32px; gap: 18px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sw { border-radius: var(--radius-md); padding: 16px; min-height: 112px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(58,53,48,0.06); }
+  .sw .name { font-family: var(--font-display); font-size: 22px; }
+  .sw .hex  { font-family: var(--font-body); font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; opacity: 0.85; }
+  .sw .role { font-family: var(--font-body); font-size: 12px; opacity: 0.7; }
+  .alaranjado { background: #F08353; color: #FAFAF8; }
+  .tangerina  { background: #F6A958; color: #2A1F1A; }
+  .header { display:flex; justify-content: space-between; align-items: baseline; }
+  h3 { font-size: 22px; }
+</style>
+</head><body>
+<div class="card">
+  <div class="header">
+    <h3>Alaranjado — cor principal</h3>
+    <span class="meta">Primary</span>
+  </div>
+  <div class="grid">
+    <div class="sw alaranjado">
+      <div><div class="name">Alaranjado</div><div class="role">movimento · alegria</div></div>
+      <div class="hex">#F08353</div>
+    </div>
+    <div class="sw tangerina">
+      <div><div class="name">Tangerina</div><div class="role">movimento · calor</div></div>
+      <div class="hex">#F6A958</div>
+    </div>
+  </div>
+  <p class="type-body-sm">Wordmark, CTAs, destaques. Tangerina é a variação de hover — nunca compete com Alaranjado na mesma composição.</p>
+</div>
+</body></html>

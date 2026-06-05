@@ -1,0 +1,222 @@
+@import "../../design-system/colors_and_type.css" layer(base);
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--bg-1);
+  --color-foreground: var(--fg-1);
+  --color-card: var(--bg-card);
+  --color-muted: var(--bg-2);
+  --color-border: var(--border-1);
+  --color-primary: var(--color-alaranjado);
+  --color-primary-hover: var(--color-tangerina);
+  --color-accent: var(--color-bege);
+  --color-accent-soft: var(--color-bege-claro);
+  --color-success: var(--color-ui-success);
+  --color-error: var(--color-ui-error);
+  --color-brand-espresso: var(--color-espresso);
+  --color-text-primary: var(--fg-1);
+  --color-text-secondary: var(--fg-2);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.15);
+}
+
+.crm-label {
+  font-family: var(--font-body);
+  font-size: var(--type-ui-label-size);
+  font-weight: var(--type-ui-label-weight);
+  letter-spacing: var(--type-ui-label-track);
+  line-height: var(--type-ui-label-leading);
+  text-transform: uppercase;
+}
+
+.crm-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.crm-scrollbar {
+  scrollbar-color: var(--color-cinza) transparent;
+  scrollbar-width: thin;
+}
+
+/* Free slot hover (agenda) */
+.crm-free-slot {
+  position: absolute;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-soft);
+}
+.crm-free-slot:hover {
+  background: var(--color-bege-claro);
+}
+.crm-free-slot:hover::after {
+  content: '+ adicionar';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-alaranjado);
+  letter-spacing: 0.3px;
+}
+
+/* Calendar event block (agenda) */
+.crm-evt {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  padding: 8px 10px 6px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  overflow: hidden;
+  font-family: var(--font-body);
+  transition: transform var(--duration-fast) var(--ease-soft),
+              box-shadow var(--duration-fast) var(--ease-soft);
+}
+.crm-evt:hover {
+  transform: translateX(1px);
+  box-shadow: 0 4px 14px rgba(58, 53, 48, 0.06);
+}
+
+/* Week nav buttons (agenda) */
+.crm-wn-btn {
+  width: 30px;
+  height: 30px;
+  appearance: none;
+  border: 0.6px solid var(--color-cinza);
+  background: #fff;
+  border-radius: var(--radius-pill);
+  color: var(--color-texto-medio);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast) var(--ease-soft);
+  flex-shrink: 0;
+}
+.crm-wn-btn:hover {
+  background: var(--color-bege-claro);
+  color: var(--color-alaranjado);
+  border-color: var(--color-tangerina);
+}
+
+/* Config page — textarea focus */
+.crm-config-ta {
+  width: 100%;
+  background: var(--bg-1);
+  border: 0.6px solid var(--color-cinza);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--color-texto-escuro);
+  resize: vertical;
+  transition: border var(--duration-fast) var(--ease-soft),
+              box-shadow var(--duration-fast) var(--ease-soft);
+}
+.crm-config-ta:focus {
+  outline: none;
+  border-color: var(--color-alaranjado);
+  box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.10);
+}
+
+.crm-faq-input,
+.crm-faq-ans {
+  width: 100%;
+  background: var(--bg-1);
+  border: 0.6px solid var(--color-cinza);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-texto-escuro);
+}
+.crm-faq-input:focus,
+.crm-faq-ans:focus {
+  outline: none;
+  border-color: var(--color-alaranjado);
+  box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.08);
+}
+.crm-faq-ans {
+  min-height: 78px;
+  resize: vertical;
+}
+
+.crm-faq-item:hover {
+  border-color: var(--color-tangerina);
+}
+
+.crm-time-pill {
+  background: #fff;
+  border: 0.6px solid var(--color-cinza);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--color-texto-escuro);
+  font-feature-settings: "tnum";
+  min-width: 60px;
+  text-align: center;
+  transition: border var(--duration-fast) var(--ease-soft);
+}
+.crm-time-pill:hover {
+  border-color: var(--color-tangerina);
+  cursor: text;
+}
+
+/* Timeline vertical line */
+.crm-tl-list {
+  position: relative;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+}
+.crm-tl-list::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    var(--color-cinza) 6px,
+    var(--color-cinza) calc(100% - 6px),
+    transparent 100%
+  );
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 28px 32px; gap: 18px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sw { border-radius: var(--radius-md); padding: 16px; min-height: 112px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(58,53,48,0.06); }
+  .sw .name { font-family: var(--font-display); font-size: 22px; }
+  .sw .hex  { font-family: var(--font-body); font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; opacity: 0.85; }
+  .sw .role { font-family: var(--font-body); font-size: 12px; opacity: 0.7; }
+  .bege { background: #D2B06E; color: #2A1F1A; }
+  .bclaro { background: #EAD7AC; color: #2A1F1A; }
+  .header { display:flex; justify-content: space-between; align-items: baseline; }
+  h3 { font-size: 22px; }
+</style>
+</head><body>
+<div class="card">
+  <div class="header">
+    <h3>Dourados — accent premium</h3>
+    <span class="meta">Accent</span>
+  </div>
+  <div class="grid">
+    <div class="sw bege">
+      <div><div class="name">Bege</div><div class="role">flexibilidade · calma</div></div>
+      <div class="hex">#D2B06E</div>
+    </div>
+    <div class="sw bclaro">
+      <div><div class="name">Bege Claro</div><div class="role">leveza · acolhimento</div></div>
+      <div class="hex">#EAD7AC</div>
+    </div>
+  </div>
+  <p class="type-body-sm">Bege em títulos editoriais e setas. Bege Claro é apenas background e tint — nunca aplique como cor de texto.</p>
+</div>
+</body></html>

@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis CRM · Agenda</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Agenda — tokens locais
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --side-panel-w: 304px;
+
+    --hour-row-h: 60px;        /* 1h = 60px na grade */
+    --grid-start-h: 7;         /* 07:00 */
+    --grid-end-h:   19;        /* 19:00 */
+    --hour-col-w: 56px;        /* coluna de horários */
+
+    --surface-raised: #FFFFFF;
+    --surface-sunken: var(--bg-2);
+
+    /* Tipos de avaliação — paleta da marca */
+    --type-pilates:    var(--color-alaranjado);
+    --type-pilates-bg: rgba(240, 131, 83, 0.14);
+    --type-pilates-fg: #8C4A1A;
+
+    --type-gestante:    var(--color-verde);
+    --type-gestante-bg: rgba(172, 192, 149, 0.30);
+    --type-gestante-fg: #4F6A3A;
+
+    --type-pelvica:    var(--color-bege);
+    --type-pelvica-bg: rgba(210, 176, 110, 0.28);
+    --type-pelvica-fg: #6E5417;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); overflow: hidden; }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 24px 16px 16px;
+    gap: var(--space-md);
+  }
+  .sb-logo { padding: 8px 12px 4px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px; letter-spacing: 2.2px;
+    text-transform: uppercase; color: var(--color-bege);
+    font-weight: 500; padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 14px; font-weight: 400;
+    text-decoration: none; cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+    position: relative;
+  }
+  .sb-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active { background: var(--color-bege-claro); color: var(--color-texto-escuro); font-weight: 500; }
+  .sb-item.active::before {
+    content: ""; position: absolute; left: 0; top: 12px; bottom: 12px;
+    width: 2px; background: var(--color-alaranjado); border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado); color: #fff;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.4px;
+    padding: 2px 7px; border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+  .sb-user {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 10px;
+    border-top: 0.6px solid var(--color-cinza); margin-top: 8px;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 14px; font-weight: 400;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
+  .avatar.md { width: 32px; height: 32px; font-size: 13px; }
+  .avatar.tone-1 { background: var(--color-bege-claro); color: #6B5526; }
+  .avatar.tone-2 { background: rgba(240, 131, 83, 0.18); color: #B85A2E; }
+  .avatar.tone-3 { background: rgba(172, 192, 149, 0.30); color: #5F7948; }
+  .avatar.tone-4 { background: rgba(210, 176, 110, 0.30); color: #7A5E1F; }
+  .avatar.tone-5 { background: rgba(122, 110, 104, 0.18); color: var(--color-texto-medio); }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); line-height: 1.2; }
+  .sb-user-role { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent; border: 0;
+    color: var(--color-texto-medio); padding: 6px;
+    border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ============================================================
+     MAIN
+     ============================================================ */
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* ===== Topbar ===== */
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+  }
+  .topbar-left {
+    display: flex; align-items: baseline; gap: 22px;
+  }
+  .topbar-title {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 28px; line-height: 1;
+    color: var(--color-texto-escuro); letter-spacing: -0.005em;
+  }
+  .week-nav {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .wn-btn {
+    width: 30px; height: 30px;
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    border-radius: var(--radius-pill);
+    color: var(--color-texto-medio);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .wn-btn svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  .wn-btn:hover { background: var(--color-bege-claro); color: var(--color-alaranjado); border-color: var(--color-tangerina); }
+  .wn-label {
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    padding: 0 10px;
+    min-width: 200px; text-align: center;
+    line-height: 30px;
+    font-feature-settings: "tnum";
+  }
+  .wn-today {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    border-radius: var(--radius-pill);
+    padding: 6px 14px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    color: var(--color-texto-medio);
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .wn-today:hover { background: var(--color-bege-claro); color: var(--color-alaranjado); }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  /* segmented view toggle */
+  .view-toggle {
+    display: inline-flex;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    border-radius: var(--radius-pill);
+    padding: 3px;
+    gap: 0;
+  }
+  .vt-btn {
+    appearance: none; border: 0; background: transparent;
+    padding: 6px 14px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    color: var(--color-texto-medio);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .vt-btn.active {
+    background: var(--color-alaranjado);
+    color: #fff;
+  }
+  .vt-btn:not(.active):hover { color: var(--color-texto-escuro); }
+
+  .primary-btn {
+    appearance: none;
+    border: 0;
+    background: var(--color-alaranjado);
+    color: #fff;
+    border-radius: var(--radius-pill);
+    padding: 9px 18px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background var(--duration-fast) var(--ease-soft);
+  }
+  .primary-btn svg { width: 14px; height: 14px; stroke-width: 1.8; }
+  .primary-btn:hover { background: var(--color-tangerina); }
+
+  /* ============================================================
+     LAYOUT — agenda + painel lateral
+     ============================================================ */
+  .agenda-wrap {
+    display: grid;
+    grid-template-columns: 1fr var(--side-panel-w);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ===== AGENDA (semana) ===== */
+  .agenda {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-width: 0;
+    border-right: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+    overflow: hidden;
+  }
+
+  /* Header dos dias */
+  .days-header {
+    display: grid;
+    grid-template-columns: var(--hour-col-w) repeat(6, 1fr);
+    border-bottom: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+    position: relative;
+    z-index: 2;
+  }
+  .dh-spacer { } /* canto */
+  .dh-cell {
+    padding: 12px 14px 12px;
+    border-left: 0.6px solid var(--color-cinza);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .dh-dow {
+    font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-texto-medio);
+  }
+  .dh-cell.today .dh-dow { color: var(--color-alaranjado); }
+  .dh-date {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 20px; line-height: 1.1;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+    display: inline-flex; align-items: baseline; gap: 6px;
+  }
+  .dh-date .mon {
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+    font-weight: 400;
+    text-transform: lowercase;
+    letter-spacing: 0;
+  }
+  .dh-cell.today .dh-date {
+    color: var(--color-texto-escuro);
+  }
+  .dh-cell.today .dh-date::after {
+    content: "hoje";
+    font-family: var(--font-body); font-size: 9.5px; font-weight: 500;
+    letter-spacing: 1.4px; text-transform: uppercase;
+    color: #fff;
+    background: var(--color-alaranjado);
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+    line-height: 1.2;
+    margin-left: 2px;
+    align-self: center;
+  }
+  .dh-count {
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+  }
+
+  /* Grid de horários */
+  .grid-scroll {
+    overflow: auto;
+    position: relative;
+    background: var(--bg-1);
+  }
+  .grid-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+  .grid-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .grid-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: var(--hour-col-w) repeat(6, 1fr);
+    position: relative;
+    min-height: calc(var(--hour-row-h) * (var(--grid-end-h) - var(--grid-start-h)) + 8px);
+  }
+
+  /* Coluna de horas */
+  .hours-col {
+    grid-column: 1; grid-row: 1;
+    position: relative;
+  }
+  .hour-label {
+    position: absolute;
+    right: 8px;
+    transform: translateY(-50%);
+    font-family: var(--font-body); font-size: 10.5px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+    background: var(--bg-1);
+    padding: 0 4px;
+  }
+
+  /* Coluna de dia */
+  .day-col {
+    border-left: 0.6px solid var(--color-cinza);
+    position: relative;
+    height: calc(var(--hour-row-h) * (var(--grid-end-h) - var(--grid-start-h)));
+  }
+  .day-col.today {
+    background: rgba(240, 131, 83, 0.025);
+  }
+
+  /* linhas horárias (background) */
+  .day-col::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to bottom, var(--color-cinza) 0, var(--color-cinza) 0.6px, transparent 0.6px, transparent var(--hour-row-h));
+    background-size: 100% var(--hour-row-h);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  /* half-hour gridline, subtle */
+  .day-col::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to bottom, transparent 0, transparent calc(var(--hour-row-h)/2 - 0.3px), var(--color-cinza) calc(var(--hour-row-h)/2 - 0.3px), var(--color-cinza) calc(var(--hour-row-h)/2 + 0.3px), transparent calc(var(--hour-row-h)/2 + 0.3px));
+    background-size: 100% var(--hour-row-h);
+    opacity: 0.18;
+    pointer-events: none;
+  }
+
+  /* slot livre (hover sugere adicionar) */
+  .free-slot {
+    position: absolute;
+    left: 6px; right: 6px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft);
+  }
+  .free-slot:hover {
+    background: var(--color-bege-claro);
+  }
+  .free-slot:hover::after {
+    content: "+ adicionar";
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    color: var(--color-alaranjado);
+    letter-spacing: 0.3px;
+  }
+
+  /* ===== BLOCO DE AVALIAÇÃO ===== */
+  .evt {
+    position: absolute;
+    left: 6px; right: 6px;
+    padding: 8px 10px 6px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    overflow: hidden;
+    border-left: 3px solid var(--type-color, var(--color-bege));
+    background: var(--type-bg, var(--bg-2));
+    color: var(--type-fg, var(--color-texto-escuro));
+    transition: transform var(--duration-fast) var(--ease-soft),
+                box-shadow var(--duration-fast) var(--ease-soft);
+    font-family: var(--font-body);
+  }
+  .evt:hover {
+    transform: translateX(1px);
+    box-shadow: 0 4px 14px rgba(58, 53, 48, 0.06);
+  }
+  .evt-time {
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.2;
+    font-feature-settings: "tnum";
+    letter-spacing: 0.2px;
+    opacity: 0.85;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .evt-time .check {
+    width: 11px; height: 11px;
+    border-radius: var(--radius-pill);
+    background: currentColor;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--type-bg, var(--bg-2));
+    flex-shrink: 0;
+  }
+  .evt-time .check svg { width: 7px; height: 7px; stroke-width: 3; color: var(--type-fg, var(--color-texto-escuro)); }
+  .evt-name {
+    font-size: 12.5px; font-weight: 500;
+    line-height: 1.25;
+    margin-top: 3px;
+    color: var(--color-texto-escuro);
+    text-wrap: pretty;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .evt-type {
+    font-size: 10px; font-weight: 400;
+    letter-spacing: 0.2px;
+    margin-top: 2px;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* status: faltou */
+  .evt.no-show {
+    background: transparent;
+    border: 1px dashed var(--color-cinza);
+    border-left: 3px dashed var(--color-cinza);
+    color: var(--color-texto-medio);
+  }
+  .evt.no-show .evt-name { color: var(--color-texto-medio); text-decoration: line-through; text-decoration-thickness: 0.6px; }
+  .evt.no-show .evt-type { opacity: 0.7; }
+  .evt.no-show .evt-time::after {
+    content: "faltou";
+    font-size: 9px; font-weight: 500;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--color-ui-error);
+    background: rgba(192, 80, 74, 0.10);
+    padding: 1px 6px;
+    border-radius: var(--radius-pill);
+    margin-left: 4px;
+  }
+
+  /* slot pequeno: empilhar quando bloco for de <50min e couber */
+  .evt.compact .evt-type { display: none; }
+
+  /* selecionado / focus do popover */
+  .evt.selected {
+    box-shadow: 0 0 0 2px var(--type-color), 0 8px 22px rgba(58, 53, 48, 0.10);
+    transform: translateX(1px);
+  }
+
+  /* ===== Linha do "agora" ===== */
+  .now-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1.2px;
+    background: var(--color-alaranjado);
+    z-index: 3;
+    pointer-events: none;
+  }
+  .now-line::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--hour-col-w) - 4px);
+    top: -4px;
+    width: 8px; height: 8px;
+    background: var(--color-alaranjado);
+    border-radius: var(--radius-pill);
+  }
+  .now-label {
+    position: absolute;
+    left: 6px;
+    top: -7px;
+    font-family: var(--font-body); font-size: 9.5px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--color-alaranjado);
+    padding: 1px 6px;
+    border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+    letter-spacing: 0.3px;
+  }
+
+  /* ============================================================
+     POPOVER — detalhe da avaliação
+     ============================================================ */
+  .popover {
+    position: absolute;
+    width: 308px;
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 18px 50px rgba(58, 53, 48, 0.14), 0 4px 12px rgba(58, 53, 48, 0.06);
+    z-index: 10;
+    overflow: hidden;
+    font-family: var(--font-body);
+  }
+  /* setinha apontando para o bloco (à esquerda) */
+  .popover::before {
+    content: "";
+    position: absolute;
+    left: -7px; top: 28px;
+    width: 12px; height: 12px;
+    background: var(--surface-raised);
+    border-left: 0.6px solid var(--color-cinza);
+    border-bottom: 0.6px solid var(--color-cinza);
+    transform: rotate(45deg);
+  }
+  .pop-head {
+    padding: 16px 18px 14px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+  }
+  .pop-type {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 1.4px; text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+    background: var(--type-pelvica-bg);
+    color: var(--type-pelvica-fg);
+    line-height: 1;
+  }
+  .pop-type .dot { width: 5px; height: 5px; border-radius: var(--radius-pill); background: var(--color-bege); }
+  .pop-name {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 22px; line-height: 1.15;
+    color: var(--color-texto-escuro);
+    margin: 10px 0 2px;
+    letter-spacing: -0.005em;
+  }
+  .pop-when {
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-medio);
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 6px;
+    font-feature-settings: "tnum";
+  }
+  .pop-when svg { width: 12px; height: 12px; stroke-width: 1.7; color: var(--color-bege); }
+  .pop-when .sep {
+    width: 2px; height: 2px; border-radius: var(--radius-pill);
+    background: var(--color-cinza);
+  }
+  .pop-status {
+    margin-top: 12px;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.2px;
+    color: var(--color-texto-medio);
+    padding: 4px 10px;
+    background: var(--bg-2);
+    border-radius: var(--radius-pill);
+  }
+  .pop-status .pulse {
+    width: 6px; height: 6px; border-radius: var(--radius-pill);
+    background: var(--color-bege);
+  }
+  .pop-body {
+    padding: 16px 18px 14px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .pop-row {
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .pop-row .lbl {
+    width: 78px;
+    flex-shrink: 0;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--color-texto-medio);
+    padding-top: 3px;
+  }
+  .pop-row .val {
+    font-size: 13px;
+    color: var(--color-texto-escuro);
+    line-height: 1.4;
+    display: inline-flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
+  }
+  .pop-row .val .avatar.sm { width: 22px; height: 22px; font-size: 9px; }
+  .pop-row .val a {
+    color: var(--color-alaranjado);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 12px;
+  }
+  .pop-obs {
+    background: var(--bg-2);
+    border-left: 2px solid var(--color-bege);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--color-texto-escuro);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+  .pop-foot {
+    padding: 14px 18px 16px;
+    border-top: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+    display: flex; align-items: center; gap: 6px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-escuro);
+    border-radius: var(--radius-pill);
+    padding: 7px 12px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .btn svg { width: 12px; height: 12px; stroke-width: 1.8; }
+  .btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); }
+  .btn.primary {
+    background: var(--color-alaranjado);
+    color: #fff;
+    border-color: var(--color-alaranjado);
+  }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); }
+  .btn.danger:hover {
+    border-color: rgba(192, 80, 74, 0.5);
+    background: rgba(192, 80, 74, 0.06);
+    color: var(--color-ui-error);
+  }
+  .btn.danger:hover svg { color: var(--color-ui-error); }
+  .pop-close {
+    position: absolute; top: 12px; right: 12px;
+    width: 24px; height: 24px;
+    border: 0; background: transparent;
+    color: var(--color-texto-medio); cursor: pointer;
+    border-radius: var(--radius-pill);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pop-close svg { width: 13px; height: 13px; stroke-width: 1.7; }
+  .pop-close:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ============================================================
+     PAINEL LATERAL
+     ============================================================ */
+  .side-panel {
+    background: var(--bg-1);
+    overflow: auto;
+    padding: 20px 22px 28px;
+    display: flex; flex-direction: column;
+    gap: 22px;
+  }
+  .side-panel::-webkit-scrollbar { width: 8px; }
+  .side-panel::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+
+  .panel-h {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--color-bege);
+    margin: 0 0 12px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .panel-h .sub {
+    color: var(--color-texto-medio); font-weight: 400;
+    letter-spacing: 0.3px; text-transform: none;
+    font-size: 11px;
+  }
+
+  /* Hoje — métricas */
+  .today-card {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    padding: 18px 18px 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .today-big {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .today-big .num {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 40px; line-height: 1;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+  }
+  .today-big .lbl {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+    line-height: 1.3;
+    max-width: 130px;
+  }
+  .today-split {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .ts-cell {
+    background: var(--bg-2);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+  }
+  .ts-cell .val {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 22px; line-height: 1;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+  }
+  .ts-cell .lbl {
+    font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--color-texto-medio);
+    margin-top: 5px;
+    line-height: 1.3;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .ts-cell.confirmed .val { color: var(--color-verde); }
+  .ts-cell.pending  .val { color: var(--color-alaranjado); }
+
+  /* Próximas avaliações */
+  .next-list {
+    display: flex; flex-direction: column;
+    gap: 8px;
+  }
+  .next-item {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    padding: 11px 12px 10px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 11px;
+    align-items: center;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .next-item:hover {
+    border-color: var(--color-tangerina);
+    box-shadow: var(--shadow-sm);
+  }
+  .ni-time {
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    background: var(--ni-bg, var(--bg-2));
+    border-left: 2.5px solid var(--ni-color, var(--color-bege));
+    min-width: 56px;
+  }
+  .ni-time .h {
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    font-feature-settings: "tnum";
+    line-height: 1.1;
+  }
+  .ni-time .d {
+    font-family: var(--font-body); font-size: 9.5px;
+    color: var(--color-texto-medio);
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+    line-height: 1;
+  }
+  .ni-meta { min-width: 0; }
+  .ni-name {
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ni-sub {
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+    line-height: 1.3;
+    margin-top: 2px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .ni-status {
+    width: 7px; height: 7px; border-radius: var(--radius-pill);
+    background: var(--color-verde);
+    flex-shrink: 0;
+  }
+  .ni-status.pending { background: var(--color-bege); }
+  .ni-action {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .ni-action svg { width: 13px; height: 13px; stroke-width: 1.7; }
+  .ni-action:hover { background: var(--color-bege-claro); color: var(--color-alaranjado); border-color: var(--color-tangerina); }
+
+  /* Legenda */
+  .legend {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px 14px;
+  }
+  .legend-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 5px 0;
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-escuro);
+  }
+  .legend-row .swatch {
+    width: 14px; height: 14px;
+    border-radius: var(--radius-xs);
+    flex-shrink: 0;
+  }
+  .legend-row .swatch.pilates {
+    background: var(--type-pilates-bg);
+    border-left: 2.5px solid var(--type-pilates);
+  }
+  .legend-row .swatch.gestante {
+    background: var(--type-gestante-bg);
+    border-left: 2.5px solid var(--type-gestante);
+  }
+  .legend-row .swatch.pelvica {
+    background: var(--type-pelvica-bg);
+    border-left: 2.5px solid var(--type-pelvica);
+  }
+  .legend-row .name { font-size: 12.5px; }
+  .legend-row .free {
+    margin-left: auto;
+    font-family: var(--font-body); font-size: 10.5px;
+    color: var(--color-bege);
+    font-style: italic;
+  }
+  .legend-foot {
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 0.6px dashed var(--color-cinza);
+    font-family: var(--font-body); font-size: 10.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="06 Agenda">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <nav>
+      <div class="sb-section-label">Operação</div>
+      <div class="sb-nav">
+        <a href="02 Dashboard.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+          Dashboard
+        </a>
+        <a href="03 Inbox WhatsApp.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+          </svg>
+          Inbox
+          <span class="sb-badge">7</span>
+        </a>
+        <a href="04 Funil.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Funil
+        </a>
+        <a href="#" class="sb-item active" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Agenda
+        </a>
+        <a href="#" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </div>
+    </nav>
+
+    <div class="sb-user">
+      <div class="avatar">LF</div>
+      <div class="sb-user-meta">
+        <span class="sb-user-name">Larissa Ferraz</span>
+        <span class="sb-user-role">Recepção · Corporis</span>
+      </div>
+      <button class="sb-user-action" aria-label="Mais opções">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">Agenda</h1>
+        <div class="week-nav">
+          <button class="wn-btn" aria-label="Semana anterior">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <span class="wn-label">25–30 mai · 2026</span>
+          <button class="wn-btn" aria-label="Próxima semana">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+          <button class="wn-today">Hoje</button>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="view-toggle" role="tablist" aria-label="Visão">
+          <button class="vt-btn active" role="tab" aria-selected="true">Semana</button>
+          <button class="vt-btn" role="tab">Dia</button>
+        </div>
+        <button class="primary-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Novo horário
+        </button>
+      </div>
+    </header>
+
+    <div class="agenda-wrap">
+
+      <!-- ============================================================
+           AGENDA — semana
+           ============================================================ -->
+      <div class="agenda">
+        <!-- Header dos dias -->
+        <div class="days-header" id="daysHeader"></div>
+
+        <!-- Grid -->
+        <div class="grid-scroll">
+          <div class="grid" id="grid">
+            <!-- coluna de horas -->
+            <div class="hours-col" id="hoursCol"></div>
+            <!-- 6 colunas-dia -->
+            <div class="day-col" data-day="0"></div>
+            <div class="day-col" data-day="1"></div>
+            <div class="day-col today" data-day="2"></div>
+            <div class="day-col" data-day="3"></div>
+            <div class="day-col" data-day="4"></div>
+            <div class="day-col" data-day="5"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           PAINEL LATERAL
+           ============================================================ -->
+      <aside class="side-panel">
+        <!-- HOJE -->
+        <section>
+          <h2 class="panel-h">Hoje <span class="sub">— qua, 27 mai</span></h2>
+          <div class="today-card">
+            <div class="today-big">
+              <span class="num">5</span>
+              <span class="lbl">avaliações iniciais marcadas</span>
+            </div>
+            <div class="today-split">
+              <div class="ts-cell confirmed">
+                <div class="val">3</div>
+                <div class="lbl">confirmadas</div>
+              </div>
+              <div class="ts-cell pending">
+                <div class="val">2</div>
+                <div class="lbl">a confirmar</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PRÓXIMAS -->
+        <section>
+          <h2 class="panel-h">Próximas <span class="sub">— a confirmar</span></h2>
+          <div class="next-list">
+
+            <div class="next-item">
+              <div class="ni-time" style="--ni-color: var(--type-pilates); --ni-bg: var(--type-pilates-bg);">
+                <div class="h">16:00</div>
+                <div class="d">hoje</div>
+              </div>
+              <div class="ni-meta">
+                <div class="ni-name">Daniela Marquetti</div>
+                <div class="ni-sub">
+                  <span class="ni-status pending"></span>
+                  Pilates · com Larissa
+                </div>
+              </div>
+              <button class="ni-action" aria-label="Enviar lembrete" title="Enviar lembrete">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="next-item">
+              <div class="ni-time" style="--ni-color: var(--type-gestante); --ni-bg: var(--type-gestante-bg);">
+                <div class="h">18:30</div>
+                <div class="d">hoje</div>
+              </div>
+              <div class="ni-meta">
+                <div class="ni-name">Camila Ribeiro</div>
+                <div class="ni-sub">
+                  <span class="ni-status"></span>
+                  Gestante · com Tainara
+                </div>
+              </div>
+              <button class="ni-action" aria-label="Enviar lembrete" title="Enviar lembrete">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="next-item">
+              <div class="ni-time" style="--ni-color: var(--type-pelvica); --ni-bg: var(--type-pelvica-bg);">
+                <div class="h">09:00</div>
+                <div class="d">amanhã</div>
+              </div>
+              <div class="ni-meta">
+                <div class="ni-name">Patrícia Lima</div>
+                <div class="ni-sub">
+                  <span class="ni-status pending"></span>
+                  Fisio pélvica · com Tainara
+                </div>
+              </div>
+              <button class="ni-action" aria-label="Enviar lembrete" title="Enviar lembrete">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="next-item">
+              <div class="ni-time" style="--ni-color: var(--type-pelvica); --ni-bg: var(--type-pelvica-bg);">
+                <div class="h">18:30</div>
+                <div class="d">sex 30</div>
+              </div>
+              <div class="ni-meta">
+                <div class="ni-name">Eduarda Bertotti</div>
+                <div class="ni-sub">
+                  <span class="ni-status"></span>
+                  Fisio pélvica · com Tainara
+                </div>
+              </div>
+              <button class="ni-action" aria-label="Enviar lembrete" title="Enviar lembrete">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- LEGENDA -->
+        <section>
+          <h2 class="panel-h">Tipos de avaliação</h2>
+          <div class="legend">
+            <div class="legend-row">
+              <span class="swatch pilates"></span>
+              <span class="name">Avaliação Pilates</span>
+              <span class="free">gratuita</span>
+            </div>
+            <div class="legend-row">
+              <span class="swatch gestante"></span>
+              <span class="name">Avaliação Gestante</span>
+              <span class="free">gratuita</span>
+            </div>
+            <div class="legend-row">
+              <span class="swatch pelvica"></span>
+              <span class="name">Avaliação Fisio Pélvica</span>
+              <span class="free">gratuita</span>
+            </div>
+            <div class="legend-foot">
+              Toda primeira avaliação é gratuita e dura cerca de 50 minutos.
+            </div>
+          </div>
+        </section>
+      </aside>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // CONFIG
+  // ============================================================
+  const HOUR_START = 7;       // 07:00
+  const HOUR_END   = 19;      // 19:00
+  const HOUR_PX    = 60;      // px por hora
+  const NOW_H = 14, NOW_M = 42;   // qua 27 mai · 14:42
+  const TODAY_INDEX = 2;          // qua = índice 2 (seg=0)
+
+  const DAYS = [
+    { dow: 'Seg', date: 25, mon: 'mai', count: '4 av.' },
+    { dow: 'Ter', date: 26, mon: 'mai', count: '4 av.' },
+    { dow: 'Qua', date: 27, mon: 'mai', count: '5 av.' },
+    { dow: 'Qui', date: 28, mon: 'mai', count: '3 av.' },
+    { dow: 'Sex', date: 29, mon: 'mai', count: '4 av.' },
+    { dow: 'Sáb', date: 30, mon: 'mai', count: '3 av.' }
+  ];
+
+  const TYPE_TOKENS = {
+    pilates:  { color: 'var(--type-pilates)',  bg: 'var(--type-pilates-bg)',  fg: 'var(--type-pilates-fg)',  label: 'Avaliação Pilates' },
+    gestante: { color: 'var(--type-gestante)', bg: 'var(--type-gestante-bg)', fg: 'var(--type-gestante-fg)', label: 'Avaliação Gestante' },
+    pelvica:  { color: 'var(--type-pelvica)',  bg: 'var(--type-pelvica-bg)',  fg: 'var(--type-pelvica-fg)',  label: 'Avaliação Fisio Pélvica' }
+  };
+
+  // ============================================================
+  // EVENTOS — semana movimentada
+  // events: { day, startH, startM, duration (min), type, name, status, owner }
+  // ============================================================
+  const EVENTS = [
+    // SEG 25
+    { day:0, s:'08:00', dur:50, type:'pilates',  name:'Camila Antunes',     status:'confirmed', owner:'Larissa' },
+    { day:0, s:'10:30', dur:50, type:'gestante', name:'Júlia Pellanda',     status:'confirmed', owner:'Tainara' },
+    { day:0, s:'14:00', dur:50, type:'pelvica',  name:'Sofia Souza',        status:'confirmed', owner:'Tainara' },
+    { day:0, s:'17:00', dur:50, type:'pilates',  name:'Helena Tartas',      status:'confirmed', owner:'Larissa' },
+
+    // TER 26
+    { day:1, s:'09:00', dur:50, type:'pilates',  name:'Bianca Marchetti',   status:'confirmed', owner:'Larissa' },
+    { day:1, s:'11:00', dur:50, type:'gestante', name:'Aline Tessari',      status:'no-show',   owner:'Tainara' },
+    { day:1, s:'15:00', dur:50, type:'pelvica',  name:'Vanessa Borba',      status:'confirmed', owner:'Tainara' },
+    { day:1, s:'18:00', dur:50, type:'pilates',  name:'Mariana Schreiner',  status:'confirmed', owner:'Larissa' },
+
+    // QUA 27 (hoje)
+    { day:2, s:'08:30', dur:50, type:'pilates',  name:'Beatriz Almeida',    status:'confirmed', owner:'Larissa' },
+    { day:2, s:'10:00', dur:50, type:'gestante', name:'Renata Oliveira',    status:'confirmed', owner:'Tainara' },
+    { day:2, s:'13:00', dur:50, type:'pelvica',  name:'Letícia Pereira',    status:'confirmed', owner:'Tainara' },
+    { day:2, s:'16:00', dur:50, type:'pilates',  name:'Daniela Marquetti',  status:'pending',   owner:'Larissa' },
+    { day:2, s:'18:30', dur:50, type:'gestante', name:'Camila Ribeiro',     status:'confirmed', owner:'Tainara' },
+
+    // QUI 28
+    { day:3, s:'09:00', dur:50, type:'pelvica',  name:'Patrícia Lima',      status:'pending',   owner:'Tainara' },
+    { day:3, s:'14:30', dur:50, type:'pilates',  name:'Lúcia Andrade',      status:'confirmed', owner:'Larissa' },
+    { day:3, s:'16:30', dur:50, type:'gestante', name:'Andrea Bessa',       status:'pending',   owner:'Tainara' },
+
+    // SEX 29
+    { day:4, s:'08:00', dur:50, type:'pilates',  name:'Aline Costa',        status:'confirmed', owner:'Larissa' },
+    { day:4, s:'11:00', dur:50, type:'gestante', name:'Mariana Bessa',      status:'confirmed', owner:'Tainara' },
+    { day:4, s:'15:30', dur:50, type:'pelvica',  name:'Carla Vasconcelos',  status:'confirmed', owner:'Tainara' },
+    { day:4, s:'17:00', dur:50, type:'pilates',  name:'Andrea Pellanda',    status:'pending',   owner:'Larissa' },
+
+    // SÁB 30
+    { day:5, s:'09:00', dur:50, type:'pilates',  name:'Sofia Bertolini',    status:'confirmed', owner:'Larissa' },
+    { day:5, s:'10:30', dur:50, type:'pelvica',  name:'Bianca Tartas',      status:'pending',   owner:'Tainara' },
+    { day:5, s:'18:30', dur:50, type:'pelvica',  name:'Eduarda Bertotti',   status:'confirmed', owner:'Tainara', selected:true, observations:'Indicação direta da Renata Oliveira. Pós-parto · 4 meses. Sala 2 reservada para uma conversa mais reservada.' }
+  ];
+
+  // ============================================================
+  // RENDER — header dos dias
+  // ============================================================
+  const daysHeader = document.getElementById('daysHeader');
+  daysHeader.innerHTML = `<div class="dh-spacer"></div>` + DAYS.map((d, i) => `
+    <div class="dh-cell ${i === TODAY_INDEX ? 'today' : ''}">
+      <span class="dh-dow">${d.dow}</span>
+      <span class="dh-date">${String(d.date).padStart(2, '0')} <span class="mon">${d.mon}</span></span>
+      <span class="dh-count">${d.count}</span>
+    </div>
+  `).join('');
+
+  // ============================================================
+  // RENDER — coluna de horas
+  // ============================================================
+  const hoursCol = document.getElementById('hoursCol');
+  let hoursHtml = '';
+  for (let h = HOUR_START; h <= HOUR_END; h++) {
+    const top = (h - HOUR_START) * HOUR_PX;
+    if (h === HOUR_START) continue; // não mostra o "07:00" topo
+    hoursHtml += `<span class="hour-label" style="top:${top}px;">${String(h).padStart(2,'0')}:00</span>`;
+  }
+  hoursCol.innerHTML = hoursHtml;
+
+  // ============================================================
+  // POSITION HELPER
+  // ============================================================
+  function topFor(h, m) { return ((h - HOUR_START) + m/60) * HOUR_PX; }
+  function parseTime(s) { const [h,m] = s.split(':').map(Number); return [h,m]; }
+
+  // ============================================================
+  // RENDER — eventos em cada day-col
+  // ============================================================
+  const dayCols = Array.from(document.querySelectorAll('.day-col'));
+
+  EVENTS.forEach((evt, idx) => {
+    const [h, m] = parseTime(evt.s);
+    const top = topFor(h, m);
+    const height = (evt.dur / 60) * HOUR_PX - 2;
+    const tk = TYPE_TOKENS[evt.type];
+    const col = dayCols[evt.day];
+
+    const endH = h + Math.floor((m + evt.dur) / 60);
+    const endM = (m + evt.dur) % 60;
+    const endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+    const startStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+
+    const check = evt.status === 'confirmed' ? `
+      <span class="check" title="Confirmada">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </span>` : '';
+
+    const classes = ['evt'];
+    if (evt.status === 'no-show') classes.push('no-show');
+    if (evt.selected) classes.push('selected');
+
+    const block = document.createElement('article');
+    block.className = classes.join(' ');
+    block.style.top = `${top}px`;
+    block.style.height = `${height}px`;
+    block.style.setProperty('--type-color', tk.color);
+    block.style.setProperty('--type-bg', tk.bg);
+    block.style.setProperty('--type-fg', tk.fg);
+    block.setAttribute('data-evt-idx', idx);
+    block.innerHTML = `
+      <div class="evt-time">${startStr}–${endStr}${check}</div>
+      <div class="evt-name">${evt.name}</div>
+      <div class="evt-type">${
+        evt.type === 'pilates' ? 'Pilates' :
+        evt.type === 'gestante' ? 'Gestante' :
+        'Fisio pélvica'
+      } · ${evt.owner}</div>
+    `;
+    col.appendChild(block);
+  });
+
+  // ============================================================
+  // RENDER — slots livres (sugestões "+ adicionar") em alguns horários
+  // ============================================================
+  const FREE_SLOTS = [
+    { day:0, s:'09:00', dur:50 },
+    { day:0, s:'12:00', dur:50 },
+    { day:1, s:'13:00', dur:50 },
+    { day:2, s:'11:30', dur:50 },
+    { day:3, s:'11:00', dur:50 },
+    { day:3, s:'13:00', dur:50 },
+    { day:4, s:'13:30', dur:50 },
+    { day:5, s:'14:00', dur:50 }
+  ];
+  FREE_SLOTS.forEach(slot => {
+    const [h, m] = parseTime(slot.s);
+    const top = topFor(h, m);
+    const height = (slot.dur/60) * HOUR_PX - 2;
+    const el = document.createElement('div');
+    el.className = 'free-slot';
+    el.style.top = `${top}px`;
+    el.style.height = `${height}px`;
+    dayCols[slot.day].appendChild(el);
+  });
+
+  // ============================================================
+  // RENDER — linha do "agora"
+  // ============================================================
+  const todayCol = dayCols[TODAY_INDEX];
+  const nowTop = topFor(NOW_H, NOW_M);
+  const nowLine = document.createElement('div');
+  nowLine.className = 'now-line';
+  nowLine.style.top = `${nowTop}px`;
+  // estender só na coluna de hoje + label
+  nowLine.innerHTML = `<span class="now-label">${String(NOW_H).padStart(2,'0')}:${String(NOW_M).padStart(2,'0')}</span>`;
+  // posicionar absoluto dentro do grid, mas restrito visualmente à coluna de hoje:
+  // mais simples: criar dentro da day-col-hoje
+  nowLine.style.position = 'absolute';
+  nowLine.style.left = '0';
+  nowLine.style.right = '0';
+  todayCol.appendChild(nowLine);
+
+  // ============================================================
+  // POPOVER — detalhe da Eduarda Bertotti (sáb 18:30, último dia)
+  // ============================================================
+  const selectedEvt = EVENTS.find(e => e.selected);
+  if (selectedEvt) {
+    const [h, m] = parseTime(selectedEvt.s);
+    const top = topFor(h, m) - 12;
+    const colSelected = dayCols[selectedEvt.day];
+    // o popover é posicionado à esquerda do bloco (para sábado, isso fica DENTRO do grid)
+    // Vamos colocá-lo à ESQUERDA do bloco apontando para o slot.
+    const pop = document.createElement('aside');
+    pop.className = 'popover';
+    pop.style.top = `${top}px`;
+    pop.style.right = `calc(100% + 12px)`; // à esquerda da coluna sáb
+    pop.style.left = 'auto';
+    // ajustar a setinha para o lado direito
+    pop.innerHTML = `
+      <button class="pop-close" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <div class="pop-head">
+        <span class="pop-type" style="background: var(--type-pelvica-bg); color: var(--type-pelvica-fg);">
+          <span class="dot" style="background: var(--type-pelvica);"></span>
+          Avaliação · Fisio pélvica
+        </span>
+        <div class="pop-name">Eduarda Bertotti</div>
+        <div class="pop-when">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          sex, 30 mai · 18h30
+          <span class="sep"></span>
+          50 min
+        </div>
+        <div class="pop-status">
+          <span class="pulse" style="background: var(--color-verde);"></span>
+          Confirmada
+        </div>
+      </div>
+      <div class="pop-body">
+        <div class="pop-row">
+          <span class="lbl">Lead</span>
+          <span class="val">
+            <span class="avatar sm tone-4">EB</span>
+            Eduarda Bertotti
+            <a href="05 Ficha do Lead.html">abrir ficha →</a>
+          </span>
+        </div>
+        <div class="pop-row">
+          <span class="lbl">Profissional</span>
+          <span class="val">
+            <span class="avatar sm tone-2">TF</span>
+            Tainara Fracasso
+          </span>
+        </div>
+        <div class="pop-row">
+          <span class="lbl">Sala</span>
+          <span class="val">Sala 2 · reservada</span>
+        </div>
+        <div class="pop-row">
+          <span class="lbl">Observações</span>
+        </div>
+        <div class="pop-obs">
+          Indicação direta da Renata Oliveira. Pós-parto · 4 meses. Sala 2 reservada para uma conversa mais reservada.
+        </div>
+      </div>
+      <div class="pop-foot">
+        <button class="btn primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Confirmar
+        </button>
+        <button class="btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>
+          </svg>
+          Remarcar
+        </button>
+        <button class="btn danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          Cancelar
+        </button>
+      </div>
+    `;
+    // colocar dentro da day-col-sábado, à esquerda
+    colSelected.appendChild(pop);
+    // ajustar a setinha — neste caso, ela deve apontar para a DIREITA do popover
+    // (o bloco está à direita). Sobrescrever via JS:
+    const arrow = pop.querySelector('::before');
+    // CSS-only não dá; vamos adicionar uma classe e regra inline:
+    pop.style.setProperty('--arrow-side', 'right');
+    // injetar regra dinâmica:
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+      .popover::before {
+        left: auto !important;
+        right: -7px !important;
+        border-left: 0 !important;
+        border-bottom: 0 !important;
+        border-right: 0.6px solid var(--color-cinza);
+        border-top: 0.6px solid var(--color-cinza);
+      }
+    `;
+    document.head.appendChild(styleEl);
+  }
+
+  // ============================================================
+  // INTERAÇÕES
+  // ============================================================
+  // tabs visão
+  document.querySelectorAll('.vt-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.vt-btn').forEach(x => {
+        x.classList.remove('active');
+        x.setAttribute('aria-selected', 'false');
+      });
+      b.classList.add('active');
+      b.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  // scroll inicial — centralizar perto do "agora" (08h–17h)
+  requestAnimationFrame(() => {
+    const scroll = document.querySelector('.grid-scroll');
+    if (scroll) scroll.scrollTop = Math.max(0, nowTop - 220);
+  });
+
+  // popover fechar
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.pop-close')) {
+      const pop = e.target.closest('.popover');
+      if (pop) pop.remove();
+    }
+  });
+
+  // sidebar
+  document.querySelectorAll('.sb-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (item.getAttribute('href') && item.getAttribute('href') !== '#') return;
+      e.preventDefault();
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="_card.css"/>
+<style>
+  .card { padding: 28px 32px; gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .scard { background: #FFFFFF; border: 0.6px solid var(--color-cinza); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+  .accent { height: 6px; }
+  .accent.alaranjado { background: var(--color-alaranjado); }
+  .accent.verde { background: var(--color-verde); }
+  .accent.bege { background: var(--color-bege); }
+  .body { padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .label { font-family: var(--font-body); font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--color-texto-medio); }
+  .title { font-family: var(--font-display); font-size: 22px; color: var(--color-texto-escuro); line-height: 1.1; }
+  .desc  { font-family: var(--font-body); font-size: 13px; color: var(--color-texto-medio); line-height: 1.5; }
+  h3 { font-size: 18px; font-family: var(--font-display); color: var(--color-texto-escuro); }
+</style>
+</head><body>
+<div class="card">
+  <h3>Cards de serviço</h3>
+  <div class="grid">
+    <div class="scard">
+      <div class="accent alaranjado"></div>
+      <div class="body">
+        <span class="label">Pilates</span>
+        <span class="title">Pilates terapêutico</span>
+        <span class="desc">Movimento prescrito por fisioterapeuta, no seu ritmo.</span>
+      </div>
+    </div>
+    <div class="scard">
+      <div class="accent verde"></div>
+      <div class="body">
+        <span class="label">Pilates Gestante</span>
+        <span class="title">Pré e pós-parto</span>
+        <span class="desc">Preparação para o parto e recuperação do assoalho pélvico.</span>
+      </div>
+    </div>
+    <div class="scard">
+      <div class="accent bege"></div>
+      <div class="body">
+        <span class="label">Fisio Pélvica</span>
+        <span class="title">Cuidado discreto</span>
+        <span class="desc">Incontinência, dor pélvica, menopausa — com técnica e respeito.</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>
