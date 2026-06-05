@@ -1,0 +1,8 @@
+<svg width="440" height="180" viewBox="0 0 440 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Corporis</title>
+  <desc id="desc">Logo principal da Corporis Fisioterapia e Pilates</desc>
+  <path d="M84 116C114 58 174 44 220 78C257 105 306 105 352 55" stroke="#D2B06E" stroke-width="9" stroke-linecap="round" stroke-dasharray="1 27"/>
+  <circle cx="88" cy="91" r="28" fill="#EAD7AC"/>
+  <text x="128" y="92" fill="#F08353" font-family="Georgia, 'Times New Roman', serif" font-size="54" font-weight="400" letter-spacing="3">Corporis</text>
+  <text x="134" y="123" fill="#7A6E68" font-family="Ubuntu, Arial, sans-serif" font-size="14" font-weight="500" letter-spacing="4">FISIOTERAPIA E PILATES</text>
+</svg>

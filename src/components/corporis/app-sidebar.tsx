@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,8 +9,8 @@ import {
   Filter,
   Inbox,
   LayoutDashboard,
-  MoreHorizontal,
   Settings,
+  UserRoundCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -73,19 +72,8 @@ export function AppSidebar() {
   return (
     <aside
       aria-label="Navegação"
-      className="grid h-dvh grid-rows-[auto_1fr_auto] gap-6 border-r border-border bg-card px-4 pb-4 pt-6"
+      className="grid h-dvh grid-rows-[1fr_auto] border-r border-border bg-card px-4 pb-4 pt-8"
     >
-      <div className="px-3 pb-1 pt-2">
-        <Image
-          src="/brand/logo-cores.png"
-          alt="Corporis Fisioterapia e Pilates"
-          width={132}
-          height={54}
-          priority
-          className="h-auto w-[132px]"
-        />
-      </div>
-
       <nav aria-label="Navegação principal">
         <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-[2.2px] text-accent">
           Operação
@@ -125,7 +113,10 @@ export function AppSidebar() {
         </div>
       </nav>
 
-      <div className="flex items-center gap-3 border-t border-border px-2 py-3">
+      <Link
+        href="/perfil"
+        className="flex items-center gap-3 border-t border-border px-2 py-3 text-text-primary !no-underline transition-colors hover:bg-accent-soft"
+      >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-accent-soft font-display text-sm leading-none text-text-primary">
           {profile?.initials ?? "CF"}
         </div>
@@ -137,14 +128,8 @@ export function AppSidebar() {
             Corporis Fisioterapia
           </p>
         </div>
-        <button
-          type="button"
-          aria-label="Mais opções"
-          className="rounded-[var(--radius-md)] p-1.5 text-text-secondary transition-colors hover:bg-accent-soft hover:text-text-primary"
-        >
-          <MoreHorizontal className="h-4 w-4" strokeWidth={1.5} />
-        </button>
-      </div>
+        <UserRoundCog className="h-4 w-4 shrink-0 text-text-secondary" strokeWidth={1.5} />
+      </Link>
     </aside>
   );
 }

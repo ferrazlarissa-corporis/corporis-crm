@@ -312,6 +312,45 @@ export interface Database {
         };
         Update: Partial<Database["crm"]["Tables"]["agent_config"]["Insert"]>;
       };
+      clinic_config: {
+        Row: {
+          id: string;
+          razao_social: string;
+          documento: string;
+          nome_comercial: string;
+          endereco: string;
+          endereco_complemento: string;
+          telefone: string;
+          telefone_observacao: string;
+          email: string;
+          funcionamento: Json;
+          logo_url: string | null;
+          logo_path: string | null;
+          logo_mime_type: string | null;
+          logo_updated_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          razao_social?: string;
+          documento?: string;
+          nome_comercial?: string;
+          endereco?: string;
+          endereco_complemento?: string;
+          telefone?: string;
+          telefone_observacao?: string;
+          email?: string;
+          funcionamento?: Json;
+          logo_url?: string | null;
+          logo_path?: string | null;
+          logo_mime_type?: string | null;
+          logo_updated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["crm"]["Tables"]["clinic_config"]["Insert"]>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

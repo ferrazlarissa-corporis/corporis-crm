@@ -1,13 +1,22 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Users, MessageSquare, FileText, Building2, Download, Plus, Search,
-  User, Pencil, Mail, Lock, XCircle, Copy,
-  Check, Clock, RotateCcw, HelpCircle, Save, Upload, Trash2,
+  User, XCircle, Copy,
+  Check, Clock, RotateCcw, Save, Upload, Trash2,
 } from 'lucide-react';
-import { createTemplate, deleteTemplate, toggleUserActive } from '../actions';
+import {
+  CLINIC_LOGO_ACCEPT_ATTRIBUTE,
+  CLINIC_LOGO_EXT_BY_MIME,
+  CLINIC_LOGO_MAX_BYTES,
+  DEFAULT_CLINIC_INFO,
+  normalizeClinicHours,
+  type ClinicHoursRow,
+  type ClinicInfo,
+} from '@/lib/clinic-config';
+import { createTemplate, deleteTemplate, toggleUserActive, updateClinicInfo, uploadClinicLogo } from '../actions';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 type TabId = 'usuarios' | 'whatsapp' | 'templates' | 'clinica';
@@ -31,6 +40,17 @@ type DBTemplate = {
 
 type Categoria = DBTemplate['categoria'];
 
+type ClinicConfig = Partial<Omit<ClinicInfo, 'funcionamento'>> & {
+  id: string;
+  logo_url: string | null;
+  logo_path: string | null;
+  logo_mime_type: string | null;
+  logo_updated_at: string | null;
+  funcionamento?: unknown;
+};
+
+type ClinicFieldId = 'legal' | 'commercial' | 'address' | 'phone' | 'email' | 'hours';
+
 // ─── constants ────────────────────────────────────────────────────────────────
 const TONE_STYLE: Record<1|2|3|4|5, { bg: string; color: string }> = {
   1: { bg: '#EAD7AC',                      color: '#6B5526' },
@@ -52,16 +72,6 @@ const CATEGORIAS: Categoria[] = ['lembrete', 'confirmacao', 'reativacao', 'boas_
 const ROLE_LABEL: Record<string, string> = {
   staff: 'Equipe', recepcao: 'Recepção', profissional: 'Profissional', gestao: 'Gestão',
 };
-
-const CLINIC_HOURS = [
-  { day: 'Segunda', h: '07:00 – 20:00', off: false },
-  { day: 'Terça',   h: '07:00 – 20:00', off: false },
-  { day: 'Quarta',  h: '07:00 – 20:00', off: false },
-  { day: 'Quinta',  h: '07:00 – 20:00', off: false },
-  { day: 'Sexta',   h: '07:00 – 18:00', off: false },
-  { day: 'Sábado',  h: 'Fechado',        off: true  },
-  { day: 'Domingo', h: 'Fechado',        off: true  },
-];
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function getInitials(nome: string): string {
@@ -85,6 +95,21 @@ function renderPreview(text: string) {
   );
 }
 
+function hydrateClinicInfo(config: ClinicConfig | null): ClinicInfo {
+  return {
+    ...DEFAULT_CLINIC_INFO,
+    razao_social: config?.razao_social ?? DEFAULT_CLINIC_INFO.razao_social,
+    documento: config?.documento ?? DEFAULT_CLINIC_INFO.documento,
+    nome_comercial: config?.nome_comercial ?? DEFAULT_CLINIC_INFO.nome_comercial,
+    endereco: config?.endereco ?? DEFAULT_CLINIC_INFO.endereco,
+    endereco_complemento: config?.endereco_complemento ?? DEFAULT_CLINIC_INFO.endereco_complemento,
+    telefone: config?.telefone ?? DEFAULT_CLINIC_INFO.telefone,
+    telefone_observacao: config?.telefone_observacao ?? DEFAULT_CLINIC_INFO.telefone_observacao,
+    email: config?.email ?? DEFAULT_CLINIC_INFO.email,
+    funcionamento: normalizeClinicHours(config?.funcionamento),
+  };
+}
+
 // ─── small components ─────────────────────────────────────────────────────────
 function Btn({ children, primary, ghost, sm, onClick, disabled }: { children: React.ReactNode; primary?: boolean; ghost?: boolean; sm?: boolean; onClick?: () => void; disabled?: boolean }) {
   const [h, setH] = useState(false);
@@ -102,21 +127,6 @@ function Btn({ children, primary, ghost, sm, onClick, disabled }: { children: Re
         cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1,
         display: 'inline-flex', alignItems: 'center', gap: 7,
         transition: 'all var(--duration-fast) var(--ease-soft)', whiteSpace: 'nowrap', flexShrink: 0,
-      }}>{children}</button>
-  );
-}
-
-function GhostTopBtn({ children }: { children: React.ReactNode }) {
-  const [h, setH] = useState(false);
-  return (
-    <button type="button" onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{
-        appearance: 'none', border: '0.6px solid var(--color-cinza)', borderColor: h ? 'var(--color-tangerina)' : 'var(--color-cinza)',
-        background: h ? 'var(--color-bege-claro)' : '#fff', color: h ? 'var(--color-alaranjado)' : 'var(--color-texto-medio)',
-        borderRadius: 'var(--radius-pill)', padding: '7px 14px',
-        fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        transition: 'all var(--duration-fast) var(--ease-soft)',
       }}>{children}</button>
   );
 }
@@ -193,24 +203,26 @@ function TplAddBtn({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
-function EditInlineBtn() {
+function EditInlineBtn({ children = 'Editar', onClick }: { children?: React.ReactNode; onClick?: () => void }) {
   const [h, setH] = useState(false);
   return (
-    <button type="button" onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    <button type="button" onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{ appearance: 'none', background: h ? 'var(--color-bege-claro)' : 'transparent', border: 0, color: h ? 'var(--color-alaranjado)' : 'var(--color-texto-medio)', fontFamily: 'var(--font-body)', fontSize: 11.5, fontWeight: 500, cursor: 'pointer', padding: '4px 8px', borderRadius: 'var(--radius-pill)', whiteSpace: 'nowrap', transition: 'all var(--duration-fast) var(--ease-soft)' }}>
-      Editar
+      {children}
     </button>
   );
 }
 
 // ─── main ─────────────────────────────────────────────────────────────────────
-export default function SistemaClient({ currentUserId, initialProfiles, initialTemplates }: {
+export default function SistemaClient({ currentUserId, initialProfiles, initialTemplates, initialClinicConfig }: {
   currentUserId: string | null;
   initialProfiles: Profile[];
   initialTemplates: DBTemplate[];
+  initialClinicConfig: ClinicConfig | null;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   const [tab, setTab] = useState<TabId>('usuarios');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -221,6 +233,15 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
   const [newTplConteudo, setNewTplConteudo] = useState('');
   const [newTplAprovado, setNewTplAprovado] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [logoUrl, setLogoUrl] = useState(initialClinicConfig?.logo_url ?? '');
+  const [logoError, setLogoError] = useState('');
+  const [logoStatus, setLogoStatus] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [clinicInfo, setClinicInfo] = useState<ClinicInfo>(() => hydrateClinicInfo(initialClinicConfig));
+  const [editingClinicField, setEditingClinicField] = useState<ClinicFieldId | null>(null);
+  const [clinicSaving, setClinicSaving] = useState(false);
+  const [clinicError, setClinicError] = useState('');
+  const [clinicStatus, setClinicStatus] = useState('');
 
   const grouped = CATEGORIAS.reduce((acc, cat) => {
     acc[cat] = initialTemplates.filter(t => t.categoria === cat);
@@ -260,6 +281,84 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
     if (res.success) startTransition(() => router.refresh());
   }
 
+  async function handleLogoSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setLogoError('');
+    setLogoStatus('');
+
+    if (file.size > CLINIC_LOGO_MAX_BYTES) {
+      setLogoError('A logo deve ter até 2 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    if (!CLINIC_LOGO_EXT_BY_MIME[file.type]) {
+      setLogoError('Use PNG, JPG, WebP ou SVG.');
+      event.target.value = '';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    setUploadingLogo(true);
+    try {
+      const res = await uploadClinicLogo(formData);
+      if (res.success) {
+        setLogoUrl(res.logoUrl);
+        setLogoStatus('Logo atualizada.');
+        startTransition(() => router.refresh());
+      } else {
+        setLogoError(res.error);
+      }
+    } catch {
+      setLogoError('Não foi possível subir a logo.');
+    } finally {
+      setUploadingLogo(false);
+      event.target.value = '';
+    }
+  }
+
+  function updateClinicField(key: keyof Omit<ClinicInfo, 'funcionamento'>, value: string) {
+    setClinicInfo(prev => ({ ...prev, [key]: value }));
+    setClinicError('');
+    setClinicStatus('');
+  }
+
+  function updateClinicHour(index: number, patch: Partial<ClinicHoursRow>) {
+    setClinicInfo(prev => ({
+      ...prev,
+      funcionamento: prev.funcionamento.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+        const next = { ...row, ...patch };
+        if (patch.off === true) return { ...next, h: 'Fechado' };
+        if (patch.off === false && next.h === 'Fechado') return { ...next, h: '' };
+        return next;
+      }),
+    }));
+    setClinicError('');
+    setClinicStatus('');
+  }
+
+  async function handleSaveClinicInfo() {
+    setClinicSaving(true);
+    setClinicError('');
+    setClinicStatus('');
+
+    const res = await updateClinicInfo(clinicInfo);
+
+    setClinicSaving(false);
+    if (res.success) {
+      setEditingClinicField(null);
+      setClinicStatus('Dados salvos.');
+      startTransition(() => router.refresh());
+    } else {
+      setClinicError(res.error);
+    }
+  }
+
   const thStyle: React.CSSProperties = {
     textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: 10.5, fontWeight: 500,
     letterSpacing: '1.8px', textTransform: 'uppercase', color: 'var(--color-bege)',
@@ -273,6 +372,32 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
     { id: 'clinica',   label: 'Clínica',   icon: <Building2 size={14} strokeWidth={1.6} /> },
   ];
 
+  const clinicInputStyle: React.CSSProperties = {
+    border: '0.6px solid var(--color-cinza)',
+    borderRadius: 'var(--radius-md)',
+    padding: '8px 10px',
+    fontFamily: 'var(--font-body)',
+    fontSize: 13,
+    color: 'var(--color-texto-escuro)',
+    outline: 'none',
+    width: '100%',
+    background: '#fff',
+  };
+
+  const clinicRows: {
+    id: Exclude<ClinicFieldId, 'hours'>;
+    lbl: string;
+    primary: keyof Omit<ClinicInfo, 'funcionamento'>;
+    secondary?: keyof Omit<ClinicInfo, 'funcionamento'>;
+    type?: 'email';
+  }[] = [
+    { id: 'legal', lbl: 'Razão social', primary: 'razao_social', secondary: 'documento' },
+    { id: 'commercial', lbl: 'Nome comercial', primary: 'nome_comercial' },
+    { id: 'address', lbl: 'Endereço', primary: 'endereco', secondary: 'endereco_complemento' },
+    { id: 'phone', lbl: 'Telefone', primary: 'telefone', secondary: 'telefone_observacao' },
+    { id: 'email', lbl: 'E-mail', primary: 'email', type: 'email' },
+  ];
+
   return (
     <div style={{ display: 'grid', gridTemplateRows: '64px auto 1fr', height: '100dvh', overflow: 'hidden' }}>
 
@@ -282,15 +407,6 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 28, lineHeight: 1, color: 'var(--color-texto-escuro)', letterSpacing: '-0.005em', margin: 0 }}>
             Configurações
           </h1>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', display: 'inline-flex', alignItems: 'center', gap: 8, letterSpacing: '0.2px' }}>
-            <span>Administração</span>
-            <span style={{ width: 3, height: 3, borderRadius: 'var(--radius-pill)', background: 'var(--color-cinza)' }} />
-            <span>Corporis · Xanxerê</span>
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <GhostTopBtn><Clock size={13} strokeWidth={1.8} />Histórico de alterações</GhostTopBtn>
-          <GhostTopBtn><HelpCircle size={13} strokeWidth={1.8} />Ajuda</GhostTopBtn>
         </div>
       </header>
 
@@ -332,7 +448,7 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
                 <div>
                   <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 26, lineHeight: 1.15, color: 'var(--color-texto-escuro)', letterSpacing: '-0.005em', margin: 0 }}>Usuários</h2>
                   <p style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--color-texto-medio)', lineHeight: 1.55, marginTop: 8 }}>
-                    Quem tem acesso ao Corporis CRM. <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>No MVP todos compartilham o mesmo nível de acesso</strong> — papéis diferenciados chegam na próxima fase.
+                    Quem tem acesso ao Corporis CRM.
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -415,20 +531,25 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
                             <StatusPill status={status} />
                           </td>
                           <td style={{ padding: '14px 20px', borderBottom: isLast ? 0 : '0.6px solid var(--color-cinza)', verticalAlign: 'middle', textAlign: 'right', position: 'relative' }}>
-                            <div onClick={e => { e.stopPropagation(); setOpenMenuId(isMenuOpen ? null : profile.id); }} style={{ display: 'inline-flex' }}>
-                            <IconBtn>
+                            <div
+                              onClick={e => {
+                                e.stopPropagation();
+                                if (isYou) {
+                                  router.push('/perfil');
+                                } else {
+                                  setOpenMenuId(isMenuOpen ? null : profile.id);
+                                }
+                              }}
+                              style={{ display: 'inline-flex' }}>
+                            <IconBtn title={isYou ? 'Abrir meu perfil' : 'Ações do usuário'}>
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" width={15} height={15}>
                                 <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
                               </svg>
                             </IconBtn>
                             </div>
-                            {isMenuOpen && (
+                            {!isYou && isMenuOpen && (
                               <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', right: 16, top: 50, background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)', minWidth: 196, padding: 6, zIndex: 50, display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ fontSize: 9.5, fontWeight: 500, letterSpacing: '1.6px', textTransform: 'uppercase', color: 'var(--color-bege)', padding: '6px 12px 4px' }}>{profile.nome}</div>
-                                <MenuBtn icon={<Pencil size={14} strokeWidth={1.6} />}>Editar dados</MenuBtn>
-                                <MenuBtn icon={<Mail size={14} strokeWidth={1.6} />}>Reenviar convite</MenuBtn>
-                                <MenuBtn icon={<Lock size={14} strokeWidth={1.6} />}>Redefinir senha</MenuBtn>
-                                <div style={{ height: '0.6px', background: 'var(--color-cinza)', margin: '4px 6px' }} />
                                 <MenuBtn icon={<XCircle size={14} strokeWidth={1.6} />} danger
                                   onClick={() => { setOpenMenuId(null); handleToggleUser(profile.id, profile.ativo); }}>
                                   {profile.ativo ? 'Desativar usuário' : 'Reativar usuário'}
@@ -443,18 +564,6 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
                 </table>
               </div>
 
-              <div style={{ marginTop: 18, padding: '14px 18px', background: 'var(--bg-2)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                <span style={{ width: 28, height: 28, borderRadius: 'var(--radius-pill)', background: '#fff', border: '0.6px solid var(--color-cinza)', color: 'var(--color-bege)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <HelpCircle size={13} strokeWidth={1.8} />
-                </span>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--color-texto-medio)', lineHeight: 1.55 }}>
-                  <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>Próxima fase — papéis diferenciados.</strong> Os perfis{' '}
-                  {['Recepção', 'Profissional', 'Gestão'].map(r => (
-                    <span key={r} style={{ background: '#fff', border: '0.6px dashed var(--color-cinza)', color: 'var(--color-texto-medio)', fontSize: 10.5, fontWeight: 500, letterSpacing: '0.4px', padding: '1px 8px', borderRadius: 'var(--radius-pill)', marginLeft: 4 }}>{r}</span>
-                  ))}{' '}
-                  vão controlar acesso a financeiro, edição de agenda e dados de outras profissionais. No MVP todo mundo é <em>Equipe</em>.
-                </p>
-              </div>
             </div>
           </div>
         )}
@@ -544,48 +653,126 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
                     Identidade, endereço e funcionamento da <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>Corporis Fisioterapia e Pilates</strong>. Esses dados alimentam respostas da Corá, lembretes, faturamento e comprovantes.
                   </p>
                 </div>
-                <Btn primary><Save size={13} strokeWidth={1.8} />Salvar alterações</Btn>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                  <Btn primary onClick={handleSaveClinicInfo} disabled={clinicSaving}>
+                    <Save size={13} strokeWidth={1.8} />{clinicSaving ? 'Salvando...' : 'Salvar alterações'}
+                  </Btn>
+                  {(clinicError || clinicStatus) && (
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: clinicError ? 'var(--color-ui-error)' : '#5F7948' }}>
+                      {clinicError || clinicStatus}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 320px) minmax(0, 1fr)', gap: 20, alignItems: 'start' }}>
                 <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: '100%', aspectRatio: '1 / 1', background: 'var(--bg-2)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--color-bege)', letterSpacing: '-0.02em' }}>Corporis</span>
+                  <div style={{ width: '100%', aspectRatio: '1 / 1', background: 'var(--bg-2)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {logoUrl ? (
+                      <div
+                        role="img"
+                        aria-label="Logo da clínica"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          backgroundImage: `url("${logoUrl}")`,
+                          backgroundPosition: 'center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: 'contain',
+                        }}
+                      />
+                    ) : (
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--color-bege)', letterSpacing: '-0.02em' }}>Corporis</span>
+                    )}
                   </div>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept={CLINIC_LOGO_ACCEPT_ATTRIBUTE}
+                    onChange={handleLogoSelected}
+                    style={{ display: 'none' }}
+                  />
                   <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'center' }}>
-                    <Btn sm><Upload size={12} strokeWidth={1.8} />Trocar logo</Btn>
+                    <Btn sm onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
+                      <Upload size={12} strokeWidth={1.8} />{uploadingLogo ? 'Enviando...' : 'Trocar logo'}
+                    </Btn>
                     <Btn sm ghost>Variações</Btn>
                   </div>
+                  {(logoError || logoStatus) && (
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: logoError ? 'var(--color-ui-error)' : '#5F7948', lineHeight: 1.4, margin: 0, textAlign: 'center' }}>
+                      {logoError || logoStatus}
+                    </p>
+                  )}
                 </div>
 
                 <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 22 }}>
-                  {[
-                    { lbl: 'Razão social',   val: 'Corporis Fisioterapia e Pilates LTDA', muted: 'CNPJ 47.612.358/0001-09 · CREFITO-10 / 21.345-F' },
-                    { lbl: 'Nome comercial', val: 'Corporis · Fisioterapia e Pilates' },
-                    { lbl: 'Endereço',       val: 'Rua Coronel Santos Marinho, 347 — Sala 903', muted: 'Centro Médico Xanxerê · Centro · Xanxerê / SC · CEP 89820-000' },
-                    { lbl: 'Telefone',       val: '+55 49 99183-1900', muted: 'WhatsApp da clínica · também recebe ligações' },
-                    { lbl: 'E-mail',         val: 'contato@corporisxre.com.br' },
-                  ].map(field => (
+                  {clinicRows.map(field => {
+                    const editing = editingClinicField === field.id;
+                    return (
                     <div key={field.lbl} style={{ display: 'grid', gridTemplateColumns: '140px 1fr auto', gap: 16, padding: '16px 4px', borderBottom: '0.6px solid var(--color-cinza)', alignItems: 'center' }}>
                       <span style={{ fontFamily: 'var(--font-body)', fontSize: 10.5, fontWeight: 500, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'var(--color-bege)' }}>{field.lbl}</span>
-                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--color-texto-escuro)', lineHeight: 1.45 }}>
-                        {field.val}
-                        {field.muted && <span style={{ color: 'var(--color-texto-medio)', fontSize: 12.5, display: 'block', marginTop: 3 }}>{field.muted}</span>}
-                      </span>
-                      <EditInlineBtn />
+                      {editing ? (
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          <input
+                            type={field.type ?? 'text'}
+                            value={clinicInfo[field.primary]}
+                            onChange={e => updateClinicField(field.primary, e.target.value)}
+                            style={clinicInputStyle}
+                          />
+                          {field.secondary && (
+                            <input
+                              type="text"
+                              value={clinicInfo[field.secondary]}
+                              onChange={e => updateClinicField(field.secondary!, e.target.value)}
+                              style={{ ...clinicInputStyle, fontSize: 12.5, color: 'var(--color-texto-medio)' }}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--color-texto-escuro)', lineHeight: 1.45 }}>
+                          {clinicInfo[field.primary]}
+                          {field.secondary && <span style={{ color: 'var(--color-texto-medio)', fontSize: 12.5, display: 'block', marginTop: 3 }}>{clinicInfo[field.secondary]}</span>}
+                        </span>
+                      )}
+                      <EditInlineBtn onClick={() => setEditingClinicField(editing ? null : field.id)}>{editing ? 'Concluir' : 'Editar'}</EditInlineBtn>
                     </div>
-                  ))}
+                    );
+                  })}
                   <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr auto', gap: 16, padding: '16px 4px', alignItems: 'start' }}>
                     <span style={{ fontFamily: 'var(--font-body)', fontSize: 10.5, fontWeight: 500, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'var(--color-bege)', paddingTop: 3 }}>Funcionamento</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', rowGap: 6, marginTop: 2 }}>
-                      {CLINIC_HOURS.map(row => (
-                        <>
-                          <span key={row.day + 'd'} style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--color-texto-medio)' }}>{row.day}</span>
-                          <span key={row.day + 'h'} style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: row.off ? 'var(--color-texto-medio)' : 'var(--color-texto-escuro)', fontStyle: row.off ? 'italic' : 'normal', fontFeatureSettings: '"tnum"' }}>{row.h}</span>
-                        </>
+                    <div style={{ display: 'grid', gridTemplateColumns: editingClinicField === 'hours' ? '90px minmax(0, 1fr) 92px' : '90px 1fr', rowGap: 6, columnGap: 10, marginTop: 2, alignItems: 'center' }}>
+                      {clinicInfo.funcionamento.map((row, index) => (
+                        editingClinicField === 'hours' ? (
+                          <div key={row.day} style={{ display: 'contents' }}>
+                            <span style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--color-texto-medio)' }}>{row.day}</span>
+                            <input
+                              type="text"
+                              value={row.h}
+                              disabled={row.off}
+                              onChange={e => updateClinicHour(index, { h: e.target.value })}
+                              style={{ ...clinicInputStyle, padding: '6px 9px', fontSize: 12.5, opacity: row.off ? 0.6 : 1 }}
+                            />
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={row.off}
+                                onChange={e => updateClinicHour(index, { off: e.target.checked })}
+                                style={{ width: 14, height: 14, accentColor: 'var(--color-alaranjado)' }}
+                              />
+                              Fechado
+                            </label>
+                          </div>
+                        ) : (
+                          <div key={row.day} style={{ display: 'contents' }}>
+                            <span style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--color-texto-medio)' }}>{row.day}</span>
+                            <span style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: row.off ? 'var(--color-texto-medio)' : 'var(--color-texto-escuro)', fontStyle: row.off ? 'italic' : 'normal', fontFeatureSettings: '"tnum"' }}>{row.h}</span>
+                          </div>
+                        )
                       ))}
                     </div>
-                    <EditInlineBtn />
+                    <EditInlineBtn onClick={() => setEditingClinicField(editingClinicField === 'hours' ? null : 'hours')}>
+                      {editingClinicField === 'hours' ? 'Concluir' : 'Editar'}
+                    </EditInlineBtn>
                   </div>
                 </div>
               </div>

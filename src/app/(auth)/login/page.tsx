@@ -10,7 +10,7 @@ export default function LoginPage() {
 
         <div className="relative flex justify-center pt-6">
           <Image
-            src="/brand/logo-branco.png"
+            src="/brand/logo-branco.svg"
             alt="Corporis Fisioterapia e Pilates"
             width={220}
             height={90}
