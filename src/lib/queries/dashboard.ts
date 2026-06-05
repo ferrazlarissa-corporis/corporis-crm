@@ -48,7 +48,8 @@ const STAGE_META: Record<LeadStage, { label: string; color: string }> = {
   novo: { label: "Novo", color: "var(--color-bege)" },
   qualificacao: { label: "Em qualificação", color: "var(--color-tangerina)" },
   avaliacao_agendada: { label: "Avaliação agendada", color: "var(--color-alaranjado)" },
-  compareceu: { label: "Compareceu", color: "#C97448" },
+  no_show: { label: "No-show", color: "var(--color-ui-error)" },
+  negociacao: { label: "Em negociação", color: "#C97448" },
   convertido: { label: "Convertido", color: "var(--color-verde)" },
   perdido: { label: "Perdido", color: "var(--color-cinza)" },
 };

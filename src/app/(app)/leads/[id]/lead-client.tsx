@@ -34,7 +34,8 @@ const STAGE_LABEL: Record<LeadStage, string> = {
   novo: "Novo",
   qualificacao: "Em qualificação",
   avaliacao_agendada: "Avaliação agendada",
-  compareceu: "Compareceu",
+  no_show: "No-show",
+  negociacao: "Em negociação",
   convertido: "Convertido",
   perdido: "Perdido",
 };
@@ -43,7 +44,8 @@ const STAGE_STYLE: Record<LeadStage, { bg: string; color: string; border: string
   novo:               { bg: "rgba(210,176,110,0.12)", color: "#7A5E1F", border: "rgba(210,176,110,0.4)", dot: "var(--color-bege)" },
   qualificacao:       { bg: "rgba(246,169,88,0.16)",  color: "#8C4A1A", border: "rgba(246,169,88,0.5)",  dot: "var(--color-tangerina)" },
   avaliacao_agendada: { bg: "rgba(240,131,83,0.14)",  color: "#B85A2E", border: "rgba(240,131,83,0.4)", dot: "var(--color-alaranjado)" },
-  compareceu:         { bg: "rgba(201,116,72,0.14)",  color: "#803A15", border: "rgba(201,116,72,0.4)",  dot: "#C97448" },
+  no_show:            { bg: "rgba(209,76,68,0.12)",   color: "#9D2D27", border: "rgba(209,76,68,0.35)",   dot: "var(--color-ui-error)" },
+  negociacao:         { bg: "rgba(201,116,72,0.14)",  color: "#803A15", border: "rgba(201,116,72,0.4)",  dot: "#C97448" },
   convertido:         { bg: "rgba(172,192,149,0.22)", color: "#5F7948", border: "rgba(172,192,149,0.5)", dot: "var(--color-verde)" },
   perdido:            { bg: "rgba(211,210,205,0.28)", color: "var(--color-texto-medio)", border: "var(--color-cinza)", dot: "var(--color-cinza)" },
 };

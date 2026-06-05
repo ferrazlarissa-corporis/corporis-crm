@@ -265,7 +265,7 @@ Usuários do sistema (espelha `auth.users`).
 ### `crm.leads`
 O registro central — um lead/potencial aluna.
 - `id` · `nome` · `telefone` (E.164, único) · `email` (nullable)
-- `estagio` (enum: `novo`, `qualificacao`, `avaliacao_agendada`, `compareceu`, `convertido`, `perdido`)
+- `estagio` (enum: `novo`, `qualificacao`, `avaliacao_agendada`, `no_show`, `negociacao`, `convertido`, `perdido`)
 - `origem` (enum: `whatsapp`, `instagram`, `indicacao`, `google`, `outro`)
 - `interesse` (enum: `pilates`, `pilates_gestante`, `fisio_pelvica`, `indefinido`)
 - `motivo_perda` (text, nullable — preenchido só se `estagio = perdido`)

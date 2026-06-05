@@ -2,6 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import {
+  FUNIL_LEAD_SELECT,
+  mapLeadRowForFunil,
+  type FunilLead,
+  type FunilLeadQueryRow,
+} from "@/lib/queries/leads";
 import { createClient } from "@/lib/supabase/server";
 import type { LeadStage, LeadInterest, LeadOrigin } from "@/types/database";
 
@@ -9,12 +15,12 @@ const createLeadSchema = z.object({
   nome:      z.string().min(2),
   telefone:  z.string().min(10),
   email:     z.string().email().optional().or(z.literal("")),
-  estagio:   z.enum(["novo","qualificacao","avaliacao_agendada","compareceu","convertido","perdido"]).default("novo"),
+  estagio:   z.enum(["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"]).default("novo"),
   origem:    z.enum(["whatsapp","instagram","indicacao","google","outro"]).default("whatsapp"),
   interesse: z.enum(["pilates","pilates_gestante","fisio_pelvica","indefinido"]).default("indefinido"),
 });
 
-export type CreateLeadResult = { success: true; id: string } | { success: false; error: string };
+export type CreateLeadResult = { success: true; lead: FunilLead } | { success: false; error: string };
 
 export async function createLead(formData: FormData): Promise<CreateLeadResult> {
   const raw = {
@@ -39,7 +45,7 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
     estagio:   parsed.data.estagio as LeadStage,
     origem:    parsed.data.origem as LeadOrigin,
     interesse: parsed.data.interesse as LeadInterest,
-  }).select("id").single();
+  }).select(FUNIL_LEAD_SELECT).single();
 
   if (error) return { success: false, error: error.message };
 
@@ -53,12 +59,12 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
 
   revalidatePath("/funil");
   revalidatePath("/dashboard");
-  return { success: true, id: data.id };
+  return { success: true, lead: mapLeadRowForFunil(data as FunilLeadQueryRow) };
 }
 
 const updateStageSchema = z.object({
   id:     z.string().uuid(),
-  estagio: z.enum(["novo","qualificacao","avaliacao_agendada","compareceu","convertido","perdido"]),
+  estagio: z.enum(["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"]),
   motivoPerda: z.string().optional(),
 });
 

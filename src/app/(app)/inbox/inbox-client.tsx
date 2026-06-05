@@ -74,7 +74,8 @@ const STAGE_LABEL: Record<LeadStage, string> = {
   novo:               "Novo",
   qualificacao:       "Qualificação",
   avaliacao_agendada: "Agendada",
-  compareceu:         "Compareceu",
+  no_show:            "No-show",
+  negociacao:         "Negociação",
   convertido:         "Convertido",
   perdido:            "Perdido",
 };

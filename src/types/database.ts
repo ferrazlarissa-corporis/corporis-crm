@@ -12,7 +12,8 @@ export type LeadStage =
   | "novo"
   | "qualificacao"
   | "avaliacao_agendada"
-  | "compareceu"
+  | "no_show"
+  | "negociacao"
   | "convertido"
   | "perdido";
 

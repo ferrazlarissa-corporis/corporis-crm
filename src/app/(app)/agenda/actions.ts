@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAppointmentsBetween } from "@/lib/queries/appointments";
-import type { AppointmentType, AppointmentStatus } from "@/types/database";
+import type { AppointmentType, AppointmentStatus, LeadStage } from "@/types/database";
 
 const createAppointmentSchema = z.object({
   lead_id: z.string().uuid(),
@@ -74,12 +74,47 @@ export async function updateAppointmentStatus(
   const supabase = await createClient();
   const db = supabase.schema("crm");
 
+  const { data: appointment, error: appointmentError } = await db
+    .from("appointments")
+    .select("lead_id")
+    .eq("id", parsed.data.id)
+    .single();
+
+  if (appointmentError) return { success: false, error: appointmentError.message };
+
   const { error } = await db
     .from("appointments")
     .update({ status: parsed.data.status as AppointmentStatus })
     .eq("id", parsed.data.id);
 
   if (error) return { success: false, error: error.message };
+
+  const stageByStatus: Partial<Record<AppointmentStatus, LeadStage>> = {
+    compareceu: "negociacao",
+    faltou: "no_show",
+  };
+  const nextStage = stageByStatus[parsed.data.status as AppointmentStatus];
+
+  if (nextStage && appointment?.lead_id) {
+    const { error: leadError } = await db.from("leads").update({
+      estagio: nextStage,
+      ultima_interacao_at: new Date().toISOString(),
+    }).eq("id", appointment.lead_id);
+
+    if (leadError) return { success: false, error: leadError.message };
+
+    await db.from("activities").insert({
+      lead_id: appointment.lead_id,
+      tipo: "mudanca_estagio",
+      descricao: parsed.data.status === "faltou"
+        ? "Avaliação marcada como falta; lead movida para No-show"
+        : "Avaliação marcada como compareceu; lead movida para Em negociação",
+      meta: { appointment_id: parsed.data.id, status: parsed.data.status, estagio: nextStage },
+    });
+
+    revalidatePath("/funil");
+    revalidatePath(`/leads/${appointment.lead_id}`);
+  }
 
   revalidatePath("/agenda");
   revalidatePath("/dashboard");

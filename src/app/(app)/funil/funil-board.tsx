@@ -10,7 +10,6 @@ import {
   Globe,
   GripVertical,
   MessageCircle,
-  MoreHorizontal,
   Phone,
   Plus,
   Search,
@@ -41,7 +40,8 @@ type StageId =
   | "novo"
   | "qual"
   | "agendada"
-  | "compareceu"
+  | "no_show"
+  | "negociacao"
   | "convertido"
   | "perdido";
 
@@ -72,7 +72,8 @@ const STAGES: { id: StageId; name: string; color: string; tight: boolean }[] = [
   { id: "novo",        name: "Novo",               color: "var(--color-bege)",        tight: false },
   { id: "qual",        name: "Em qualificação",     color: "var(--color-tangerina)",   tight: false },
   { id: "agendada",    name: "Avaliação agendada",  color: "var(--color-alaranjado)",  tight: false },
-  { id: "compareceu",  name: "Compareceu",          color: "#C97448",                  tight: false },
+  { id: "no_show",     name: "No-show",             color: "var(--color-ui-error)",    tight: false },
+  { id: "negociacao",  name: "Em negociação",       color: "#C97448",                  tight: false },
   { id: "convertido",  name: "Convertido",          color: "var(--color-verde)",       tight: true  },
   { id: "perdido",     name: "Perdido",             color: "var(--color-cinza)",       tight: true  },
 ];
@@ -102,7 +103,8 @@ const STAGE_TO_DB: Record<StageId, LeadStage> = {
   novo:        "novo",
   qual:        "qualificacao",
   agendada:    "avaliacao_agendada",
-  compareceu:  "compareceu",
+  no_show:     "no_show",
+  negociacao:  "negociacao",
   convertido:  "convertido",
   perdido:     "perdido",
 };
@@ -361,17 +363,29 @@ function DroppableColumn({ id, children, isOver }: { id: string; children: React
 
 // ─── New Lead Modal ────────────────────────────────────────────────────────────
 
-function NewLeadModal({ onClose }: { onClose: () => void }) {
+function NewLeadModal({
+  initialStage,
+  onClose,
+  onCreated,
+}: {
+  initialStage: StageId;
+  onClose: () => void;
+  onCreated: (lead: FunilLead) => void;
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const initialStageName = STAGES.find((stage) => stage.id === initialStage)?.name ?? "Novo";
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
     startTransition(async () => {
+      setError(null);
       const result = await createLead(formData);
       if (result.success) {
+        onCreated(result.lead);
+        form.reset();
         onClose();
       } else {
         setError(result.error);
@@ -383,13 +397,19 @@ function NewLeadModal({ onClose }: { onClose: () => void }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(42,31,26,0.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: "var(--bg-card)", borderRadius: "var(--radius-lg)", border: "0.6px solid var(--color-cinza)", padding: "28px 28px 24px", width: 480, boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between" style={{ marginBottom: "22px" }}>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: "var(--color-texto-escuro)", margin: 0 }}>Novo lead</h2>
+          <div>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: "var(--color-texto-escuro)", margin: 0 }}>Novo lead</h2>
+            <span style={{ display: "block", marginTop: "6px", fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-texto-medio)" }}>
+              Etapa inicial: {initialStageName}
+            </span>
+          </div>
           <button onClick={onClose} type="button" style={{ background: "none", border: 0, cursor: "pointer", color: "var(--color-texto-medio)", padding: "4px" }}>
             <X className="h-4 w-4" style={{ strokeWidth: 1.6 }} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <input type="hidden" name="estagio" value={STAGE_TO_DB[initialStage]} />
           {[
             { name: "nome", label: "Nome", type: "text", placeholder: "Nome completo", required: true },
             { name: "telefone", label: "Telefone (WhatsApp)", type: "tel", placeholder: "+55 49 9 9999-9999", required: true },
@@ -442,6 +462,7 @@ function NewLeadModal({ onClose }: { onClose: () => void }) {
 export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[] }) {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [modalStage, setModalStage] = useState<StageId>("novo");
   const [leads, setLeads] = useState(() => initialLeads.map(mapFunilLead));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<StageId | null>(null);
@@ -455,6 +476,11 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
 
   const handleDragOver = useCallback((event: { over: { id: string | number } | null }) => {
     setOverStage(event.over ? (String(event.over.id) as StageId) : null);
+  }, []);
+
+  const openNewLeadModal = useCallback((stageId: StageId) => {
+    setModalStage(stageId);
+    setShowModal(true);
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -529,7 +555,7 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
             <span style={{ color: "var(--color-texto-medio)", fontWeight: 400 }}>Interesse:</span>{" "}Todos
             <ChevronDown className="h-3 w-3" style={{ color: "var(--color-texto-medio)", strokeWidth: 1.6 }} />
           </button>
-          <button type="button" onClick={() => setShowModal(true)} className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] px-[18px] py-[9px] text-[13px] font-medium tracking-[0.3px] text-white transition-colors duration-[160ms]" style={{ background: "var(--color-alaranjado)", border: 0, fontFamily: "var(--font-body)" }}>
+          <button type="button" onClick={() => openNewLeadModal("novo")} className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] px-[18px] py-[9px] text-[13px] font-medium tracking-[0.3px] text-white transition-colors duration-[160ms]" style={{ background: "var(--color-alaranjado)", border: 0, fontFamily: "var(--font-body)" }}>
             <Plus className="h-3.5 w-3.5" style={{ strokeWidth: 1.8 }} />
             Novo lead
           </button>
@@ -582,16 +608,15 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
                     <span style={{ fontFamily: "var(--font-body)", fontSize: "11px", color: "var(--color-texto-medio)", background: "var(--bg-2)", padding: "2px 8px", borderRadius: "var(--radius-pill)", lineHeight: 1.4, fontVariantNumeric: "tabular-nums" }}>
                       {stageLeads.length}
                     </span>
-                    <div className="ml-auto flex items-center" style={{ gap: "2px" }}>
-                      {[
-                        { icon: <Plus className="h-[13px] w-[13px]" style={{ strokeWidth: 1.7 }} />, label: "Adicionar" },
-                        { icon: <MoreHorizontal className="h-[13px] w-[13px]" style={{ strokeWidth: 1.7 }} />, label: "Mais opções" },
-                      ].map(({ icon, label }) => (
-                        <button key={label} type="button" aria-label={label} className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-[var(--radius-md)] transition-all duration-[160ms]" style={{ background: "transparent", border: 0, color: "var(--color-texto-medio)" }}>
-                          {icon}
-                        </button>
-                      ))}
-                    </div>
+                    <button
+                      type="button"
+                      aria-label={`Adicionar lead em ${stage.name}`}
+                      onClick={() => openNewLeadModal(stage.id)}
+                      className="ml-auto flex h-6 w-6 cursor-pointer items-center justify-center rounded-[var(--radius-md)] transition-all duration-[160ms]"
+                      style={{ background: "transparent", border: 0, color: "var(--color-texto-medio)" }}
+                    >
+                      <Plus className="h-[13px] w-[13px]" style={{ strokeWidth: 1.7 }} />
+                    </button>
                   </header>
 
                   <DroppableColumn id={stage.id} isOver={isOver}>
@@ -632,7 +657,18 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
         </DragOverlay>
       </DndContext>
 
-      {showModal && <NewLeadModal onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <NewLeadModal
+          initialStage={modalStage}
+          onClose={() => setShowModal(false)}
+          onCreated={(lead) => {
+            setLeads((prev) => {
+              const createdLead = mapFunilLead(lead);
+              return [createdLead, ...prev.filter((item) => item.id !== createdLead.id)];
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
