@@ -300,6 +300,7 @@ export interface Database {
           exemplos_conversa: Json;
           model_provider: string;
           model_id: string;
+          apenas_desconhecidos: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -314,6 +315,7 @@ export interface Database {
           exemplos_conversa?: Json;
           model_provider?: string;
           model_id?: string;
+          apenas_desconhecidos?: boolean;
           created_at?: string;
           updated_at?: string;
         };

@@ -345,6 +345,7 @@ function SavedNote({ text, success }: { text: string; success?: boolean }) {
 export default function AgentePage() {
   // state
   const [agentActive, setAgentActive] = useState(true);
+  const [apenasDesconhecidos, setApenasDesconhecidos] = useState(true);
   const [personaText, setPersonaText] = useState(PERSONA_DEFAULT);
   const [faqItems, setFaqItems] = useState<FaqItem[]>(INITIAL_FAQ);
   const [editingId, setEditingId] = useState<number | 'new' | null>(4); // editing "Preciso de pedido?"
@@ -384,6 +385,7 @@ export default function AgentePage() {
     supabase.schema('crm').from('agent_config').select('*').single().then(({ data }) => {
       if (!data) return;
       setAgentActive(data.ativo);
+      setApenasDesconhecidos(data.apenas_desconhecidos ?? true);
       if (data.persona_prompt) setPersonaText(data.persona_prompt);
       if (data.mensagem_fora_horario) setOffHoursText(data.mensagem_fora_horario);
       if (Array.isArray(data.faq) && (data.faq as unknown[]).length > 0) {
@@ -436,6 +438,7 @@ export default function AgentePage() {
     startSave(async () => {
       const result = await updateAgentConfig({
         ativo:                agentActive,
+        apenas_desconhecidos: apenasDesconhecidos,
         persona_prompt:       personaText,
         mensagem_fora_horario: offHoursText,
         horario_atendimento:  horarioAtendimento,
@@ -878,6 +881,18 @@ export default function AgentePage() {
                     <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-medio)', lineHeight: 1.55 }}>
                       A <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>Clara</strong> está respondendo novos contatos no WhatsApp. Conversas com lead já em atendimento humano <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>não</strong> são interrompidas.
                     </p>
+                    {/* Apenas desconhecidos */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, borderTop: '0.6px solid var(--color-cinza)', paddingTop: 16, marginTop: 4 }}>
+                      <Toggle checked={apenasDesconhecidos} onChange={setApenasDesconhecidos} size="sm" label="Apenas contatos não salvos" />
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.3 }}>
+                          Apenas contatos não salvos
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', marginTop: 3, lineHeight: 1.5 }}>
+                          A Clara ignora mensagens de quem está salvo na agenda do WhatsApp — clientes em acompanhamento, contatos pessoais e fornecedores.
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Divider */}
@@ -1415,17 +1430,6 @@ export default function AgentePage() {
                 <Btn primary onClick={handleSaveAll}>{savePending ? 'Salvando…' : 'Salvar horários'}</Btn>
               </div>
             </section>
-
-            {/* ─── Bottom bar ────────────────────────────────────────────── */}
-            <div style={{ marginTop: 8, padding: '18px 28px', borderRadius: 'var(--radius-lg)', background: 'var(--bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18 }}>
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--color-texto-medio)', lineHeight: 1.5 }}>
-                <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>Tudo certo por aqui.</strong> Cada seção é salva separadamente — você pode sair desta página a qualquer momento sem perder nada.
-              </div>
-              <Btn>
-                <Check size={13} strokeWidth={1.8} />
-                Voltar para o Dashboard
-              </Btn>
-            </div>
 
           </div>
         </div>

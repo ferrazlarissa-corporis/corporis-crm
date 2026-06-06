@@ -144,3 +144,20 @@ export async function markAsRead(chatId: string): Promise<unknown> {
     readMessages: [{ remoteJid: chatId, fromMe: false, id: "" }],
   });
 }
+
+// ─── Contact check ────────────────────────────────────────────────────────────
+
+/**
+ * Returns true if the JID (e.g. "5549999999999@s.whatsapp.net") is saved
+ * in the WhatsApp instance's contact book. Returns false on error so AI
+ * defaults to responding when the check is unavailable.
+ */
+export async function isContactSaved(jid: string): Promise<boolean> {
+  try {
+    const result = await evoFetch("/contact/findContacts/{instance}", { where: { id: jid } });
+    const list = Array.isArray(result) ? result : [];
+    return list.length > 0;
+  } catch {
+    return false;
+  }
+}

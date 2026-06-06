@@ -1,7 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { jidToE164, extractMessageText } from "@/lib/evolution/client";
+import { jidToE164, extractMessageText, isContactSaved } from "@/lib/evolution/client";
 
 // ─── Payload schema ───────────────────────────────────────────────────────────
 
@@ -135,8 +135,16 @@ export async function POST(request: NextRequest) {
   if (conv.modo === "ia") {
     const { data: agentConf } = await db
       .from("agent_config")
-      .select("ativo")
+      .select("ativo, apenas_desconhecidos")
       .single();
+
+    // If filter is active, skip AI for contacts saved in the phone's address book
+    if (agentConf?.apenas_desconhecidos) {
+      const saved = await isContactSaved(remoteJid);
+      if (saved) {
+        return NextResponse.json({ ok: true, skipped: "known_contact", conversation_id: conv.id });
+      }
+    }
 
     if (agentConf?.ativo) {
       // Run after the response is sent. Unlike a bare fire-and-forget fetch,

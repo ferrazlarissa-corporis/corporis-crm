@@ -21,6 +21,7 @@ import { AGENT_MODELS } from "@/lib/ai/model";
 
 const agentConfigSchema = z.object({
   ativo:                z.boolean(),
+  apenas_desconhecidos: z.boolean(),
   persona_prompt:       z.string().min(10),
   mensagem_fora_horario: z.string(),
   horario_atendimento:  z.record(z.string(), z.string()),
@@ -79,6 +80,7 @@ export async function updateAgentConfig(input: AgentConfigInput): Promise<Config
 
   const { error } = await db.from("agent_config").update({
     ativo:                 parsed.data.ativo,
+    apenas_desconhecidos:  parsed.data.apenas_desconhecidos,
     persona_prompt:        parsed.data.persona_prompt,
     mensagem_fora_horario: parsed.data.mensagem_fora_horario,
     horario_atendimento:   parsed.data.horario_atendimento,
