@@ -233,27 +233,50 @@ export default function InboxClient({ initialConversations }: { initialConversat
       .limit(50)
       .then(({ data }) => { setMessages((data as MessageRow[]) ?? []); setLoadingMsgs(false); });
 
-    const channel = supabase
-      .channel(`messages_${selectedId}`)
-      .on("postgres_changes", {
-        event: "INSERT", schema: "crm", table: "messages",
-        filter: `conversation_id=eq.${selectedId}`,
-      }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as MessageRow]);
-      })
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
 
-    return () => { supabase.removeChannel(channel); };
+    // Set Realtime auth from the recovered session BEFORE subscribing —
+    // otherwise the socket connects as `anon` and RLS on `crm` blocks events.
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session) supabase.realtime.setAuth(data.session.access_token);
+
+      channel = supabase
+        .channel(`messages_${selectedId}`)
+        .on("postgres_changes", {
+          event: "INSERT", schema: "crm", table: "messages",
+          filter: `conversation_id=eq.${selectedId}`,
+        }, (payload) => {
+          const incoming = payload.new as MessageRow;
+          setMessages((prev) =>
+            prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]
+          );
+        })
+        .subscribe();
+    });
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [selectedId]);
 
   // Realtime: update conversation list on changes
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel("conversations_changes")
-      .on("postgres_changes", {
-        event: "*", schema: "crm", table: "conversations",
-      }, (payload) => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session) supabase.realtime.setAuth(data.session.access_token);
+
+      channel = supabase
+        .channel("conversations_changes")
+        .on("postgres_changes", {
+          event: "*", schema: "crm", table: "conversations",
+        }, (payload) => {
         if (payload.eventType === "UPDATE") {
           setConvs((prev) => prev.map((c) =>
             c.id === (payload.new as { id: string }).id
@@ -283,9 +306,14 @@ export default function InboxClient({ initialConversations }: { initialConversat
               setConvs((prev) => prev.some((c) => c.id === full.id) ? prev : [full, ...prev]);
             });
         }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+        })
+        .subscribe();
+    });
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleToggleHandoff = async (conversationId: string, modo: "ia" | "humano") => {
