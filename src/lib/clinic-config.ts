@@ -1,6 +1,7 @@
 export const CLINIC_CONFIG_ID = "00000000-0000-0000-0000-000000000001";
 export const CLINIC_ASSETS_BUCKET = "clinic-assets";
 export const CLINIC_LOGO_MAX_BYTES = 2 * 1024 * 1024;
+export const CLINIC_TIME_ZONE = "America/Sao_Paulo";
 
 export const CLINIC_LOGO_EXT_BY_MIME: Record<string, string> = {
   "image/png": "png",
@@ -43,6 +44,16 @@ const CLINIC_DAY_INDEX: Record<string, number> = CLINIC_WEEK_DAYS.reduce(
   (acc, day, index) => ({ ...acc, [day]: index }),
   {} as Record<string, number>,
 );
+
+const CLINIC_WEEKDAY_INDEX: Record<string, number> = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+};
 
 export type ClinicInfo = {
   razao_social: string;
@@ -109,6 +120,34 @@ function formatMinutes(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
+function clinicDateParts(date: Date, timeZone = CLINIC_TIME_ZONE) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
+  const hour = Number(parts.hour);
+  const minute = Number(parts.minute);
+
+  return {
+    dateKey: `${parts.year}-${parts.month}-${parts.day}`,
+    dayIndex: CLINIC_WEEKDAY_INDEX[parts.weekday] ?? 0,
+    minutes: hour * 60 + minute,
+  };
+}
+
+function formatClinicIntervals(intervals: ClinicTimeInterval[]): string {
+  return intervals
+    .map((interval) => `${interval.start} - ${interval.end}`)
+    .join(" / ");
+}
+
 export function parseClinicHoursText(value: string): ClinicTimeInterval[] {
   return value
     .split("|")
@@ -145,6 +184,42 @@ export function buildClinicSchedule(value: unknown): ClinicScheduleDay[] {
       };
     })
     .sort((a, b) => a.index - b.index);
+}
+
+export function validateAppointmentWithinClinicHours(
+  value: unknown,
+  start: Date,
+  end: Date,
+  timeZone = CLINIC_TIME_ZONE,
+): { ok: true } | { ok: false; message: string } {
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    return { ok: false, message: "Informe uma data e hora válidas para a avaliação." };
+  }
+
+  const schedule = buildClinicSchedule(value);
+  const startParts = clinicDateParts(start, timeZone);
+  const endParts = clinicDateParts(end, timeZone);
+  const day = schedule.find((item) => item.index === startParts.dayIndex);
+  const dayName = day?.day ?? CLINIC_WEEK_DAYS[startParts.dayIndex] ?? "este dia";
+
+  if (!day || day.off || day.intervals.length === 0) {
+    return { ok: false, message: `A clínica está fechada em ${dayName}. Escolha um dia de atendimento.` };
+  }
+
+  if (startParts.dateKey !== endParts.dateKey) {
+    return { ok: false, message: `O agendamento precisa começar e terminar no mesmo dia de atendimento. Em ${dayName}: ${formatClinicIntervals(day.intervals)}.` };
+  }
+
+  const fitsClinicHours = day.intervals.some((interval) => (
+    startParts.minutes >= interval.startMinutes &&
+    endParts.minutes <= interval.endMinutes
+  ));
+
+  if (!fitsClinicHours) {
+    return { ok: false, message: `Este horário está fora do funcionamento de ${dayName}. Disponível: ${formatClinicIntervals(day.intervals)}.` };
+  }
+
+  return { ok: true };
 }
 
 export function formatClinicHoursCompact(row: ClinicHoursRow): string {

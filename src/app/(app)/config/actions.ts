@@ -10,6 +10,11 @@ import {
 } from "@/lib/clinic-config";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getConnectionState,
+  getInstanceInfo,
+  connectInstance,
+} from "@/lib/evolution/client";
 
 // ─── Agent config ──────────────────────────────────────────────────────────────
 
@@ -166,6 +171,55 @@ export async function updateClinicInfo(input: ClinicInfoInput): Promise<ConfigRe
 export type ClinicLogoResult =
   | { success: true; logoUrl: string; logoPath: string }
   | { success: false; error: string };
+
+// ─── WhatsApp / Evolution API ─────────────────────────────────────────────────
+
+export type WhatsAppStatus = {
+  configured: boolean;
+  state: "open" | "close" | "connecting" | "unknown";
+  number?: string;
+  instance?: string;
+};
+
+export async function fetchWhatsAppStatus(): Promise<WhatsAppStatus> {
+  const envOk =
+    !!process.env.EVOLUTION_API_URL &&
+    !!process.env.EVOLUTION_API_KEY &&
+    !!process.env.EVOLUTION_INSTANCE;
+
+  if (!envOk) return { configured: false, state: "unknown" };
+
+  const instanceName = process.env.EVOLUTION_INSTANCE!;
+
+  try {
+    const [state, info] = await Promise.all([
+      getConnectionState(),
+      getInstanceInfo().catch(() => null),
+    ]);
+    return {
+      configured: true,
+      state,
+      number: info?.number,
+      instance: instanceName,
+    };
+  } catch {
+    return { configured: true, state: "unknown", instance: instanceName };
+  }
+}
+
+export type QRResult =
+  | { success: true; base64: string }
+  | { success: false; error: string };
+
+export async function generateWhatsAppQR(): Promise<QRResult> {
+  try {
+    const result = await connectInstance();
+    if (!result?.base64) return { success: false, error: "QR não disponível — tente novamente." };
+    return { success: true, base64: result.base64 };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Erro ao conectar." };
+  }
+}
 
 export async function uploadClinicLogo(formData: FormData): Promise<ClinicLogoResult> {
   const file = formData.get("logo");

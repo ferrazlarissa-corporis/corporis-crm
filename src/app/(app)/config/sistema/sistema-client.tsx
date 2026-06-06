@@ -1,11 +1,11 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useRef, useState, useTransition, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Users, MessageSquare, FileText, Building2, Download, Plus, Search,
   User, XCircle, Copy,
-  Check, Clock, RotateCcw, Save, Upload, Trash2,
+  Check, Clock, RotateCcw, Save, Upload, Trash2, RefreshCw, Wifi, WifiOff,
 } from 'lucide-react';
 import {
   CLINIC_LOGO_ACCEPT_ATTRIBUTE,
@@ -16,7 +16,11 @@ import {
   type ClinicHoursRow,
   type ClinicInfo,
 } from '@/lib/clinic-config';
-import { createTemplate, deleteTemplate, toggleUserActive, updateClinicInfo, uploadClinicLogo } from '../actions';
+import {
+  createTemplate, deleteTemplate, toggleUserActive, updateClinicInfo, uploadClinicLogo,
+  fetchWhatsAppStatus, generateWhatsAppQR,
+  type WhatsAppStatus,
+} from '../actions';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 type TabId = 'usuarios' | 'whatsapp' | 'templates' | 'clinica';
@@ -50,6 +54,8 @@ type ClinicConfig = Partial<Omit<ClinicInfo, 'funcionamento'>> & {
 };
 
 type ClinicFieldId = 'legal' | 'commercial' | 'address' | 'phone' | 'email' | 'hours';
+
+type WaPhase = 'idle' | 'loading' | 'open' | 'close' | 'connecting' | 'qr' | 'qr_expired' | 'unknown';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const TONE_STYLE: Record<1|2|3|4|5, { bg: string; color: string }> = {
@@ -243,6 +249,15 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
   const [clinicError, setClinicError] = useState('');
   const [clinicStatus, setClinicStatus] = useState('');
 
+  // WhatsApp tab state
+  const [waPhase, setWaPhase] = useState<WaPhase>('idle');
+  const [waStatus, setWaStatus] = useState<WhatsAppStatus | null>(null);
+  const [waQrBase64, setWaQrBase64] = useState('');
+  const [waQrExpiresAt, setWaQrExpiresAt] = useState(0);
+  const [waQrCountdown, setWaQrCountdown] = useState(0);
+  const [waQrLoading, setWaQrLoading] = useState(false);
+  const waTabLoadedRef = useRef(false);
+
   const grouped = CATEGORIAS.reduce((acc, cat) => {
     acc[cat] = initialTemplates.filter(t => t.categoria === cat);
     return acc;
@@ -357,6 +372,61 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
     } else {
       setClinicError(res.error);
     }
+  }
+
+  const loadWaStatus = useCallback(async () => {
+    setWaPhase('loading');
+    const status = await fetchWhatsAppStatus();
+    setWaStatus(status);
+    if (!status.configured) { setWaPhase('unknown'); return; }
+    setWaPhase(status.state === 'open' ? 'open' : status.state === 'connecting' ? 'connecting' : status.state === 'close' ? 'close' : 'unknown');
+  }, []);
+
+  // Load on first visit to WhatsApp tab
+  useEffect(() => {
+    if (tab === 'whatsapp' && !waTabLoadedRef.current) {
+      waTabLoadedRef.current = true;
+      loadWaStatus();
+    }
+  }, [tab, loadWaStatus]);
+
+  // Poll while connecting or QR visible
+  useEffect(() => {
+    if (waPhase !== 'connecting' && waPhase !== 'qr') return;
+    const id = setInterval(async () => {
+      const status = await fetchWhatsAppStatus();
+      setWaStatus(status);
+      if (status.state === 'open') {
+        setWaPhase('open');
+        setWaQrBase64('');
+      }
+    }, 3000);
+    return () => clearInterval(id);
+  }, [waPhase]);
+
+  // QR countdown timer
+  useEffect(() => {
+    if (waPhase !== 'qr' || !waQrExpiresAt) return;
+    const tick = () => {
+      const left = Math.max(0, Math.round((waQrExpiresAt - Date.now()) / 1000));
+      setWaQrCountdown(left);
+      if (left === 0) setWaPhase('qr_expired');
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [waPhase, waQrExpiresAt]);
+
+  async function handleGenerateQR() {
+    setWaQrLoading(true);
+    const res = await generateWhatsAppQR();
+    setWaQrLoading(false);
+    if (!res.success) return;
+    const base64 = res.base64.startsWith('data:') ? res.base64 : `data:image/png;base64,${res.base64}`;
+    setWaQrBase64(base64);
+    setWaQrExpiresAt(Date.now() + 60_000);
+    setWaQrCountdown(60);
+    setWaPhase('qr');
   }
 
   const thStyle: React.CSSProperties = {
@@ -579,17 +649,175 @@ export default function SistemaClient({ currentUserId, initialProfiles, initialT
                     O número da clínica conversa com as alunas via <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>Evolution API</strong>. Aqui você acompanha a conexão e gera um novo QR quando o aparelho desconecta.
                   </p>
                 </div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <Btn>Testar envio</Btn>
-                  <Btn>Logs da API</Btn>
-                </div>
+                <Btn onClick={loadWaStatus} disabled={waPhase === 'loading'}>
+                  <RefreshCw size={13} strokeWidth={1.8} style={{ opacity: waPhase === 'loading' ? 0.5 : 1 }} />
+                  Atualizar status
+                </Btn>
               </div>
 
-              <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: '28px', textAlign: 'center' }}>
-                <div style={{ color: 'var(--color-texto-medio)', fontFamily: 'var(--font-body)', fontSize: 14 }}>
-                  Configure a Evolution API nas variáveis de ambiente para ver o status da conexão aqui.
+              {/* Loading skeleton */}
+              {waPhase === 'idle' || waPhase === 'loading' ? (
+                <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 28, display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-pill)', background: 'var(--bg-2)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ height: 14, width: 160, background: 'var(--bg-2)', borderRadius: 4 }} />
+                    <div style={{ height: 11, width: 100, background: 'var(--bg-2)', borderRadius: 4 }} />
+                  </div>
                 </div>
-              </div>
+              ) : null}
+
+              {/* Not configured */}
+              {waPhase === 'unknown' && !waStatus?.configured ? (
+                <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-pill)', background: 'var(--bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <WifiOff size={20} strokeWidth={1.5} style={{ color: 'var(--color-texto-medio)' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, color: 'var(--color-texto-escuro)', marginBottom: 6 }}>Evolution API não configurada</div>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-medio)', lineHeight: 1.6 }}>
+                        Defina as variáveis de ambiente <code style={{ background: 'var(--bg-2)', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>EVOLUTION_API_URL</code>, <code style={{ background: 'var(--bg-2)', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>EVOLUTION_API_KEY</code> e <code style={{ background: 'var(--bg-2)', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>EVOLUTION_INSTANCE</code> para ativar a integração.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Unknown / error */}
+              {waPhase === 'unknown' && waStatus?.configured ? (
+                <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-pill)', background: 'rgba(192, 80, 74, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <WifiOff size={20} strokeWidth={1.5} style={{ color: 'var(--color-ui-error)' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, color: 'var(--color-texto-escuro)', marginBottom: 6 }}>Não foi possível conectar à Evolution API</div>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-medio)', lineHeight: 1.6, marginBottom: 14 }}>
+                        Verifique se a instância <code style={{ background: 'var(--bg-2)', padding: '1px 5px', borderRadius: 3, fontSize: 12 }}>{waStatus.instance}</code> está online e acessível.
+                      </div>
+                      <Btn onClick={loadWaStatus}><RefreshCw size={12} strokeWidth={1.8} />Tentar novamente</Btn>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Connected */}
+              {waPhase === 'open' && waStatus ? (
+                <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-pill)', background: 'rgba(172, 192, 149, 0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Wifi size={20} strokeWidth={1.5} style={{ color: '#5F7948' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.3 }}>Linha principal da clínica</div>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 4, fontFamily: 'var(--font-body)', fontSize: 11.5, fontWeight: 500, letterSpacing: '0.3px', padding: '3px 11px 3px 9px', borderRadius: 'var(--radius-pill)', background: 'rgba(172, 192, 149, 0.20)', color: '#5F7948' }}>
+                          <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-pill)', background: 'var(--color-verde)', boxShadow: '0 0 0 3px rgba(172, 192, 149, 0.30)', flexShrink: 0 }} />
+                          Conectado
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <Btn onClick={handleGenerateQR} disabled={waQrLoading}>
+                        <RefreshCw size={12} strokeWidth={1.8} />Reconectar
+                      </Btn>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0 0', borderTop: '0.6px solid var(--color-cinza)' }}>
+                    {[
+                      { lbl: 'Número', val: waStatus.number ? `+${waStatus.number.replace(/^\+/, '')}` : '—' },
+                      { lbl: 'Instância', val: waStatus.instance ?? '—', mono: true },
+                      { lbl: 'Webhook', val: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/api/webhook/whatsapp`, mono: true },
+                    ].map(({ lbl, val, mono }) => (
+                      <div key={lbl} style={{ padding: '16px 0 14px', paddingRight: 24 }}>
+                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10.5, fontWeight: 500, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'var(--color-bege)', marginBottom: 6 }}>{lbl}</div>
+                        <div style={{ fontFamily: mono ? '"Ubuntu Mono", ui-monospace, monospace' : 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-escuro)', wordBreak: 'break-all' }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Disconnected */}
+              {waPhase === 'close' ? (
+                <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-pill)', background: 'rgba(192, 80, 74, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <WifiOff size={20} strokeWidth={1.5} style={{ color: 'var(--color-ui-error)' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.3 }}>
+                          {waStatus?.number ? `+${waStatus.number.replace(/^\+/, '')}` : 'Linha principal'}
+                        </div>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 4, fontFamily: 'var(--font-body)', fontSize: 11.5, fontWeight: 500, letterSpacing: '0.3px', padding: '3px 11px 3px 9px', borderRadius: 'var(--radius-pill)', background: 'var(--bg-2)', color: 'var(--color-texto-medio)' }}>
+                          <span style={{ width: 7, height: 7, borderRadius: 'var(--radius-pill)', background: 'var(--color-cinza)', flexShrink: 0 }} />
+                          Desconectado
+                        </span>
+                      </div>
+                    </div>
+                    <Btn primary onClick={handleGenerateQR} disabled={waQrLoading}>
+                      <Wifi size={13} strokeWidth={1.8} />{waQrLoading ? 'Gerando QR…' : 'Reconectar agora'}
+                    </Btn>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Connecting */}
+              {waPhase === 'connecting' ? (
+                <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 28, display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-pill)', background: 'rgba(210, 176, 110, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <RefreshCw size={20} strokeWidth={1.5} style={{ color: '#7A5E1F' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, color: 'var(--color-texto-escuro)', marginBottom: 4 }}>Conectando…</div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--color-texto-medio)' }}>Verificando status a cada 3 segundos.</div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* QR Code */}
+              {(waPhase === 'qr' || waPhase === 'qr_expired') && waQrBase64 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 340px) minmax(0, 1fr)', gap: 20, alignItems: 'start', marginTop: 0 }}>
+                  <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 18, color: 'var(--color-texto-escuro)', alignSelf: 'flex-start' }}>Parear aparelho</div>
+                    <div style={{ position: 'relative', width: 220, height: 220 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={waQrBase64} alt="QR Code WhatsApp" width={220} height={220} style={{ borderRadius: 'var(--radius-sm)', display: 'block', opacity: waPhase === 'qr_expired' ? 0.3 : 1, transition: 'opacity var(--duration-fast) var(--ease-soft)' }} />
+                      {waPhase === 'qr_expired' && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--color-texto-escuro)' }}>QR expirado</span>
+                          <Btn sm primary onClick={handleGenerateQR} disabled={waQrLoading}><RefreshCw size={11} strokeWidth={2} />Gerar novo QR</Btn>
+                        </div>
+                      )}
+                    </div>
+                    {waPhase === 'qr' && (
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', fontFeatureSettings: '"tnum"' }}>
+                        Expira em {String(Math.floor(waQrCountdown / 60)).padStart(2, '0')}:{String(waQrCountdown % 60).padStart(2, '0')}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: 24 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 18, color: 'var(--color-texto-escuro)', marginBottom: 16 }}>Como parear</div>
+                    {[
+                      'Abra o WhatsApp no aparelho da clínica',
+                      'Toque em Menu (⋮) → Aparelhos conectados',
+                      'Toque em Conectar aparelho',
+                      'Aponte a câmera para o QR ao lado',
+                    ].map((step, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: 'var(--radius-pill)', background: 'var(--color-bege-claro)', color: '#6B5526', fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--color-texto-escuro)', lineHeight: 1.55 }}>{step}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 8, fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', lineHeight: 1.5 }}>
+                      Após escanear, aguarde a confirmação — a tela atualiza automaticamente.
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
             </div>
           </div>
         )}

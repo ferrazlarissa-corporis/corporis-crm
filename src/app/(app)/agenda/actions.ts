@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAppointmentsBetween } from "@/lib/queries/appointments";
+import { CLINIC_CONFIG_ID, normalizeClinicHours, validateAppointmentWithinClinicHours } from "@/lib/clinic-config";
 import type { AppointmentType, AppointmentStatus, LeadStage } from "@/types/database";
 
 const createAppointmentSchema = z.object({
@@ -12,7 +13,7 @@ const createAppointmentSchema = z.object({
   fim: z.string().datetime({ offset: true }),
   tipo: z.enum(["avaliacao_pilates", "avaliacao_fisio_pelvica", "avaliacao_gestante"]),
   profissional_id: z.string().uuid().optional().nullable(),
-  observacoes: z.string().optional(),
+  observacoes: z.string().trim().min(1, "Registre uma observação antes de confirmar o agendamento."),
 });
 
 export type CreateAppointmentResult = { success: true; id: string } | { success: false; error: string };
@@ -25,6 +26,20 @@ export async function createAppointment(
 
   const supabase = await createClient();
   const db = supabase.schema("crm");
+  const { data: clinicConfig } = await db
+    .from("clinic_config")
+    .select("funcionamento")
+    .eq("id", CLINIC_CONFIG_ID)
+    .maybeSingle();
+  const scheduleValidation = validateAppointmentWithinClinicHours(
+    normalizeClinicHours(clinicConfig?.funcionamento),
+    new Date(parsed.data.inicio),
+    new Date(parsed.data.fim),
+  );
+
+  if (!scheduleValidation.ok) {
+    return { success: false, error: scheduleValidation.message };
+  }
 
   const { data, error } = await db.from("appointments").insert({
     lead_id: parsed.data.lead_id,
@@ -54,6 +69,7 @@ export async function createAppointment(
 
   revalidatePath("/agenda");
   revalidatePath("/funil");
+  revalidatePath("/dashboard");
   revalidatePath(`/leads/${parsed.data.lead_id}`);
   return { success: true, id: data.id };
 }

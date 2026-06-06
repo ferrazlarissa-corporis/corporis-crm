@@ -9,6 +9,7 @@ import {
   Clock3,
   Globe,
   GripVertical,
+  HelpCircle,
   MessageCircle,
   Phone,
   Plus,
@@ -28,8 +29,11 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import type { FunilLead } from "@/lib/queries/leads";
+import { validateAppointmentWithinClinicHours } from "@/lib/clinic-config";
+import type { ClinicHoursRow } from "@/lib/clinic-config";
 import { updateLeadStage, createLead } from "../leads/actions";
-import type { LeadStage } from "@/types/database";
+import { createAppointment } from "../agenda/actions";
+import type { AppointmentType, LeadStage } from "@/types/database";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -78,8 +82,18 @@ const STAGES: { id: StageId; name: string; color: string; tight: boolean }[] = [
   { id: "perdido",     name: "Perdido",             color: "var(--color-cinza)",       tight: true  },
 ];
 
+const STAGE_GOALS: Record<StageId, string> = {
+  novo: "Registrar a lead e garantir o primeiro contato rápido, entendendo de onde ela veio e qual necessidade trouxe até a clínica.",
+  qual: "Entender o perfil, o interesse e a urgência da lead para confirmar se a avaliação faz sentido e qual serviço indicar.",
+  agendada: "Manter a lead engajada até a avaliação, confirmar presença e reduzir o risco de falta.",
+  no_show: "Recuperar a lead que faltou, entender o motivo da ausência e tentar reagendar com acolhimento.",
+  negociacao: "Conduzir a decisão após a avaliação, tirar dúvidas, alinhar plano e horários e transformar interesse em matrícula.",
+  convertido: "Lead virou aluna. Garantir início organizado, registro correto e continuidade do relacionamento.",
+  perdido: "Registrar o motivo da perda e encerrar o atendimento com cuidado, mantendo possibilidade de reativação futura.",
+};
+
 const INTEREST_LABEL: Record<Interest, string> = {
-  pilates: "Pilates terapêutico",
+  pilates: "Pilates",
   gestante: "Pilates gestante",
   pelvica: "Fisio pélvica",
 };
@@ -107,6 +121,34 @@ const STAGE_TO_DB: Record<StageId, LeadStage> = {
   negociacao:  "negociacao",
   convertido:  "convertido",
   perdido:     "perdido",
+};
+
+const STAGE_ORDER: Record<StageId, number> = {
+  novo: 0,
+  qual: 1,
+  agendada: 2,
+  no_show: 3,
+  negociacao: 4,
+  convertido: 5,
+  perdido: 6,
+};
+
+const APPOINTMENT_DURATION_MINUTES = 50;
+const OBSERVATIONS_REQUIRED_ERROR = "Registre uma observação antes de confirmar o agendamento.";
+const APPOINTMENT_REQUIRED_STAGES = new Set<StageId>(["agendada", "no_show", "negociacao", "convertido"]);
+const APPOINTMENT_HOUR_OPTIONS = Array.from({ length: 15 }, (_, index) => String(index + 6).padStart(2, "0"));
+const APPOINTMENT_MINUTE_OPTIONS = ["00", "30"];
+
+const APPOINTMENT_TYPE_BY_INTEREST: Record<Interest, AppointmentType> = {
+  pilates: "avaliacao_pilates",
+  gestante: "avaliacao_gestante",
+  pelvica: "avaliacao_fisio_pelvica",
+};
+
+const APPOINTMENT_TYPE_LABEL: Record<AppointmentType, string> = {
+  avaliacao_pilates: "Avaliação Pilates",
+  avaliacao_gestante: "Avaliação Gestante",
+  avaliacao_fisio_pelvica: "Avaliação Fisio Pélvica",
 };
 
 const OWNER_PALETTE = [
@@ -174,6 +216,36 @@ function daysLabel(days: number) {
   return `há ${days} dias`;
 }
 
+function toDateTimeLocalValue(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function nextAppointmentStartParts() {
+  const date = new Date();
+  date.setHours(date.getHours() + 1, 0, 0, 0);
+
+  if (date.getHours() < 6) {
+    date.setHours(6, 0, 0, 0);
+  }
+
+  if (date.getHours() > 20) {
+    date.setDate(date.getDate() + 1);
+    date.setHours(6, 0, 0, 0);
+  }
+
+  const value = toDateTimeLocalValue(date);
+  return {
+    date: value.slice(0, 10),
+    hour: value.slice(11, 13),
+    minute: value.slice(14, 16),
+  };
+}
+
+function stageRequiresAppointment(stage: StageId) {
+  return APPOINTMENT_REQUIRED_STAGES.has(stage);
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function OriginIcon({ origin }: { origin: Origin }) {
@@ -220,11 +292,19 @@ function Avatar({ owner, size = "sm" }: { owner: LeadOwner; size?: "sm" | "xs" }
   );
 }
 
-function KanbanCard({ lead, stageColor }: { lead: Lead; stageColor: string }) {
+function KanbanCard({
+  lead,
+  stageColor,
+  action,
+}: {
+  lead: Lead;
+  stageColor: string;
+  action?: React.ReactNode;
+}) {
   const interest = INTEREST_STYLE[lead.interest];
   return (
-    <Link href={`/leads/${lead.id}`} className="block !no-underline">
-      <article className="group relative overflow-hidden rounded-[var(--radius-md)] border border-border bg-card shadow-[var(--shadow-sm)] transition-[transform,box-shadow] duration-[240ms] ease-[cubic-bezier(.4,0,.2,1)] hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(58,53,48,0.08)] cursor-pointer">
+    <article className="group relative overflow-hidden rounded-[var(--radius-md)] border border-border bg-card shadow-[var(--shadow-sm)] transition-[transform,box-shadow] duration-[240ms] ease-[cubic-bezier(.4,0,.2,1)] hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(58,53,48,0.08)]">
+      <Link href={`/leads/${lead.id}`} className="block cursor-pointer !no-underline">
         <div style={{ height: "4px", background: stageColor }} />
         <div style={{ padding: "14px 14px 12px", display: "flex", flexDirection: "column", gap: "10px" }}>
           <div className="flex items-start justify-between gap-2">
@@ -274,8 +354,13 @@ function KanbanCard({ lead, stageColor }: { lead: Lead; stageColor: string }) {
             {lead.lastWhen}
           </div>
         </div>
-      </article>
-    </Link>
+      </Link>
+      {action ? (
+        <div style={{ padding: "10px 14px 12px", borderTop: "0.6px solid var(--color-cinza)", background: "var(--bg-card)" }}>
+          {action}
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -305,17 +390,253 @@ function KanbanCardTight({ lead, stageColor }: { lead: Lead; stageColor: string 
   );
 }
 
-function ColumnEmpty() {
+function ColumnEmpty({ objective }: { objective: string }) {
   return (
     <div className="flex flex-col items-center gap-2.5 rounded-[var(--radius-md)] px-[18px] py-7 text-center" style={{ border: "0.6px dashed var(--color-cinza)" }}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]" style={{ color: "var(--color-bege)" }}>
         <path d="M20 6 9 17l-5-5" />
       </svg>
       <div style={{ fontFamily: "var(--font-display)", fontSize: "16px", color: "var(--color-texto-escuro)", lineHeight: 1.2, marginTop: "2px" }}>
-        Nada por aqui ainda.
+        Objetivo da etapa
       </div>
-      <div style={{ fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-texto-medio)", lineHeight: 1.5, maxWidth: "220px" }}>
-        Quando uma aluna chegar neste estágio, o card aparece aqui.
+      <div style={{ fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-texto-medio)", lineHeight: 1.5, maxWidth: "232px" }}>
+        {objective}
+      </div>
+    </div>
+  );
+}
+
+function StageGoalHelp({ stageName, objective }: { stageName: string; objective: string }) {
+  return (
+    <div className="group relative flex h-6 w-6 items-center justify-center">
+      <button
+        type="button"
+        aria-label={`Objetivo da etapa ${stageName}`}
+        className="flex h-6 w-6 cursor-help items-center justify-center rounded-[var(--radius-md)] transition-colors duration-[160ms]"
+        style={{ background: "transparent", border: 0, color: "var(--color-texto-medio)" }}
+      >
+        <HelpCircle className="h-[13px] w-[13px]" style={{ strokeWidth: 1.7 }} />
+      </button>
+      <div
+        role="tooltip"
+        className="pointer-events-none absolute right-0 top-8 z-30 w-[260px] rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-left opacity-0 shadow-[0_8px_24px_rgba(58,53,48,0.10)] transition-opacity duration-[160ms] group-focus-within:opacity-100 group-hover:opacity-100"
+      >
+        <div style={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 500, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--color-bege)", lineHeight: 1.2, marginBottom: "6px" }}>
+          Objetivo
+        </div>
+        <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-texto-medio)", lineHeight: 1.45 }}>
+          {objective}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function RescheduleButton({
+  pending,
+  onReschedule,
+}: {
+  pending: boolean;
+  onReschedule: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onReschedule();
+      }}
+      className="inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-[var(--radius-pill)] text-[12px] font-medium transition-colors duration-[160ms] disabled:cursor-wait disabled:opacity-70"
+      style={{
+        border: "0.6px solid rgba(240,131,83,0.45)",
+        background: "rgba(240,131,83,0.10)",
+        color: "var(--color-alaranjado)",
+        fontFamily: "var(--font-body)",
+      }}
+    >
+      {pending ? "Remarcando..." : "Remarcar"}
+    </button>
+  );
+}
+
+function ScheduleAppointmentModal({
+  lead,
+  clinicHours,
+  onClose,
+  onScheduled,
+}: {
+  lead: Lead;
+  clinicHours: ClinicHoursRow[];
+  onClose: () => void;
+  onScheduled: (leadId: string) => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<"inicio" | "observacoes" | null>(null);
+  const appointmentType = APPOINTMENT_TYPE_BY_INTEREST[lead.interest];
+  const isStartError = errorField === "inicio";
+  const isObservationsError = errorField === "observacoes";
+  const defaultStart = nextAppointmentStartParts();
+
+  const clearStartError = () => {
+    if (isStartError) {
+      setError(null);
+      setErrorField(null);
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const dateValue = String(formData.get("data") ?? "");
+    const hourValue = String(formData.get("hora") ?? "");
+    const minuteValue = String(formData.get("minuto") ?? "");
+    const startValue = dateValue && hourValue && minuteValue
+      ? `${dateValue}T${hourValue}:${minuteValue}:00`
+      : "";
+    const observations = String(formData.get("observacoes") ?? "").trim();
+    const start = new Date(startValue);
+
+    if (!startValue || Number.isNaN(start.getTime())) {
+      setError("Informe a data e hora da avaliação.");
+      setErrorField("inicio");
+      return;
+    }
+
+    const end = new Date(start.getTime() + APPOINTMENT_DURATION_MINUTES * 60_000);
+    const scheduleValidation = validateAppointmentWithinClinicHours(clinicHours, start, end);
+
+    if (!scheduleValidation.ok) {
+      setError(scheduleValidation.message);
+      setErrorField("inicio");
+      return;
+    }
+
+    if (!observations) {
+      setError(OBSERVATIONS_REQUIRED_ERROR);
+      setErrorField("observacoes");
+      return;
+    }
+
+    startTransition(async () => {
+      setError(null);
+      setErrorField(null);
+      const result = await createAppointment({
+        lead_id: lead.id,
+        inicio: start.toISOString(),
+        fim: end.toISOString(),
+        tipo: appointmentType,
+        observacoes: observations,
+      });
+
+      if (result.success) {
+        onScheduled(lead.id);
+        onClose();
+      } else {
+        setError(result.error);
+        setErrorField(result.error.includes("horário") || result.error.includes("clínica") ? "inicio" : null);
+      }
+    });
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(42,31,26,0.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: "var(--bg-card)", borderRadius: "var(--radius-lg)", border: "0.6px solid var(--color-cinza)", padding: "28px 28px 24px", width: 480, boxShadow: "var(--shadow-lg)" }} onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between" style={{ marginBottom: "22px" }}>
+          <div>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: "var(--color-texto-escuro)", margin: 0 }}>
+              Agendar avaliação
+            </h2>
+            <span style={{ display: "block", marginTop: "6px", fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-texto-medio)" }}>
+              {lead.name} · {APPOINTMENT_TYPE_LABEL[appointmentType]}
+            </span>
+          </div>
+          <button onClick={onClose} type="button" style={{ background: "none", border: 0, cursor: "pointer", color: "var(--color-texto-medio)", padding: "4px" }}>
+            <X className="h-4 w-4" style={{ strokeWidth: 1.6 }} />
+          </button>
+        </div>
+
+        <form noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div>
+            <label style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: "6px" }}>
+              Data e hora
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 88px 88px", gap: "10px" }}>
+              <input
+                name="data"
+                type="date"
+                required
+                defaultValue={defaultStart.date}
+                aria-invalid={isStartError}
+                aria-describedby={isStartError ? "schedule-appointment-error" : undefined}
+                onChange={clearStartError}
+                style={{ width: "100%", border: isStartError ? "0.8px solid var(--color-ui-error)" : "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box", boxShadow: isStartError ? "0 0 0 3px rgba(205, 61, 54, 0.10)" : "none" }}
+              />
+              <select
+                name="hora"
+                defaultValue={defaultStart.hour}
+                aria-label="Hora"
+                aria-invalid={isStartError}
+                onChange={clearStartError}
+                style={{ width: "100%", border: isStartError ? "0.8px solid var(--color-ui-error)" : "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box", boxShadow: isStartError ? "0 0 0 3px rgba(205, 61, 54, 0.10)" : "none" }}
+              >
+                {APPOINTMENT_HOUR_OPTIONS.map((hour) => (
+                  <option key={hour} value={hour}>{hour}h</option>
+                ))}
+              </select>
+              <select
+                name="minuto"
+                defaultValue={defaultStart.minute}
+                aria-label="Minutos"
+                aria-invalid={isStartError}
+                onChange={clearStartError}
+                style={{ width: "100%", border: isStartError ? "0.8px solid var(--color-ui-error)" : "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box", boxShadow: isStartError ? "0 0 0 3px rgba(205, 61, 54, 0.10)" : "none" }}
+              >
+                {APPOINTMENT_MINUTE_OPTIONS.map((minute) => (
+                  <option key={minute} value={minute}>{minute} min</option>
+                ))}
+              </select>
+            </div>
+            <span style={{ display: "block", marginTop: "6px", fontFamily: "var(--font-body)", fontSize: "11px", color: "var(--color-texto-medio)" }}>
+              Duração padrão: {APPOINTMENT_DURATION_MINUTES} minutos.
+            </span>
+          </div>
+
+          <div>
+            <label style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "6px" }}>
+              <span>Observações</span>
+              <span style={{ color: "var(--color-ui-error)", letterSpacing: "1.1px" }}>Obrigatório</span>
+            </label>
+            <textarea
+              name="observacoes"
+              rows={4}
+              required
+              aria-invalid={isObservationsError}
+              aria-describedby={isObservationsError ? "schedule-appointment-error" : undefined}
+              placeholder="Ex.: preferência de horário, contexto da conversa ou cuidado importante."
+              onChange={() => {
+                if (isObservationsError) {
+                  setError(null);
+                  setErrorField(null);
+                }
+              }}
+              style={{ width: "100%", resize: "vertical", border: isObservationsError ? "0.8px solid var(--color-ui-error)" : "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box", lineHeight: 1.45, boxShadow: isObservationsError ? "0 0 0 3px rgba(205, 61, 54, 0.10)" : "none" }}
+            />
+          </div>
+
+          {error && <p id="schedule-appointment-error" style={{ fontFamily: "var(--font-body)", fontSize: "13px", color: "var(--color-ui-error)", margin: 0 }}>{error}</p>}
+
+          <div className="flex items-center justify-end" style={{ gap: "10px", paddingTop: "8px", borderTop: "0.6px solid var(--color-cinza)" }}>
+            <button type="button" onClick={onClose} style={{ appearance: "none", border: "0.6px solid var(--color-cinza)", background: "var(--bg-card)", color: "var(--color-texto-escuro)", borderRadius: "var(--radius-pill)", padding: "9px 18px", fontFamily: "var(--font-body)", fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={pending} style={{ appearance: "none", border: 0, background: pending ? "var(--color-tangerina)" : "var(--color-alaranjado)", color: "#fff", borderRadius: "var(--radius-pill)", padding: "9px 18px", fontFamily: "var(--font-body)", fontSize: "13px", fontWeight: 500, cursor: pending ? "wait" : "pointer" }}>
+              {pending ? "Agendando..." : "Confirmar agendamento"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -370,11 +691,14 @@ function NewLeadModal({
 }: {
   initialStage: StageId;
   onClose: () => void;
-  onCreated: (lead: FunilLead) => void;
+  onCreated: (lead: FunilLead, options?: { scheduleAfterCreate?: boolean }) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const requiresScheduling = stageRequiresAppointment(initialStage);
+  const creationStage: StageId = requiresScheduling ? "qual" : initialStage;
   const initialStageName = STAGES.find((stage) => stage.id === initialStage)?.name ?? "Novo";
+  const creationStageName = STAGES.find((stage) => stage.id === creationStage)?.name ?? "Em qualificação";
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -384,7 +708,7 @@ function NewLeadModal({
       setError(null);
       const result = await createLead(formData);
       if (result.success) {
-        onCreated(result.lead);
+        onCreated(result.lead, { scheduleAfterCreate: requiresScheduling });
         form.reset();
         onClose();
       } else {
@@ -400,7 +724,9 @@ function NewLeadModal({
           <div>
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 400, color: "var(--color-texto-escuro)", margin: 0 }}>Novo lead</h2>
             <span style={{ display: "block", marginTop: "6px", fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-texto-medio)" }}>
-              Etapa inicial: {initialStageName}
+              {requiresScheduling
+                ? `${initialStageName} exige avaliação. O lead entra em ${creationStageName} até confirmar a data.`
+                : `Etapa inicial: ${initialStageName}`}
             </span>
           </div>
           <button onClick={onClose} type="button" style={{ background: "none", border: 0, cursor: "pointer", color: "var(--color-texto-medio)", padding: "4px" }}>
@@ -409,7 +735,7 @@ function NewLeadModal({
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <input type="hidden" name="estagio" value={STAGE_TO_DB[initialStage]} />
+          <input type="hidden" name="estagio" value={STAGE_TO_DB[creationStage]} />
           {[
             { name: "nome", label: "Nome", type: "text", placeholder: "Nome completo", required: true },
             { name: "telefone", label: "Telefone (WhatsApp)", type: "tel", placeholder: "+55 49 9 9999-9999", required: true },
@@ -459,13 +785,20 @@ function NewLeadModal({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[] }) {
+export default function FunilBoard({
+  initialLeads,
+  clinicHours,
+}: {
+  initialLeads: FunilLead[];
+  clinicHours: ClinicHoursRow[];
+}) {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [modalStage, setModalStage] = useState<StageId>("novo");
   const [leads, setLeads] = useState(() => initialLeads.map(mapFunilLead));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<StageId | null>(null);
+  const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
   const [, startTransition] = useTransition();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -493,6 +826,17 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
     const newStage = String(over.id) as StageId;
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.stage === newStage) return;
+    if (STAGE_ORDER[newStage] < STAGE_ORDER[lead.stage]) return;
+
+    if (newStage === "no_show" && lead.stage !== "agendada") {
+      setSchedulingLead(lead);
+      return;
+    }
+
+    if (STAGE_ORDER[lead.stage] < STAGE_ORDER.agendada && stageRequiresAppointment(newStage)) {
+      setSchedulingLead(lead);
+      return;
+    }
 
     // Optimistic update
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: newStage } : l));
@@ -505,6 +849,19 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
       }
     });
   }, [leads]);
+
+  const handleReschedule = useCallback((leadId: string) => {
+    const lead = leads.find((item) => item.id === leadId);
+    if (!lead || lead.stage !== "no_show") return;
+    setSchedulingLead(lead);
+  }, [leads]);
+
+  const handleScheduled = useCallback((leadId: string) => {
+    setLeads((prev) => prev.map((item) => item.id === leadId
+      ? { ...item, stage: "agendada", last: "booked", lastWhen: "agora", daysIn: 0, stale: false }
+      : item
+    ));
+  }, []);
 
   const filteredLeads = search.trim()
     ? leads.filter((l) => l.name.toLowerCase().includes(search.toLowerCase()))
@@ -598,6 +955,7 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
             {STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.id);
               const isOver = overStage === stage.id;
+              const objective = STAGE_GOALS[stage.id];
               return (
                 <section key={stage.id} className="flex flex-col" style={{ width: stage.tight ? "232px" : "304px", flexShrink: 0, minHeight: "100%" }}>
                   <header className="mb-1 flex items-center" style={{ gap: "10px", padding: "8px 4px 14px" }}>
@@ -608,21 +966,24 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
                     <span style={{ fontFamily: "var(--font-body)", fontSize: "11px", color: "var(--color-texto-medio)", background: "var(--bg-2)", padding: "2px 8px", borderRadius: "var(--radius-pill)", lineHeight: 1.4, fontVariantNumeric: "tabular-nums" }}>
                       {stageLeads.length}
                     </span>
-                    <button
-                      type="button"
-                      aria-label={`Adicionar lead em ${stage.name}`}
-                      onClick={() => openNewLeadModal(stage.id)}
-                      className="ml-auto flex h-6 w-6 cursor-pointer items-center justify-center rounded-[var(--radius-md)] transition-all duration-[160ms]"
-                      style={{ background: "transparent", border: 0, color: "var(--color-texto-medio)" }}
-                    >
-                      <Plus className="h-[13px] w-[13px]" style={{ strokeWidth: 1.7 }} />
-                    </button>
+                    <div className="ml-auto flex items-center" style={{ gap: "2px" }}>
+                      <button
+                        type="button"
+                        aria-label={`Adicionar lead em ${stage.name}`}
+                        onClick={() => openNewLeadModal(stage.id)}
+                        className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-[var(--radius-md)] transition-all duration-[160ms]"
+                        style={{ background: "transparent", border: 0, color: "var(--color-texto-medio)" }}
+                      >
+                        <Plus className="h-[13px] w-[13px]" style={{ strokeWidth: 1.7 }} />
+                      </button>
+                      <StageGoalHelp stageName={stage.name} objective={objective} />
+                    </div>
                   </header>
 
                   <DroppableColumn id={stage.id} isOver={isOver}>
                     <div className="flex flex-col" style={{ gap: "12px", paddingBottom: "12px" }}>
                       {stageLeads.length === 0 ? (
-                        <ColumnEmpty />
+                        <ColumnEmpty objective={objective} />
                       ) : stage.tight ? (
                         stageLeads.map((lead) => (
                           <DraggableCard key={lead.id} id={lead.id}>
@@ -632,7 +993,20 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
                       ) : (
                         stageLeads.map((lead) => (
                           <DraggableCard key={lead.id} id={lead.id}>
-                            {() => <KanbanCard lead={lead} stageColor={stage.color} />}
+                            {() => (
+                              <div className="flex flex-col" style={{ gap: "8px" }}>
+                                <KanbanCard
+                                  lead={lead}
+                                  stageColor={stage.color}
+                                  action={lead.stage === "no_show" ? (
+                                    <RescheduleButton
+                                      pending={schedulingLead?.id === lead.id}
+                                      onReschedule={() => handleReschedule(lead.id)}
+                                    />
+                                  ) : undefined}
+                                />
+                              </div>
+                            )}
                           </DraggableCard>
                         ))
                       )}
@@ -661,12 +1035,24 @@ export default function FunilBoard({ initialLeads }: { initialLeads: FunilLead[]
         <NewLeadModal
           initialStage={modalStage}
           onClose={() => setShowModal(false)}
-          onCreated={(lead) => {
+          onCreated={(lead, options) => {
             setLeads((prev) => {
               const createdLead = mapFunilLead(lead);
               return [createdLead, ...prev.filter((item) => item.id !== createdLead.id)];
             });
+            if (options?.scheduleAfterCreate) {
+              setSchedulingLead(mapFunilLead(lead));
+            }
           }}
+        />
+      )}
+
+      {schedulingLead && (
+        <ScheduleAppointmentModal
+          lead={schedulingLead}
+          clinicHours={clinicHours}
+          onClose={() => setSchedulingLead(null)}
+          onScheduled={handleScheduled}
         />
       )}
     </div>

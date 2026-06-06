@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import {
   Bell,
   Bot,
@@ -24,7 +24,7 @@ import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
 import type { ConversationRow, MessageRow } from "@/lib/queries/conversations";
 import type { LeadStage } from "@/types/database";
-import { toggleHandoff, markConversationRead } from "./actions";
+import { toggleHandoff, markConversationRead, sendMessage } from "./actions";
 
 function dayLabel(dateStr: string) {
   const d = new Date(dateStr);
@@ -152,12 +152,72 @@ export default function InboxClient({ initialConversations }: { initialConversat
   const [convs, setConvs] = useState(initialConversations);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSelectConversation = (id: string) => {
     setSelectedId(id);
     setConvs((prev) => prev.map((c) => c.id === id ? { ...c, nao_lida: false } : c));
     markConversationRead({ conversationId: id });
   };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = useCallback(async () => {
+    const text = messageText.trim();
+    if (!text || !selectedId || isSending) return;
+
+    setIsSending(true);
+    setMessageText("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+
+    const optimisticId = `opt-${Date.now()}`;
+    const optimisticMsg: MessageRow = {
+      id: optimisticId,
+      direcao: "saida",
+      autor: "humano",
+      conteudo: text,
+      created_at: new Date().toISOString(),
+      entregue_at: null,
+      lida_at: null,
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    const result = await sendMessage({ conversationId: selectedId, text });
+    setIsSending(false);
+
+    if (result.success) {
+      setMessages((prev) => prev.map((m) => m.id === optimisticId ? result.message : m));
+    } else {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+    }
+  }, [messageText, selectedId, isSending]);
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessageText(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Clear message text when conversation changes
+  useEffect(() => {
+    setMessageText("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+  }, [selectedId]);
 
   // Load messages + Realtime subscription when conversation selected
   useEffect(() => {
@@ -384,6 +444,7 @@ export default function InboxClient({ initialConversations }: { initialConversat
                   }),
                 ])
               )}
+              <div ref={messagesEndRef} />
             </div>
           </div>
 
@@ -392,12 +453,26 @@ export default function InboxClient({ initialConversations }: { initialConversat
               <button type="button" aria-label="Anexar arquivo" className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-text-secondary transition-colors hover:bg-accent-soft hover:text-text-primary">
                 <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.5} />
               </button>
-              <textarea rows={1} className="max-h-[140px] min-h-[38px] resize-none bg-transparent px-1 py-[9px] text-sm leading-normal text-text-primary outline-none placeholder:text-text-secondary" placeholder={selectedConv ? `Escreva uma mensagem para ${selectedConv.lead.nome.split(" ")[0]}...` : "Selecione uma conversa"} />
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={messageText}
+                onChange={handleTextareaChange}
+                onKeyDown={handleKeyDown}
+                disabled={!selectedId || isSending}
+                className="max-h-[140px] min-h-[38px] resize-none bg-transparent px-1 py-[9px] text-sm leading-normal text-text-primary outline-none placeholder:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder={selectedConv ? `Escreva uma mensagem para ${selectedConv.lead.nome.split(" ")[0]}… Enter para enviar` : "Selecione uma conversa"}
+              />
               <button type="button" aria-label="Inserir emoji" className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-text-secondary transition-colors hover:bg-accent-soft hover:text-text-primary">
                 <Smile className="h-[18px] w-[18px]" strokeWidth={1.5} />
               </button>
-              <button type="button" className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-pill)] bg-primary px-4 text-[13px] font-medium tracking-[0.3px] text-[var(--color-fundo-claro)] transition-colors hover:bg-primary-hover">
-                Enviar <Send className="h-3.5 w-3.5" strokeWidth={1.8} />
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={!messageText.trim() || !selectedId || isSending}
+                className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-pill)] bg-primary px-4 text-[13px] font-medium tracking-[0.3px] text-[var(--color-fundo-claro)] transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSending ? "Enviando…" : "Enviar"} <Send className="h-3.5 w-3.5" strokeWidth={1.8} />
               </button>
             </div>
           </div>

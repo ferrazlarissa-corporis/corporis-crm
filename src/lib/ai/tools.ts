@@ -1,4 +1,10 @@
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
+import {
+  buildClinicSchedule,
+  CLINIC_CONFIG_ID,
+  normalizeClinicHours,
+  validateAppointmentWithinClinicHours,
+} from "@/lib/clinic-config";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { AppointmentType, LeadInterest } from "@/types/database";
 
@@ -34,9 +40,9 @@ export const AGENT_TOOLS: Tool[] = [
         inicio:       { type: "string", description: "Data/hora de início em ISO 8601." },
         fim:          { type: "string", description: "Data/hora de fim em ISO 8601." },
         tipo:         { type: "string", enum: ["avaliacao_pilates", "avaliacao_gestante", "avaliacao_fisio_pelvica"] },
-        observacoes:  { type: "string", description: "Observações opcionais do agendamento." },
+        observacoes:  { type: "string", description: "Contexto obrigatório do agendamento." },
       },
-      required: ["lead_id", "inicio", "fim", "tipo"],
+      required: ["lead_id", "inicio", "fim", "tipo", "observacoes"],
     },
   },
   {
@@ -99,6 +105,14 @@ export async function executeTool(
         const dias = Number(input.dias ?? 7);
         const from = new Date();
         const to   = new Date(Date.now() + dias * 24 * 60 * 60 * 1000);
+        const { data: clinicConfig } = await db
+          .from("clinic_config")
+          .select("funcionamento")
+          .eq("id", CLINIC_CONFIG_ID)
+          .maybeSingle();
+        const clinicHours = normalizeClinicHours(clinicConfig?.funcionamento);
+        const clinicSchedule = buildClinicSchedule(clinicHours);
+        const hasOpenSlots = clinicSchedule.some((day) => !day.off && day.intervals.length > 0);
 
         // Fetch existing appointments in the range
         const { data: taken } = await db
@@ -108,29 +122,25 @@ export async function executeTool(
           .gte("inicio", from.toISOString())
           .lte("inicio", to.toISOString());
 
-        // Generate available slots (08:00-18:00, weekdays, every 60 min)
         const slots: string[] = [];
         const cur = new Date(from);
-        cur.setHours(8, 0, 0, 0);
+        cur.setMinutes(0, 0, 0);
+        if (cur < from) cur.setTime(cur.getTime() + 60 * 60 * 1000);
 
-        while (cur <= to && slots.length < 8) {
-          const dayOfWeek = cur.getDay();
-          if (dayOfWeek !== 0) { // not Sunday
-            const slotEnd = new Date(cur.getTime() + 50 * 60 * 1000);
-            const conflict = (taken ?? []).some((t) => {
-              const ti = new Date(t.inicio);
-              const tf = new Date(t.fim);
-              return cur < tf && slotEnd > ti;
-            });
-            if (!conflict && cur.getHours() < 19) {
-              slots.push(cur.toISOString());
-            }
+        while (hasOpenSlots && cur <= to && slots.length < 8) {
+          const slotEnd = new Date(cur.getTime() + 50 * 60 * 1000);
+          const isInsideClinicHours = validateAppointmentWithinClinicHours(clinicHours, cur, slotEnd).ok;
+          const conflict = (taken ?? []).some((t) => {
+            const ti = new Date(t.inicio);
+            const tf = new Date(t.fim);
+            return cur < tf && slotEnd > ti;
+          });
+
+          if (isInsideClinicHours && !conflict) {
+            slots.push(cur.toISOString());
           }
+
           cur.setTime(cur.getTime() + 60 * 60 * 1000);
-          if (cur.getHours() >= 19) {
-            cur.setDate(cur.getDate() + 1);
-            cur.setHours(8, 0, 0, 0);
-          }
         }
 
         return JSON.stringify({ tipo, horarios_disponiveis: slots });
@@ -141,9 +151,30 @@ export async function executeTool(
           lead_id: string; inicio: string; fim: string;
           tipo: AppointmentType; observacoes?: string;
         };
+        const notes = observacoes?.trim();
+
+        if (!notes) {
+          return JSON.stringify({ success: false, error: "Registre uma observação antes de confirmar o agendamento." });
+        }
+
+        const { data: clinicConfig } = await db
+          .from("clinic_config")
+          .select("funcionamento")
+          .eq("id", CLINIC_CONFIG_ID)
+          .maybeSingle();
+        const clinicHours = normalizeClinicHours(clinicConfig?.funcionamento);
+        const scheduleValidation = validateAppointmentWithinClinicHours(
+          clinicHours,
+          new Date(inicio),
+          new Date(fim),
+        );
+
+        if (!scheduleValidation.ok) {
+          return JSON.stringify({ success: false, error: scheduleValidation.message });
+        }
 
         const { data } = await db.from("appointments").insert({
-          lead_id, inicio, fim, tipo, observacoes: observacoes ?? null, status: "agendado",
+          lead_id, inicio, fim, tipo, observacoes: notes, status: "agendado",
         }).select("id").single();
 
         await db.from("leads").update({

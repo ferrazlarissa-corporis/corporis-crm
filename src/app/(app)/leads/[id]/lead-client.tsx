@@ -51,7 +51,7 @@ const STAGE_STYLE: Record<LeadStage, { bg: string; color: string; border: string
 };
 
 const INTEREST_LABEL: Record<LeadInterest, string> = {
-  pilates:          "Pilates terapêutico",
+  pilates:          "Pilates",
   pilates_gestante: "Pilates gestante",
   fisio_pelvica:    "Fisioterapia pélvica",
   indefinido:       "Interesse indefinido",

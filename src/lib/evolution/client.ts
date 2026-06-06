@@ -3,7 +3,7 @@ import { z } from "zod";
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 function evolutionConfig() {
-  const baseUrl  = process.env.EVOLUTION_API_URL;
+  const baseUrl  = process.env.EVOLUTION_API_URL?.replace(/\/$/, "");
   const apiKey   = process.env.EVOLUTION_API_KEY;
   const instance = process.env.EVOLUTION_INSTANCE;
   if (!baseUrl || !apiKey || !instance) {
@@ -19,6 +19,21 @@ async function evoFetch(path: string, body: unknown): Promise<unknown> {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: apiKey },
     body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Evolution API error ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+async function evoGet(path: string): Promise<unknown> {
+  const { baseUrl, apiKey, instance } = evolutionConfig();
+  const url = `${baseUrl}${path.replace("{instance}", instance)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { apikey: apiKey },
+    cache: "no-store",
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -86,6 +101,40 @@ export async function sendTemplate(
       components,
     },
   });
+}
+
+// ─── Connection state ─────────────────────────────────────────────────────────
+
+export async function getConnectionState(): Promise<"open" | "close" | "connecting"> {
+  const data = await evoGet("/instance/connectionState/{instance}");
+  const state = (data as Record<string, Record<string, string>>)?.instance?.state;
+  if (state === "open" || state === "connecting") return state;
+  return "close";
+}
+
+export interface InstanceInfo {
+  profileName?: string;
+  number?: string;
+}
+
+export async function getInstanceInfo(): Promise<InstanceInfo | null> {
+  const { instance } = evolutionConfig();
+  const data = await evoGet(`/instance/fetchInstances?instanceName=${encodeURIComponent(instance)}`);
+  const list = Array.isArray(data) ? data : [];
+  const found = list[0] as Record<string, unknown> | undefined;
+  if (!found) return null;
+  return {
+    profileName: found.profileName as string | undefined,
+    number: found.number as string | undefined,
+  };
+}
+
+export async function connectInstance(): Promise<{ base64: string } | null> {
+  const data = await evoGet("/instance/connect/{instance}");
+  const d = data as Record<string, unknown>;
+  const base64 = (d?.base64 ?? d?.code) as string | undefined;
+  if (!base64) return null;
+  return { base64 };
 }
 
 // ─── Mark as read ─────────────────────────────────────────────────────────────

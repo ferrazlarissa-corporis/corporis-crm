@@ -11,11 +11,27 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import type { LeadStage, LeadInterest, LeadOrigin } from "@/types/database";
 
+const LEAD_STAGE_VALUES = ["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"] as const;
+const APPOINTMENT_REQUIRED_STAGES = new Set<LeadStage>(["avaliacao_agendada", "no_show", "negociacao", "convertido"]);
+const LEAD_STAGE_ORDER: Record<LeadStage, number> = {
+  novo: 0,
+  qualificacao: 1,
+  avaliacao_agendada: 2,
+  no_show: 3,
+  negociacao: 4,
+  convertido: 5,
+  perdido: 6,
+};
+
+function stageRequiresAppointment(stage: LeadStage) {
+  return APPOINTMENT_REQUIRED_STAGES.has(stage);
+}
+
 const createLeadSchema = z.object({
   nome:      z.string().min(2),
   telefone:  z.string().min(10),
   email:     z.string().email().optional().or(z.literal("")),
-  estagio:   z.enum(["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"]).default("novo"),
+  estagio:   z.enum(LEAD_STAGE_VALUES).default("novo"),
   origem:    z.enum(["whatsapp","instagram","indicacao","google","outro"]).default("whatsapp"),
   interesse: z.enum(["pilates","pilates_gestante","fisio_pelvica","indefinido"]).default("indefinido"),
 });
@@ -34,6 +50,9 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
 
   const parsed = createLeadSchema.safeParse(raw);
   if (!parsed.success) return { success: false, error: "Dados inválidos: " + parsed.error.message };
+  if (stageRequiresAppointment(parsed.data.estagio as LeadStage)) {
+    return { success: false, error: "Para criar lead nesta etapa, primeiro registre a lead em qualificação e confirme a data da avaliação." };
+  }
 
   const supabase = await createClient();
   const db = supabase.schema("crm");
@@ -64,7 +83,7 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
 
 const updateStageSchema = z.object({
   id:     z.string().uuid(),
-  estagio: z.enum(["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"]),
+  estagio: z.enum(LEAD_STAGE_VALUES),
   motivoPerda: z.string().optional(),
 });
 
@@ -77,14 +96,30 @@ export async function updateLeadStage(input: z.infer<typeof updateStageSchema>):
   const supabase = await createClient();
   const db = supabase.schema("crm");
 
-  // Fetch current stage for activity log
-  const { data: current } = await db.from("leads").select("estagio").eq("id", parsed.data.id).single();
+  // Fetch current stage for activity log and transition guards.
+  const { data: current, error: currentError } = await db.from("leads").select("estagio").eq("id", parsed.data.id).single();
+  if (currentError || !current) return { success: false, error: currentError?.message ?? "Lead não encontrada." };
+
+  const currentStage = current.estagio as LeadStage;
+  const nextStage = parsed.data.estagio as LeadStage;
+
+  if (LEAD_STAGE_ORDER[nextStage] < LEAD_STAGE_ORDER[currentStage]) {
+    return { success: false, error: "Não é possível retroceder o funil arrastando o card." };
+  }
+
+  if (LEAD_STAGE_ORDER[currentStage] < LEAD_STAGE_ORDER.avaliacao_agendada && stageRequiresAppointment(nextStage)) {
+    return { success: false, error: "Antes de avançar, confirme a data e hora da avaliação." };
+  }
+
+  if (nextStage === "no_show" && currentStage !== "avaliacao_agendada") {
+    return { success: false, error: "No-show só pode receber leads que estavam em Avaliação agendada." };
+  }
 
   const updatePayload: Record<string, unknown> = {
-    estagio: parsed.data.estagio,
+    estagio: nextStage,
     ultima_interacao_at: new Date().toISOString(),
   };
-  if (parsed.data.estagio === "perdido" && parsed.data.motivoPerda) {
+  if (nextStage === "perdido" && parsed.data.motivoPerda) {
     updatePayload.motivo_perda = parsed.data.motivoPerda;
   }
 
@@ -94,8 +129,8 @@ export async function updateLeadStage(input: z.infer<typeof updateStageSchema>):
   await db.from("activities").insert({
     lead_id:  parsed.data.id,
     tipo:     "mudanca_estagio",
-    descricao: `Movida de ${current?.estagio ?? "??"} para ${parsed.data.estagio}`,
-    meta:     { de: current?.estagio, para: parsed.data.estagio },
+    descricao: `Movida de ${currentStage} para ${nextStage}`,
+    meta:     { de: currentStage, para: nextStage },
   });
 
   revalidatePath("/funil");

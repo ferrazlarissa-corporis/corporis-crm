@@ -1,21 +1,7 @@
 import { getAppointmentsBetween } from "@/lib/queries/appointments";
-import { CLINIC_CONFIG_ID, normalizeClinicHours } from "@/lib/clinic-config";
-import { createClient } from "@/lib/supabase/server";
+import { getClinicHours } from "@/lib/queries/clinic-config";
 import AgendaClient from "./agenda-client";
 import { endOfWeek, startOfWeek } from "date-fns";
-
-async function getClinicHours() {
-  const supabase = await createClient();
-
-  const { data } = await supabase
-    .schema("crm")
-    .from("clinic_config")
-    .select("funcionamento")
-    .eq("id", CLINIC_CONFIG_ID)
-    .maybeSingle();
-
-  return normalizeClinicHours(data?.funcionamento);
-}
 
 export default async function AgendaPage() {
   const now       = new Date();
