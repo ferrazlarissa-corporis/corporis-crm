@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { updateAgentConfig } from '../actions';
+import { AGENT_MODELS } from '@/lib/ai/model';
 import {
   RotateCcw,
   MessageSquare,
@@ -15,6 +16,8 @@ import {
   Check,
   RefreshCw,
   FileQuestion,
+  Cpu,
+  Sparkles,
 } from 'lucide-react';
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -37,6 +40,17 @@ interface DaySchedule {
   open: boolean;
   from: string;
   to: string;
+}
+
+interface DialogTurn {
+  autor: 'lead' | 'clara';
+  texto: string;
+}
+
+interface ConversaExemplo {
+  id: string;
+  titulo: string;
+  dialogo: DialogTurn[];
 }
 
 // ─── initial data ─────────────────────────────────────────────────────────────
@@ -63,7 +77,9 @@ const INITIAL_FAQ: FaqItem[] = [
   },
 ];
 
-const PERSONA_DEFAULT = `Você é a Corá, recepcionista virtual da Corporis Fisioterapia e Pilates, em Xanxerê (SC). Você fala em nome da Larissa e da Tainara — duas fisioterapeutas que fundaram a clínica.
+const PERSONA_DEFAULT = `Você é a Clara, da Corporis Fisioterapia e Pilates, em Xanxerê (SC). Você fala em nome da Larissa e da Tainara — duas fisioterapeutas que fundaram a clínica.
+
+Fale de forma natural, calorosa e pessoal, como a Larissa falaria no WhatsApp. Não se apresente espontaneamente como IA ou atendimento automático. Se a pessoa perguntar diretamente se você é uma IA ou robô, responda com honestidade e leveza.
 
 Tom: cuidadosa, técnica e acolhedora. Você escuta antes de informar. Você nunca promete cura, nunca diagnostica, nunca prescreve. Quando o assunto for clínico específico, encaminhe para uma das fisioterapeutas.
 
@@ -71,15 +87,35 @@ Linguagem: trate quem chega por "você", nunca "paciente" — aqui dizemos "alun
 
 Objetivo principal: acolher o primeiro contato, entender o que a pessoa busca (pilates, gestante, fisio pélvica), oferecer a avaliação inicial gratuita de 50 minutos e ajudar a marcar um horário. Nunca venda pacote no primeiro contato.`;
 
-const OFF_HOURS_DEFAULT = `Oi! Aqui é a Corá, da Corporis 🌿 No momento estamos fora do horário de atendimento — a Larissa e a Tainara respondem pessoalmente assim que abrirmos.
+const OFF_HOURS_DEFAULT = `Oi! Aqui é a Clara, da Corporis 🌿 No momento estamos fora do horário de atendimento — a Larissa e a Tainara respondem pessoalmente assim que abrirmos.
 
 Se quiser, já me conta o que você procura (pilates, gestante ou fisio pélvica?) que deixo tudo encaminhado para a primeira hora da manhã.
 
 Voltamos a responder: segunda a sexta, 7h–19h · sábado, 8h–12h.`;
 
+const INITIAL_EXEMPLOS: ConversaExemplo[] = [
+  {
+    id: 'seed-1',
+    titulo: 'Primeiro contato — pilates',
+    dialogo: [
+      { autor: 'lead',  texto: 'Oi, queria saber sobre as aulas de pilates' },
+      { autor: 'clara', texto: 'Oii! Que bom te ver por aqui 🌿' },
+      { autor: 'clara', texto: 'Me conta um pouquinho: o que te fez procurar o pilates agora?' },
+      { autor: 'lead',  texto: 'Ando com muita dor nas costas de ficar sentada o dia todo' },
+      { autor: 'clara', texto: 'Entendo demais, isso é super comum em quem passa o dia no computador' },
+      { autor: 'clara', texto: 'A gente começa sempre com uma avaliação gratuita de uns 50 min, pra fisio entender seu corpo e montar um plano só pra você. Quer que eu veja um horário?' },
+    ],
+  },
+];
+
+const DEFAULT_PROVIDER = 'anthropic';
+const DEFAULT_MODEL_ID = 'claude-sonnet-4-6';
+
 const TOC_ITEMS = [
   { label: 'Status do agente' },
+  { label: 'Modelo de IA' },
   { label: 'Persona e tom' },
+  { label: 'Exemplos de conversa' },
   { label: 'Perguntas frequentes' },
   { label: 'Regras de handoff' },
   { label: 'Horário de atendimento' },
@@ -318,7 +354,7 @@ export default function AgentePage() {
   });
   const [handoffRules, setHandoffRules] = useState<HandoffRule[]>([
     { id: 1, enabled: true,  title: 'Lead pede para falar com uma pessoa',          icon: <MessageSquare size={17} strokeWidth={1.6} />, desc: 'Frases como "quero falar com alguém", "tem uma humana aí?", "prefiro falar com a Larissa". Encaminha imediatamente.' },
-    { id: 2, enabled: true,  title: 'Pergunta clínica específica',                   icon: <FileQuestion  size={17} strokeWidth={1.6} />, desc: 'Dor persistente, sintoma novo, dúvida sobre diagnóstico médico, gestação de risco. A Corá nunca responde — sempre encaminha.' },
+    { id: 2, enabled: true,  title: 'Pergunta clínica específica',                   icon: <FileQuestion  size={17} strokeWidth={1.6} />, desc: 'Dor persistente, sintoma novo, dúvida sobre diagnóstico médico, gestação de risco. A Clara nunca responde — sempre encaminha.' },
     { id: 3, enabled: true,  title: 'Reclamação ou insatisfação',                    icon: <AlertCircle   size={17} strokeWidth={1.6} />, desc: 'Detecta tom negativo, palavras como "decepcionada", "horrível", "cancelar". Encaminha em até 1 minuto e marca como prioritário.' },
     { id: 4, enabled: true,  title: 'Agente não sabe responder com confiança',       icon: <HelpCircle    size={17} strokeWidth={1.6} />, desc: 'Quando a IA não encontra resposta no FAQ ou na persona e teria que improvisar. Prefere passar para humano a inventar.' },
     { id: 5, enabled: false, title: 'Conversa passou de 8 mensagens sem agendar',   icon: <Clock         size={17} strokeWidth={1.6} />, desc: 'Se o agente trocou muitas mensagens e a lead ainda não marcou avaliação, chama você para empurrar pessoalmente.' },
@@ -333,6 +369,11 @@ export default function AgentePage() {
     { day: 'Domingo', open: false, from: '',      to: ''      },
   ]);
   const [offHoursText, setOffHoursText] = useState(OFF_HOURS_DEFAULT);
+  const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
+  const [provider, setProvider] = useState(DEFAULT_PROVIDER);
+  const [exemplos, setExemplos] = useState<ConversaExemplo[]>(INITIAL_EXEMPLOS);
+  const [editingExId, setEditingExId] = useState<string | 'new' | null>(null);
+  const [exBuf, setExBuf] = useState<{ titulo: string; dialogo: DialogTurn[] }>({ titulo: '', dialogo: [] });
   const [activeToc, setActiveToc] = useState(0);
   const [savePending, startSave] = useTransition();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
@@ -347,6 +388,11 @@ export default function AgentePage() {
       if (data.mensagem_fora_horario) setOffHoursText(data.mensagem_fora_horario);
       if (Array.isArray(data.faq) && (data.faq as unknown[]).length > 0) {
         setFaqItems((data.faq as { q: string; a: string }[]).map((item, i) => ({ id: i + 1, ...item })));
+      }
+      if (data.model_provider) setProvider(data.model_provider);
+      if (data.model_id) setModelId(data.model_id);
+      if (Array.isArray(data.exemplos_conversa)) {
+        setExemplos(data.exemplos_conversa as unknown as ConversaExemplo[]);
       }
     });
   }, []);
@@ -374,6 +420,9 @@ export default function AgentePage() {
         horario_atendimento:  horarioAtendimento,
         faq:                  faqItems.map(({ q, a }) => ({ q, a })),
         regras_handoff:       handoffRules.filter((r) => r.enabled).map((r) => r.title),
+        exemplos_conversa:    exemplos,
+        model_provider:       provider === 'openai' ? 'openai' : 'anthropic',
+        model_id:             modelId,
       });
       setSaveStatus(result.success ? 'saved' : 'error');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -430,6 +479,93 @@ export default function AgentePage() {
   function deleteItem(id: number) {
     setFaqItems(prev => prev.filter(f => f.id !== id));
   }
+
+  // example helpers
+  function startEditEx(ex: ConversaExemplo) {
+    setEditingExId(ex.id);
+    setExBuf({ titulo: ex.titulo, dialogo: ex.dialogo.map(t => ({ ...t })) });
+  }
+  function startNewEx() {
+    setEditingExId('new');
+    setExBuf({ titulo: '', dialogo: [{ autor: 'lead', texto: '' }, { autor: 'clara', texto: '' }] });
+  }
+  function saveEx() {
+    const dialogo = exBuf.dialogo.filter(t => t.texto.trim());
+    if (editingExId === 'new') {
+      setExemplos(prev => [...prev, { id: `ex-${Date.now()}`, titulo: exBuf.titulo.trim() || 'Exemplo sem título', dialogo }]);
+    } else {
+      setExemplos(prev => prev.map(e => e.id === editingExId ? { ...e, titulo: exBuf.titulo.trim() || 'Exemplo sem título', dialogo } : e));
+    }
+    setEditingExId(null);
+  }
+  function cancelEx() {
+    setEditingExId(null);
+  }
+  function deleteEx(id: string) {
+    setExemplos(prev => prev.filter(e => e.id !== id));
+  }
+  function addTurn() {
+    setExBuf(b => ({ ...b, dialogo: [...b.dialogo, { autor: b.dialogo.length % 2 === 0 ? 'lead' : 'clara', texto: '' }] }));
+  }
+  function updateTurn(i: number, patch: Partial<DialogTurn>) {
+    setExBuf(b => ({ ...b, dialogo: b.dialogo.map((t, j) => j === i ? { ...t, ...patch } : t) }));
+  }
+  function removeTurn(i: number) {
+    setExBuf(b => ({ ...b, dialogo: b.dialogo.filter((_, j) => j !== i) }));
+  }
+
+  const exLabelStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 500, letterSpacing: '1.6px',
+    textTransform: 'uppercase', color: 'var(--color-bege)', display: 'block', marginBottom: 6,
+  };
+  const renderExEditor = () => (
+    <div style={{ background: 'var(--bg-1)', border: '0.6px solid var(--color-alaranjado)', borderRadius: 'var(--radius-md)', padding: '16px 18px 14px', boxShadow: '0 0 0 3px rgba(240, 131, 83, 0.08)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label style={exLabelStyle}>Título do exemplo</label>
+          <input className="crm-faq-input" placeholder="Ex.: Primeiro contato — gestante" value={exBuf.titulo} onChange={e => setExBuf(b => ({ ...b, titulo: e.target.value }))} />
+        </div>
+        <div>
+          <label style={exLabelStyle}>Diálogo</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {exBuf.dialogo.map((turn, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '96px 1fr auto', gap: 8, alignItems: 'start' }}>
+                <select
+                  className="crm-faq-input"
+                  value={turn.autor}
+                  onChange={e => updateTurn(i, { autor: e.target.value as 'lead' | 'clara' })}
+                  style={{ padding: '8px 10px' }}
+                >
+                  <option value="lead">Lead</option>
+                  <option value="clara">Clara</option>
+                </select>
+                <textarea
+                  className="crm-faq-ans"
+                  style={{ minHeight: 44 }}
+                  placeholder={turn.autor === 'clara' ? 'O que a Clara responde…' : 'O que a pessoa escreve…'}
+                  value={turn.texto}
+                  onChange={e => updateTurn(i, { texto: e.target.value })}
+                />
+                <IconBtn title="Remover fala" danger onClick={() => removeTurn(i)}>
+                  <Trash2 size={13} strokeWidth={1.7} />
+                </IconBtn>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <Btn ghost sm onClick={addTurn}>
+              <Plus size={13} strokeWidth={2} />
+              Adicionar fala
+            </Btn>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+          <Btn ghost onClick={cancelEx}>Cancelar</Btn>
+          <Btn primary onClick={saveEx}>Salvar exemplo</Btn>
+        </div>
+      </div>
+    </div>
+  );
 
   // shared styles
   const secHead: React.CSSProperties = {
@@ -675,9 +811,9 @@ export default function AgentePage() {
                   justifyContent: 'center',
                   fontFamily: 'var(--font-display)',
                   fontSize: 10,
-                }}>co</span>
+                }}>cl</span>
                 <span style={{ color: 'var(--color-texto-medio)' }}>agente</span>
-                &nbsp;<strong style={{ fontWeight: 500 }}>Corá</strong>
+                &nbsp;<strong style={{ fontWeight: 500 }}>Clara</strong>
               </span>
             </div>
 
@@ -719,7 +855,7 @@ export default function AgentePage() {
                       </div>
                     </div>
                     <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-medio)', lineHeight: 1.55 }}>
-                      A <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>Corá</strong> está respondendo novos contatos no WhatsApp. Conversas com lead já em atendimento humano <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>não</strong> são interrompidas.
+                      A <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>Clara</strong> está respondendo novos contatos no WhatsApp. Conversas com lead já em atendimento humano <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>não</strong> são interrompidas.
                     </p>
                   </div>
 
@@ -765,14 +901,82 @@ export default function AgentePage() {
               </div>
             </section>
 
-            {/* ─── Section 2: Persona ────────────────────────────────────── */}
+            {/* ─── Section: Modelo de IA ─────────────────────────────────── */}
             <section
               ref={el => { sectionRefs.current[1] = el; }}
-              id="sec-persona"
+              id="sec-modelo"
               style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', marginBottom: 24, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}
             >
               <div style={secHead}>
                 <span style={secNum}>02</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h2 style={secTitle}>Modelo de IA</h2>
+                  <p style={secSub}>O cérebro por trás da Clara. Modelos mais fortes imitam melhor o jeito da Larissa; modelos mais leves respondem mais rápido e custam menos.</p>
+                </div>
+              </div>
+
+              <div style={secBody}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                  {Object.entries(AGENT_MODELS).map(([id, meta]) => {
+                    const selected = modelId === id && meta.available;
+                    const disabled = !meta.available;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => { if (!disabled) { setModelId(id); setProvider(meta.provider); } }}
+                        style={{
+                          textAlign: 'left',
+                          appearance: 'none',
+                          border: `0.6px solid ${selected ? 'var(--color-alaranjado)' : 'var(--color-cinza)'}`,
+                          background: selected ? 'var(--color-bege-claro)' : '#fff',
+                          borderRadius: 'var(--radius-md)',
+                          padding: '14px 16px',
+                          cursor: disabled ? 'not-allowed' : 'pointer',
+                          opacity: disabled ? 0.55 : 1,
+                          boxShadow: selected ? '0 0 0 3px rgba(240, 131, 83, 0.10)' : 'none',
+                          transition: 'all var(--duration-fast) var(--ease-soft)',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', background: selected ? 'var(--color-alaranjado)' : 'var(--bg-2)', color: selected ? '#fff' : 'var(--color-bege)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {meta.provider === 'openai' ? <Sparkles size={16} strokeWidth={1.7} /> : <Cpu size={16} strokeWidth={1.7} />}
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, fontWeight: 500, color: 'var(--color-texto-escuro)' }}>{meta.label}</span>
+                            {disabled && (
+                              <span style={{ fontFamily: 'var(--font-body)', fontSize: 9.5, fontWeight: 500, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--color-texto-medio)', background: 'var(--bg-2)', padding: '2px 7px', borderRadius: 'var(--radius-pill)' }}>em breve</span>
+                            )}
+                            {selected && (
+                              <Check size={14} strokeWidth={2.2} color="var(--color-alaranjado)" style={{ marginLeft: 'auto' }} />
+                            )}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--color-texto-medio)', marginTop: 3, textTransform: 'capitalize' }}>{meta.provider}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={secFoot}>
+                <SavedNote text="Aplica-se à próxima mensagem recebida" />
+                <Btn primary onClick={handleSaveAll}>{savePending ? 'Salvando…' : 'Salvar modelo'}</Btn>
+              </div>
+            </section>
+
+            {/* ─── Section 2: Persona ────────────────────────────────────── */}
+            <section
+              ref={el => { sectionRefs.current[2] = el; }}
+              id="sec-persona"
+              style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', marginBottom: 24, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}
+            >
+              <div style={secHead}>
+                <span style={secNum}>03</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h2 style={secTitle}>Persona e tom</h2>
                   <p style={secSub}>O texto-base que ensina o agente como falar. Pense que você está escrevendo um briefing para uma recepcionista nova.</p>
@@ -861,14 +1065,83 @@ export default function AgentePage() {
               </div>
             </section>
 
+            {/* ─── Section: Exemplos de conversa ─────────────────────────── */}
+            <section
+              ref={el => { sectionRefs.current[3] = el; }}
+              id="sec-exemplos"
+              style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', marginBottom: 24, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}
+            >
+              <div style={secHead}>
+                <span style={secNum}>04</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h2 style={secTitle}>Exemplos de conversa</h2>
+                  <p style={secSub}>Conversas reais da Larissa que ensinam a Clara o jeito de falar — ritmo, calor, mensagens curtas. A Clara imita o tom, não copia o texto. Quanto mais exemplos, mais natural.</p>
+                </div>
+              </div>
+
+              <div style={secBody}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {exemplos.map(ex => {
+                    if (editingExId === ex.id) {
+                      return <div key={ex.id}>{renderExEditor()}</div>;
+                    }
+                    return (
+                      <div key={ex.id} className="crm-faq-item" style={{ background: 'var(--bg-1)', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-md)', padding: '16px 18px 14px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'start', transition: 'border var(--duration-fast) var(--ease-soft)' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.4 }}>
+                            {ex.titulo}
+                          </div>
+                          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            {ex.dialogo.map((t, j) => (
+                              <div key={j} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                                <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase', color: t.autor === 'clara' ? 'var(--color-alaranjado)' : 'var(--color-bege)', minWidth: 38, flexShrink: 0 }}>
+                                  {t.autor === 'clara' ? 'Clara' : 'Lead'}
+                                </span>
+                                <span style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--color-texto-medio)', lineHeight: 1.5 }}>{t.texto}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                          <IconBtn title="Editar" onClick={() => startEditEx(ex)}>
+                            <Pencil size={13} strokeWidth={1.7} />
+                          </IconBtn>
+                          <IconBtn title="Remover" danger onClick={() => deleteEx(ex.id)}>
+                            <Trash2 size={13} strokeWidth={1.7} />
+                          </IconBtn>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {editingExId === 'new' && renderExEditor()}
+                </div>
+
+                <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <Btn ghost onClick={startNewEx}>
+                    <Plus size={14} strokeWidth={2} />
+                    Adicionar exemplo
+                  </Btn>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--color-texto-medio)', fontStyle: 'italic' }}>
+                    {exemplos.length} {exemplos.length === 1 ? 'exemplo cadastrado' : 'exemplos cadastrados'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={secFoot}>
+                <SavedNote text="Usado para imitar o tom da Larissa" />
+                <Btn primary onClick={handleSaveAll}>{savePending ? 'Salvando…' : 'Salvar exemplos'}</Btn>
+              </div>
+            </section>
+
             {/* ─── Section 3: FAQ ────────────────────────────────────────── */}
             <section
-              ref={el => { sectionRefs.current[2] = el; }}
+              ref={el => { sectionRefs.current[4] = el; }}
               id="sec-faq"
               style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', marginBottom: 24, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}
             >
               <div style={secHead}>
-                <span style={secNum}>03</span>
+                <span style={secNum}>05</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h2 style={secTitle}>Perguntas frequentes</h2>
                   <p style={secSub}>Respostas curadas que o agente usa como fonte de verdade. Quando a pergunta da aluna casa com uma destas, ele responde com o texto exato — sem improvisar.</p>
@@ -959,12 +1232,12 @@ export default function AgentePage() {
 
             {/* ─── Section 4: Handoff ────────────────────────────────────── */}
             <section
-              ref={el => { sectionRefs.current[3] = el; }}
+              ref={el => { sectionRefs.current[5] = el; }}
               id="sec-handoff"
               style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', marginBottom: 24, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}
             >
               <div style={secHead}>
-                <span style={secNum}>04</span>
+                <span style={secNum}>06</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h2 style={secTitle}>Regras de handoff</h2>
                   <p style={secSub}>Quando o agente deve parar e te chamar. Cada gatilho liga ou desliga independente — a conversa vai para o Inbox e fica marcada como &ldquo;humano necessário&rdquo;.</p>
@@ -1032,12 +1305,12 @@ export default function AgentePage() {
 
             {/* ─── Section 5: Horários ───────────────────────────────────── */}
             <section
-              ref={el => { sectionRefs.current[4] = el; }}
+              ref={el => { sectionRefs.current[6] = el; }}
               id="sec-hours"
               style={{ background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-lg)', marginBottom: 24, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}
             >
               <div style={secHead}>
-                <span style={secNum}>05</span>
+                <span style={secNum}>07</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h2 style={secTitle}>Horário de atendimento</h2>
                   <p style={secSub}>Quando o agente responde imediatamente e quando ele responde com a mensagem fora do horário. O fuso é o da clínica (Brasília · GMT−3).</p>

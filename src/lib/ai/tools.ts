@@ -36,13 +36,12 @@ export const AGENT_TOOLS: Tool[] = [
     input_schema: {
       type: "object" as const,
       properties: {
-        lead_id:      { type: "string", description: "ID da lead." },
         inicio:       { type: "string", description: "Data/hora de início em ISO 8601." },
         fim:          { type: "string", description: "Data/hora de fim em ISO 8601." },
         tipo:         { type: "string", enum: ["avaliacao_pilates", "avaliacao_gestante", "avaliacao_fisio_pelvica"] },
         observacoes:  { type: "string", description: "Contexto obrigatório do agendamento." },
       },
-      required: ["lead_id", "inicio", "fim", "tipo", "observacoes"],
+      required: ["inicio", "fim", "tipo", "observacoes"],
     },
   },
   {
@@ -51,10 +50,9 @@ export const AGENT_TOOLS: Tool[] = [
     input_schema: {
       type: "object" as const,
       properties: {
-        lead_id:   { type: "string" },
         interesse: { type: "string", enum: ["pilates", "pilates_gestante", "fisio_pelvica", "indefinido"] },
       },
-      required: ["lead_id", "interesse"],
+      required: ["interesse"],
     },
   },
   {
@@ -63,11 +61,10 @@ export const AGENT_TOOLS: Tool[] = [
     input_schema: {
       type: "object" as const,
       properties: {
-        lead_id:     { type: "string" },
         score:       { type: "number", minimum: 0, maximum: 100 },
         justificativa: { type: "string", description: "Explicação breve do score." },
       },
-      required: ["lead_id", "score", "justificativa"],
+      required: ["score", "justificativa"],
     },
   },
   {
@@ -76,13 +73,12 @@ export const AGENT_TOOLS: Tool[] = [
     input_schema: {
       type: "object" as const,
       properties: {
-        conversation_id: { type: "string" },
         motivo: {
           type: "string",
           enum: ["pedido_humano", "duvida_clinica_especifica", "reclamacao", "agente_nao_sabe"],
         },
       },
-      required: ["conversation_id", "motivo"],
+      required: ["motivo"],
     },
   },
 ];
@@ -91,9 +87,16 @@ export const AGENT_TOOLS: Tool[] = [
 
 export type ToolInput = Record<string, unknown>;
 
+/** IDs do contexto da conversa, injetados pelo servidor (nunca pelo modelo). */
+export interface ToolContext {
+  leadId: string;
+  conversationId: string;
+}
+
 export async function executeTool(
   toolName: string,
-  input: ToolInput
+  input: ToolInput,
+  ctx: ToolContext
 ): Promise<string> {
   const supabase = createServiceRoleClient();
   const db = supabase.schema("crm");
@@ -147,10 +150,11 @@ export async function executeTool(
       }
 
       case "agendar_avaliacao": {
-        const { lead_id, inicio, fim, tipo, observacoes } = input as {
-          lead_id: string; inicio: string; fim: string;
+        const { inicio, fim, tipo, observacoes } = input as {
+          inicio: string; fim: string;
           tipo: AppointmentType; observacoes?: string;
         };
+        const lead_id = ctx.leadId;
         const notes = observacoes?.trim();
 
         if (!notes) {
@@ -193,15 +197,17 @@ export async function executeTool(
       }
 
       case "atualizar_interesse": {
-        const { lead_id, interesse } = input as { lead_id: string; interesse: LeadInterest };
+        const { interesse } = input as { interesse: LeadInterest };
+        const lead_id = ctx.leadId;
         await db.from("leads").update({ interesse }).eq("id", lead_id);
         return JSON.stringify({ success: true, interesse });
       }
 
       case "registrar_score": {
-        const { lead_id, score, justificativa } = input as {
-          lead_id: string; score: number; justificativa: string;
+        const { score, justificativa } = input as {
+          score: number; justificativa: string;
         };
+        const lead_id = ctx.leadId;
         await db.from("leads").update({ score_qualificacao: score }).eq("id", lead_id);
         await db.from("activities").insert({
           lead_id,
@@ -213,18 +219,16 @@ export async function executeTool(
       }
 
       case "solicitar_handoff": {
-        const { conversation_id, motivo } = input as { conversation_id: string; motivo: string };
+        const { motivo } = input as { motivo: string };
+        const conversation_id = ctx.conversationId;
         await db.from("conversations").update({ modo: "humano", nao_lida: true }).eq("id", conversation_id);
 
-        const { data: conv } = await db.from("conversations").select("lead_id").eq("id", conversation_id).single();
-        if (conv) {
-          await db.from("activities").insert({
-            lead_id: conv.lead_id,
-            tipo: "handoff",
-            descricao: `Handoff solicitado pelo agente IA — motivo: ${motivo}`,
-            meta: { motivo, conversation_id },
-          });
-        }
+        await db.from("activities").insert({
+          lead_id: ctx.leadId,
+          tipo: "handoff",
+          descricao: `Handoff solicitado pelo agente IA — motivo: ${motivo}`,
+          meta: { motivo, conversation_id },
+        });
         return JSON.stringify({ success: true, modo: "humano" });
       }
 

@@ -297,6 +297,9 @@ export interface Database {
           mensagem_fora_horario: string;
           faq: Json;
           regras_handoff: Json;
+          exemplos_conversa: Json;
+          model_provider: string;
+          model_id: string;
           created_at: string;
           updated_at: string;
         };
@@ -308,6 +311,9 @@ export interface Database {
           mensagem_fora_horario?: string;
           faq?: Json;
           regras_handoff?: Json;
+          exemplos_conversa?: Json;
+          model_provider?: string;
+          model_id?: string;
           created_at?: string;
           updated_at?: string;
         };

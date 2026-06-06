@@ -15,6 +15,7 @@ import {
   getInstanceInfo,
   connectInstance,
 } from "@/lib/evolution/client";
+import { AGENT_MODELS } from "@/lib/ai/model";
 
 // ─── Agent config ──────────────────────────────────────────────────────────────
 
@@ -25,6 +26,19 @@ const agentConfigSchema = z.object({
   horario_atendimento:  z.record(z.string(), z.string()),
   faq:                  z.array(z.object({ q: z.string(), a: z.string() })),
   regras_handoff:       z.array(z.string()),
+  exemplos_conversa:    z.array(z.object({
+    id:      z.string(),
+    titulo:  z.string(),
+    dialogo: z.array(z.object({
+      autor: z.enum(["lead", "clara"]),
+      texto: z.string(),
+    })),
+  })),
+  model_provider:       z.enum(["anthropic", "openai"]),
+  model_id:             z.string().refine(
+    (id) => Boolean(AGENT_MODELS[id]?.available),
+    { message: "Modelo de IA indisponível." },
+  ),
 });
 
 export type AgentConfigInput = z.infer<typeof agentConfigSchema>;
@@ -70,6 +84,9 @@ export async function updateAgentConfig(input: AgentConfigInput): Promise<Config
     horario_atendimento:   parsed.data.horario_atendimento,
     faq:                   parsed.data.faq,
     regras_handoff:        parsed.data.regras_handoff,
+    exemplos_conversa:     parsed.data.exemplos_conversa,
+    model_provider:        parsed.data.model_provider,
+    model_id:              parsed.data.model_id,
   }).neq("id", "00000000-0000-0000-0000-000000000000"); // update the singleton
 
   if (error) return { success: false, error: error.message };
