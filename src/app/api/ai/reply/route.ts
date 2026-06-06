@@ -4,8 +4,17 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendTextMessage } from "@/lib/evolution/client";
 import { AGENT_TOOLS, executeTool, type ToolInput } from "@/lib/ai/tools";
-import { chooseAgentModel } from "@/lib/ai/model";
+import { resolveModel } from "@/lib/ai/model";
 import type { Json } from "@/types/database";
+
+// Separador que o modelo usa para quebrar a resposta em mensagens curtas (bursts).
+const BURST_DELIMITER = "---";
+const MAX_BURSTS = 4;
+
+interface ConversaExemplo {
+  titulo?: string;
+  dialogo?: { autor: "lead" | "clara"; texto: string }[];
+}
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -40,6 +49,7 @@ function buildSystemPrompt(
   personaPrompt: string,
   faq: Json,
   regrasHandoff: Json,
+  exemplos: Json,
   lead: { nome: string; interesse: string; estagio: string; score_qualificacao: number | null }
 ): string {
   const faqStr = Array.isArray(faq) && faq.length > 0
@@ -52,6 +62,21 @@ function buildSystemPrompt(
     ? `\n\n## Gatilhos de handoff (use a tool solicitar_handoff nestes casos)\n- ${(regrasHandoff as string[]).join("\n- ")}`
     : "";
 
+  const exemplosArr = Array.isArray(exemplos) ? (exemplos as ConversaExemplo[]) : [];
+  const exemplosStr = exemplosArr.length > 0
+    ? "\n\n## Exemplos do jeito da Larissa (imite o tom e o ritmo, NÃO copie literalmente)\n" +
+      exemplosArr
+        .filter((ex) => Array.isArray(ex.dialogo) && ex.dialogo.length > 0)
+        .map((ex) => {
+          const head = ex.titulo ? `### ${ex.titulo}\n` : "";
+          const body = (ex.dialogo ?? [])
+            .map((t) => `${t.autor === "lead" ? "Lead" : "Clara"}: ${t.texto}`)
+            .join("\n");
+          return head + body;
+        })
+        .join("\n\n")
+    : "";
+
   return `${personaPrompt}
 
 ## Contexto da aluna
@@ -60,6 +85,17 @@ function buildSystemPrompt(
 - Estágio no funil: ${lead.estagio}
 - Score de qualificação: ${lead.score_qualificacao ?? "não avaliado"}
 
+## Quem é você
+- Seu nome é Clara. Fale de forma natural, calorosa e pessoal — como a Larissa falaria no WhatsApp.
+- NÃO se apresente espontaneamente como IA, robô, assistente virtual ou atendimento automático.
+- Se a pessoa perguntar DIRETAMENTE se você é uma IA/robô/atendente automático, responda com honestidade e leveza, sem drama.
+
+## Como escrever no WhatsApp (estilo humano)
+- Responda em mensagens curtas, como uma pessoa digitando — não em um parágrafo único e longo.
+- Separe cada mensagem por uma linha contendo apenas "${BURST_DELIMITER}".
+- Use no máximo ${MAX_BURSTS} mensagens por resposta. Frases curtas, tom de conversa.
+- Evite emojis em excesso (no máximo um, e só quando soar natural).
+
 ## Guardrails obrigatórios
 - NUNCA prometa cura, resultado em prazo ou faça diagnóstico.
 - NUNCA use "paciente" ou "patologia". Use "aluna" e "incômodo".
@@ -67,8 +103,19 @@ function buildSystemPrompt(
 - Sem urgência fabricada, sem "últimas vagas", sem CAPS LOCK.
 - Em caso de dúvida clínica específica: use solicitar_handoff.
 - Responda sempre em português brasileiro.
-${faqStr}${handoffStr}`;
+${exemplosStr}${faqStr}${handoffStr}`;
 }
+
+// Quebra a resposta do modelo em mensagens curtas (bursts).
+function splitIntoBursts(text: string): string[] {
+  return text
+    .split(new RegExp(`\\n?\\s*${BURST_DELIMITER}\\s*\\n?`, "g"))
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .slice(0, MAX_BURSTS);
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -143,19 +190,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, skipped: "no_user_message" });
   }
 
-  const lastUserMsg = String(anthropicMessages[anthropicMessages.length - 1].content ?? "");
-  const modelKey = chooseAgentModel(lastUserMsg);
-  const modelId  = modelKey === "claude-sonnet"
-    ? "claude-sonnet-4-6"
-    : "claude-haiku-4-5-20251001";
+  const { modelId } = resolveModel(config.model_provider, config.model_id);
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const systemPrompt = buildSystemPrompt(
     config.persona_prompt,
     config.faq,
     config.regras_handoff,
+    config.exemplos_conversa,
     lead
   );
+
+  const toolCtx = { leadId: lead.id, conversationId: conversation_id };
 
   // Agentic loop
   let messages = [...anthropicMessages];
@@ -183,7 +229,7 @@ export async function POST(request: NextRequest) {
     const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
     for (const block of toolUseBlocks) {
       if (block.type !== "tool_use") continue;
-      const result = await executeTool(block.name, block.input as ToolInput);
+      const result = await executeTool(block.name, block.input as ToolInput, toolCtx);
       toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
     }
 
@@ -194,25 +240,36 @@ export async function POST(request: NextRequest) {
     ];
   }
 
-  // Send and store reply
-  if (finalText.trim()) {
-    await sendTextMessage({ phone: lead.telefone, text: finalText.trim() });
+  // Send and store reply — em mensagens curtas (bursts), como uma pessoa digitando.
+  const bursts = splitIntoBursts(finalText);
+  if (bursts.length > 0) {
+    for (let i = 0; i < bursts.length; i++) {
+      const chunk = bursts[i];
 
-    await db.from("messages").insert({
-      conversation_id,
-      direcao:  "saida",
-      autor:    "ia",
-      conteudo: finalText.trim(),
-      tipo:     "texto",
-    });
+      // Pausa curta entre mensagens (levemente proporcional ao tamanho).
+      if (i > 0) {
+        const delay = Math.min(1400, 700 + chunk.length * 12);
+        await sleep(delay);
+      }
+
+      await sendTextMessage({ phone: lead.telefone, text: chunk });
+
+      await db.from("messages").insert({
+        conversation_id,
+        direcao:  "saida",
+        autor:    "ia",
+        conteudo: chunk,
+        tipo:     "texto",
+      });
+    }
 
     await db.from("activities").insert({
       lead_id:  lead.id,
       tipo:     "mensagem",
       descricao: "Mensagem enviada pelo agente IA",
-      meta:     { preview: finalText.slice(0, 120) },
+      meta:     { preview: bursts.join(" ").slice(0, 120), bursts: bursts.length },
     });
   }
 
-  return NextResponse.json({ ok: true, model: modelId });
+  return NextResponse.json({ ok: true, model: modelId, bursts: bursts.length });
 }
