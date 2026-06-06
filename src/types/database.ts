@@ -301,6 +301,7 @@ export interface Database {
           model_provider: string;
           model_id: string;
           apenas_desconhecidos: boolean;
+          numeros_bypass: Json;
           created_at: string;
           updated_at: string;
         };
@@ -316,6 +317,7 @@ export interface Database {
           model_provider?: string;
           model_id?: string;
           apenas_desconhecidos?: boolean;
+          numeros_bypass?: Json;
           created_at?: string;
           updated_at?: string;
         };

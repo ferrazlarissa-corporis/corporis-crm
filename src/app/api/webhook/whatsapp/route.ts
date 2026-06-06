@@ -135,14 +135,21 @@ export async function POST(request: NextRequest) {
   if (conv.modo === "ia") {
     const { data: agentConf } = await db
       .from("agent_config")
-      .select("ativo, apenas_desconhecidos")
+      .select("ativo, apenas_desconhecidos, numeros_bypass")
       .single();
 
-    // If filter is active, skip AI for contacts saved in the phone's address book
+    // If filter is active, skip AI for contacts saved in the phone's address book,
+    // unless the number is in the bypass list (test numbers, staff, etc.)
     if (agentConf?.apenas_desconhecidos) {
-      const saved = await isContactSaved(remoteJid);
-      if (saved) {
-        return NextResponse.json({ ok: true, skipped: "known_contact", conversation_id: conv.id });
+      const bypass = Array.isArray(agentConf.numeros_bypass)
+        ? (agentConf.numeros_bypass as string[])
+        : [];
+      const isBypassed = bypass.includes(telefone);
+      if (!isBypassed) {
+        const saved = await isContactSaved(remoteJid);
+        if (saved) {
+          return NextResponse.json({ ok: true, skipped: "known_contact", conversation_id: conv.id });
+        }
       }
     }
 

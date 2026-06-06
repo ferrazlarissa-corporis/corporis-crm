@@ -346,6 +346,8 @@ export default function AgentePage() {
   // state
   const [agentActive, setAgentActive] = useState(true);
   const [apenasDesconhecidos, setApenasDesconhecidos] = useState(true);
+  // Stored as E.164, edited as newline-separated text
+  const [numerosbypassText, setNumerosbypassText] = useState('+5547991719570');
   const [personaText, setPersonaText] = useState(PERSONA_DEFAULT);
   const [faqItems, setFaqItems] = useState<FaqItem[]>(INITIAL_FAQ);
   const [editingId, setEditingId] = useState<number | 'new' | null>(4); // editing "Preciso de pedido?"
@@ -386,6 +388,9 @@ export default function AgentePage() {
       if (!data) return;
       setAgentActive(data.ativo);
       setApenasDesconhecidos(data.apenas_desconhecidos ?? true);
+      if (Array.isArray(data.numeros_bypass) && (data.numeros_bypass as unknown[]).length > 0) {
+        setNumerosbypassText((data.numeros_bypass as string[]).join('\n'));
+      }
       if (data.persona_prompt) setPersonaText(data.persona_prompt);
       if (data.mensagem_fora_horario) setOffHoursText(data.mensagem_fora_horario);
       if (Array.isArray(data.faq) && (data.faq as unknown[]).length > 0) {
@@ -439,6 +444,7 @@ export default function AgentePage() {
       const result = await updateAgentConfig({
         ativo:                agentActive,
         apenas_desconhecidos: apenasDesconhecidos,
+        numeros_bypass:       numerosbypassText.split('\n').map(s => s.trim()).filter(Boolean),
         persona_prompt:       personaText,
         mensagem_fora_horario: offHoursText,
         horario_atendimento:  horarioAtendimento,
@@ -882,16 +888,47 @@ export default function AgentePage() {
                       A <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>Clara</strong> está respondendo novos contatos no WhatsApp. Conversas com lead já em atendimento humano <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>não</strong> são interrompidas.
                     </p>
                     {/* Apenas desconhecidos */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, borderTop: '0.6px solid var(--color-cinza)', paddingTop: 16, marginTop: 4 }}>
-                      <Toggle checked={apenasDesconhecidos} onChange={setApenasDesconhecidos} size="sm" label="Apenas contatos não salvos" />
-                      <div>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.3 }}>
-                          Apenas contatos não salvos
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', marginTop: 3, lineHeight: 1.5 }}>
-                          A Clara ignora mensagens de quem está salvo na agenda do WhatsApp — clientes em acompanhamento, contatos pessoais e fornecedores.
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '0.6px solid var(--color-cinza)', paddingTop: 16, marginTop: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <Toggle checked={apenasDesconhecidos} onChange={setApenasDesconhecidos} size="sm" label="Apenas contatos não salvos" />
+                        <div>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.3 }}>
+                            Apenas contatos não salvos
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', marginTop: 3, lineHeight: 1.5 }}>
+                            A Clara ignora mensagens de quem está salvo na agenda do WhatsApp — clientes em acompanhamento, contatos pessoais e fornecedores.
+                          </div>
                         </div>
                       </div>
+                      {apenasDesconhecidos && (
+                        <div style={{ marginLeft: 50 }}>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 500, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'var(--color-bege)', marginBottom: 6 }}>
+                            Exceções — números que sempre recebem resposta
+                          </div>
+                          <textarea
+                            value={numerosbypassText}
+                            onChange={e => setNumerosbypassText(e.target.value)}
+                            placeholder="+5549999999999"
+                            rows={3}
+                            style={{
+                              width: '100%',
+                              fontFamily: 'var(--font-body)',
+                              fontSize: 12,
+                              color: 'var(--color-texto-escuro)',
+                              background: 'var(--bg-2)',
+                              border: '0.6px solid var(--color-cinza)',
+                              borderRadius: 'var(--radius-md)',
+                              padding: '8px 10px',
+                              resize: 'vertical',
+                              outline: 'none',
+                              lineHeight: 1.6,
+                            }}
+                          />
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--color-texto-medio)', marginTop: 4 }}>
+                            Um número por linha no formato E.164 — ex.: +5547991719570
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
