@@ -17,7 +17,8 @@ const bodySchema = z.object({
 
 function isWithinBusinessHours(schedule: Json): boolean {
   const s = schedule as Record<string, string>;
-  const now = new Date();
+  // Vercel runs UTC — convert to São Paulo time before checking hours
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
   const day = now.getDay(); // 0=Sun, 6=Sat
   if (day === 0) return false;
 

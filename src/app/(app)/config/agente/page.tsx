@@ -1066,9 +1066,19 @@ export default function AgentePage() {
                       <div style={{ padding: '12px 16px', borderBottom: i < hours.length - 1 ? '0.6px solid var(--color-cinza)' : 'none', display: 'flex', alignItems: 'center' }}>
                         {row.open ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFeatureSettings: '"tnum"' }}>
-                            <span className="crm-time-pill">{row.from}</span>
+                            <input
+                              type="time"
+                              className="crm-time-pill"
+                              value={row.from}
+                              onChange={e => setHours(prev => prev.map((r, j) => j === i ? { ...r, from: e.target.value } : r))}
+                            />
                             <span style={{ color: 'var(--color-texto-medio)', fontSize: 12 }}>até</span>
-                            <span className="crm-time-pill">{row.to}</span>
+                            <input
+                              type="time"
+                              className="crm-time-pill"
+                              value={row.to}
+                              onChange={e => setHours(prev => prev.map((r, j) => j === i ? { ...r, to: e.target.value } : r))}
+                            />
                           </span>
                         ) : (
                           <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 500, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'var(--color-texto-medio)', background: 'var(--bg-2)', padding: '3px 10px', borderRadius: 'var(--radius-pill)' }}>
@@ -1107,8 +1117,8 @@ export default function AgentePage() {
               </div>
 
               <div style={secFoot}>
-                <SavedNote text={`Atende ${hours.filter(r => r.open).length} dias por semana · 70h semanais`} />
-                <Btn primary>Salvar horários</Btn>
+                <SavedNote text={`Atende ${hours.filter(r => r.open).length} dias por semana`} />
+                <Btn primary onClick={handleSaveAll}>{savePending ? 'Salvando…' : 'Salvar horários'}</Btn>
               </div>
             </section>
 

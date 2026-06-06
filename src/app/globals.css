@@ -189,13 +189,18 @@ select {
   font-size: 12.5px;
   color: var(--color-texto-escuro);
   font-feature-settings: "tnum";
-  min-width: 60px;
+  min-width: 80px;
   text-align: center;
   transition: border var(--duration-fast) var(--ease-soft);
+  outline: none;
 }
 .crm-time-pill:hover {
   border-color: var(--color-tangerina);
   cursor: text;
+}
+.crm-time-pill:focus {
+  border-color: var(--color-alaranjado);
+  box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.10);
 }
 
 /* Timeline vertical line */
