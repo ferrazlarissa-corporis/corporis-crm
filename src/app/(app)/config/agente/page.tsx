@@ -394,6 +394,27 @@ export default function AgentePage() {
       if (Array.isArray(data.exemplos_conversa)) {
         setExemplos(data.exemplos_conversa as unknown as ConversaExemplo[]);
       }
+      // Restore hours (DB stores as { segunda_sexta: "HH:MM-HH:MM", sabado: "HH:MM-HH:MM" })
+      if (data.horario_atendimento) {
+        const h = data.horario_atendimento as { segunda_sexta?: string; sabado?: string };
+        const parse = (range?: string) => {
+          if (!range) return { open: false, from: '', to: '' };
+          const [from, to] = range.split('-');
+          return { open: true, from: from ?? '', to: to ?? '' };
+        };
+        const wday = parse(h.segunda_sexta);
+        const sat  = parse(h.sabado);
+        setHours(prev => prev.map((r, i) => {
+          if (i < 5) return { ...r, open: wday.open, from: wday.from, to: wday.to };
+          if (i === 5) return { ...r, open: sat.open, from: sat.from, to: sat.to };
+          return { ...r, open: false };
+        }));
+      }
+      // Restore handoff rule enabled states
+      if (Array.isArray(data.regras_handoff)) {
+        const enabled = new Set(data.regras_handoff as string[]);
+        setHandoffRules(prev => prev.map(r => ({ ...r, enabled: enabled.has(r.title) })));
+      }
     });
   }, []);
 
