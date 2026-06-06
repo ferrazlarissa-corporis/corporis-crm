@@ -262,7 +262,26 @@ export default function InboxClient({ initialConversations }: { initialConversat
           ));
         }
         if (payload.eventType === "INSERT") {
-          // New conversation — refetch is complex; just mark flag for now
+          const newId = (payload.new as { id: string }).id;
+          supabase.schema("crm")
+            .from("conversations")
+            .select("id, modo, status, nao_lida, updated_at, leads!inner(id, nome, estagio)")
+            .eq("id", newId)
+            .single()
+            .then(({ data: nc }) => {
+              if (!nc) return;
+              const lead = Array.isArray(nc.leads) ? nc.leads[0] : nc.leads;
+              const full: ConversationRow = {
+                id: nc.id,
+                lead: { id: lead?.id ?? "", nome: lead?.nome ?? "", estagio: (lead?.estagio ?? "novo") as ConversationRow["lead"]["estagio"] },
+                modo: nc.modo,
+                status: nc.status,
+                nao_lida: nc.nao_lida,
+                last_message: null,
+                updated_at: nc.updated_at,
+              };
+              setConvs((prev) => prev.some((c) => c.id === full.id) ? prev : [full, ...prev]);
+            });
         }
       })
       .subscribe();
@@ -322,7 +341,7 @@ export default function InboxClient({ initialConversations }: { initialConversat
           </div>
 
           <div className="crm-scrollbar min-h-0 overflow-y-auto">
-            {initialConversations.length === 0 ? (
+            {convs.length === 0 ? (
               <div className="px-4 py-8 text-center text-[13px] text-text-secondary">
                 Nenhuma conversa ainda.<br />
                 <span className="text-xs">As conversas do WhatsApp aparecerão aqui.</span>

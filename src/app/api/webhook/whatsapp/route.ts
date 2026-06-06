@@ -24,11 +24,14 @@ const webhookSchema = z.object({
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  // 1. Auth
-  const secret = request.headers.get("x-corporis-webhook-secret") ??
-                 request.headers.get("x-webhook-secret");
-  if (secret !== process.env.EVOLUTION_WEBHOOK_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // 1. Auth — only enforce secret if EVOLUTION_WEBHOOK_SECRET is configured
+  const expectedSecret = process.env.EVOLUTION_WEBHOOK_SECRET;
+  if (expectedSecret) {
+    const secret = request.headers.get("x-corporis-webhook-secret") ??
+                   request.headers.get("x-webhook-secret");
+    if (secret !== expectedSecret) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   // 2. Parse
@@ -41,7 +44,9 @@ export async function POST(request: NextRequest) {
   const { event, data } = parsed.data;
 
   // Only handle incoming text messages
-  if (event !== "messages.upsert" && event !== "message.any") {
+  // Evolution API v2 sends "messages.upsert"; accept uppercase variant too
+  const normalizedEvent = event.toLowerCase().replace(/_/g, ".");
+  if (normalizedEvent !== "messages.upsert" && normalizedEvent !== "message.any") {
     return NextResponse.json({ ok: true, skipped: event });
   }
   if (data.key.fromMe) {
