@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { jidToE164, extractMessageText } from "@/lib/evolution/client";
@@ -139,16 +139,27 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (agentConf?.ativo) {
-      // Fire-and-forget — don't await so webhook responds fast
+      // Run after the response is sent. Unlike a bare fire-and-forget fetch,
+      // after() keeps the serverless function alive until this completes,
+      // so the internal call to /api/ai/reply is not killed on Vercel.
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-      fetch(`${appUrl}/api/ai/reply`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
-        },
-        body: JSON.stringify({ conversation_id: conv.id }),
-      }).catch((err) => console.error("[webhook] ai/reply fire error:", err));
+      after(async () => {
+        try {
+          const res = await fetch(`${appUrl}/api/ai/reply`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
+            },
+            body: JSON.stringify({ conversation_id: conv.id }),
+          });
+          if (!res.ok) {
+            console.error("[webhook] ai/reply non-ok:", res.status, await res.text().catch(() => ""));
+          }
+        } catch (err) {
+          console.error("[webhook] ai/reply fire error:", err);
+        }
+      });
     }
   }
 
