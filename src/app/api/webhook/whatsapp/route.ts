@@ -1,7 +1,8 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { jidToE164, extractMessageText, isContactSaved } from "@/lib/evolution/client";
+import { jidToE164, extractMessageText, isContactSaved, fetchMediaBase64 } from "@/lib/evolution/client";
+import { transcribeAudio } from "@/lib/ai/whisper";
 
 // ─── Payload schema ───────────────────────────────────────────────────────────
 
@@ -56,9 +57,22 @@ export async function POST(request: NextRequest) {
   const evolutionMessageId = data.key.id;
   const remoteJid          = data.key.remoteJid;
   const telefone           = jidToE164(remoteJid);
-  const textContent        = extractMessageText(data.message);
+  const textContent = extractMessageText(data.message);
+  const isAudio     = !textContent && (
+    data.messageType === "audioMessage" || data.messageType === "pttMessage"
+  );
 
-  if (!textContent) {
+  let effectiveContent = textContent;
+
+  if (isAudio) {
+    const media = await fetchMediaBase64(data.key);
+    if (media) {
+      const transcript = await transcribeAudio(media.base64, media.mimetype);
+      if (transcript) effectiveContent = transcript;
+    }
+  }
+
+  if (!effectiveContent) {
     return NextResponse.json({ ok: true, skipped: "non-text" });
   }
 
@@ -118,8 +132,8 @@ export async function POST(request: NextRequest) {
     conversation_id:      conv.id,
     direcao:              "entrada",
     autor:                "lead",
-    conteudo:             textContent,
-    tipo:                 "texto",
+    conteudo:             effectiveContent,
+    tipo:                 isAudio ? "audio" : "texto",
     evolution_message_id: evolutionMessageId,
   });
 
@@ -127,8 +141,8 @@ export async function POST(request: NextRequest) {
   await db.from("activities").insert({
     lead_id:  lead.id,
     tipo:     "mensagem",
-    descricao: `Mensagem recebida no WhatsApp`,
-    meta:     { evolution_message_id: evolutionMessageId, preview: textContent.slice(0, 120) },
+    descricao: isAudio ? "Áudio recebido no WhatsApp (transcrição automática)" : "Mensagem recebida no WhatsApp",
+    meta:     { evolution_message_id: evolutionMessageId, preview: effectiveContent.slice(0, 120) },
   });
 
   // 8. Trigger AI if mode = 'ia' and agent is active

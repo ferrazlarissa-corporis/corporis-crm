@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { updateAgentConfig } from '../actions';
+import { fetchWhatsAppStatus, updateAgentConfig, type WhatsAppStatus } from '../actions';
 import { AGENT_MODELS } from '@/lib/ai/model';
 import {
   RotateCcw,
@@ -181,45 +181,50 @@ function Btn({
   ghost,
   sm,
   onClick,
+  disabled,
 }: {
   children: React.ReactNode;
   primary?: boolean;
   ghost?: boolean;
   sm?: boolean;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   const [hov, setHov] = useState(false);
+  const activeHover = hov && !disabled;
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
         appearance: 'none',
         border: primary
-          ? `0.6px solid ${hov ? 'var(--color-tangerina)' : 'var(--color-alaranjado)'}`
+          ? `0.6px solid ${activeHover ? 'var(--color-tangerina)' : 'var(--color-alaranjado)'}`
           : ghost
             ? '0.6px solid transparent'
             : '0.6px solid var(--color-cinza)',
         background: primary
-          ? hov ? 'var(--color-tangerina)' : 'var(--color-alaranjado)'
+          ? activeHover ? 'var(--color-tangerina)' : 'var(--color-alaranjado)'
           : ghost
-            ? hov ? 'var(--bg-2)' : 'transparent'
-            : hov ? 'var(--color-bege-claro)' : '#fff',
-        color: primary ? '#fff' : ghost ? hov ? 'var(--color-texto-escuro)' : 'var(--color-texto-medio)' : 'var(--color-texto-escuro)',
+            ? activeHover ? 'var(--bg-2)' : 'transparent'
+            : activeHover ? 'var(--color-bege-claro)' : '#fff',
+        color: primary ? '#fff' : ghost ? activeHover ? 'var(--color-texto-escuro)' : 'var(--color-texto-medio)' : 'var(--color-texto-escuro)',
         borderRadius: 'var(--radius-pill)',
         padding: sm ? '5px 11px' : '8px 16px',
         fontFamily: 'var(--font-body)',
         fontSize: sm ? 12 : 13,
         fontWeight: 500,
         letterSpacing: '0.2px',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
         gap: 7,
         transition: 'all var(--duration-fast) var(--ease-soft)',
         flexShrink: 0,
+        opacity: disabled ? 0.62 : 1,
       }}
     >
       {children}
@@ -341,6 +346,82 @@ function SavedNote({ text, success }: { text: string; success?: boolean }) {
   );
 }
 
+function formatWhatsAppNumber(raw?: string) {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.startsWith('55') && digits.length === 13) {
+    return `+${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  }
+  if (digits.startsWith('55') && digits.length === 12) {
+    return `+${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 8)}-${digits.slice(8)}`;
+  }
+  return raw.trim().startsWith('+') ? raw.trim() : `+${digits}`;
+}
+
+function getWhatsAppStatusMeta(status: WhatsAppStatus | null, loading: boolean) {
+  if (loading && !status) {
+    return {
+      label: 'Verificando conexão',
+      detail: 'Consultando a Evolution API.',
+      dot: 'var(--color-bege)',
+      badgeBg: 'var(--bg-2)',
+    };
+  }
+
+  if (!status) {
+    return {
+      label: 'Status indisponível',
+      detail: 'Não foi possível consultar a conexão agora.',
+      dot: 'var(--color-bege)',
+      badgeBg: 'var(--bg-2)',
+    };
+  }
+
+  if (!status.configured) {
+    return {
+      label: 'Configuração incompleta',
+      detail: 'Revise as variáveis da Evolution API no ambiente.',
+      dot: 'var(--color-ui-error)',
+      badgeBg: 'rgba(192, 80, 74, 0.08)',
+    };
+  }
+
+  if (status.state === 'open') {
+    return {
+      label: 'Conectado',
+      detail: 'Evolution API pronta para respostas automáticas.',
+      dot: 'var(--color-verde)',
+      badgeBg: 'rgba(172, 192, 149, 0.18)',
+    };
+  }
+
+  if (status.state === 'connecting') {
+    return {
+      label: 'Conectando',
+      detail: 'A instância está tentando restabelecer a sessão.',
+      dot: 'var(--color-alaranjado)',
+      badgeBg: 'rgba(240, 131, 83, 0.10)',
+    };
+  }
+
+  if (status.state === 'close') {
+    return {
+      label: 'Desconectado',
+      detail: 'Leads chegam no Inbox, mas sem resposta automática.',
+      dot: 'var(--color-ui-error)',
+      badgeBg: 'rgba(192, 80, 74, 0.08)',
+    };
+  }
+
+  return {
+    label: 'Status indisponível',
+    detail: 'A Evolution API não retornou o estado da conexão.',
+    dot: 'var(--color-bege)',
+    badgeBg: 'var(--bg-2)',
+  };
+}
+
 // ─── main page ────────────────────────────────────────────────────────────────
 export default function AgentePage() {
   // state
@@ -380,6 +461,9 @@ export default function AgentePage() {
   const [activeToc, setActiveToc] = useState(0);
   const [savePending, startSave] = useTransition();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [whatsAppStatus, setWhatsAppStatus] = useState<WhatsAppStatus | null>(null);
+  const [whatsAppStatusLoading, setWhatsAppStatusLoading] = useState(true);
+  const [whatsAppStatusCheckedAt, setWhatsAppStatusCheckedAt] = useState<Date | null>(null);
 
   // Load real config from DB
   useEffect(() => {
@@ -424,6 +508,23 @@ export default function AgentePage() {
       }
     });
   }, []);
+
+  const loadWhatsAppStatus = useCallback(async () => {
+    setWhatsAppStatusLoading(true);
+    try {
+      const status = await fetchWhatsAppStatus();
+      setWhatsAppStatus(status);
+    } catch {
+      setWhatsAppStatus({ configured: true, state: 'unknown' });
+    } finally {
+      setWhatsAppStatusCheckedAt(new Date());
+      setWhatsAppStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadWhatsAppStatus();
+  }, [loadWhatsAppStatus]);
 
   // Save all config to DB
   async function handleSaveAll() {
@@ -653,6 +754,11 @@ export default function AgentePage() {
     alignItems: 'center',
     justifyContent: 'space-between',
   };
+  const whatsAppStatusMeta = getWhatsAppStatusMeta(whatsAppStatus, whatsAppStatusLoading);
+  const whatsAppNumber = formatWhatsAppNumber(whatsAppStatus?.number);
+  const whatsAppCheckedLabel = whatsAppStatusCheckedAt
+    ? `Atualizado às ${whatsAppStatusCheckedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+    : 'Ainda não verificado';
 
   return (
     <div style={{ display: 'grid', gridTemplateRows: '64px 1fr', height: '100dvh', overflow: 'hidden' }}>
@@ -940,37 +1046,85 @@ export default function AgentePage() {
                     <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 500, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'var(--color-bege)' }}>
                       Conexão
                     </div>
-                    <div style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'rgba(172, 192, 149, 0.30)', color: '#5F7948', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {/* WhatsApp SVG */}
-                        <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor">
-                          <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.9-.4-1.7-1-2.4-1.7-.5-.5-1-1.1-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.2-.3.4-.4.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4 0-.1-.6-1.5-.9-2.1-.2-.5-.5-.4-.6-.4h-.6c-.2 0-.5.1-.7.4-.3.3-1 1-1 2.3 0 1.4 1 2.7 1.1 2.9.1.1 2 3 4.8 4.2.4.2.8.3 1.1.4.5.1.9.1 1.3.1.4-.1 1.2-.5 1.4-1 .2-.5.2-.9.1-1 0-.1-.1-.2-.3-.2zM12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/>
-                        </svg>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.2 }}>
-                          +55 49 99183-1900
+                    <div style={{
+                      background: '#fff',
+                      border: '0.6px solid var(--color-cinza)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 14,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', background: 'rgba(172, 192, 149, 0.20)', color: '#5F7948', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor" aria-hidden>
+                            <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.9-.4-1.7-1-2.4-1.7-.5-.5-1-1.1-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.2-.3.4-.4.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4 0-.1-.6-1.5-.9-2.1-.2-.5-.5-.4-.6-.4h-.6c-.2 0-.5.1-.7.4-.3.3-1 1-1 2.3 0 1.4 1 2.7 1.1 2.9.1.1 2 3 4.8 4.2.4.2.8.3 1.1.4.5.1.9.1 1.3.1.4-.1 1.2-.5 1.4-1 .2-.5.2-.9.1-1 0-.1-.1-.2-.3-.2zM12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/>
+                          </svg>
                         </div>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--color-texto-medio)', marginTop: 3, display: 'inline-flex', alignItems: 'center', gap: 6, fontFeatureSettings: '"tnum"' }}>
-                          <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-pill)', background: 'var(--color-verde)', boxShadow: '0 0 0 3px rgba(172, 192, 149, 0.25)', flexShrink: 0 }} />
-                          Conectado · Evolution API · sincronizado há 2 min
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 7,
+                              background: whatsAppStatusMeta.badgeBg,
+                              borderRadius: 'var(--radius-pill)',
+                              padding: '4px 10px',
+                              fontFamily: 'var(--font-body)',
+                              fontSize: 11,
+                              fontWeight: 500,
+                              color: 'var(--color-texto-escuro)',
+                            }}>
+                              <span style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius: 'var(--radius-pill)',
+                                background: whatsAppStatusMeta.dot,
+                                boxShadow: whatsAppStatus?.state === 'open' ? '0 0 0 3px rgba(172, 192, 149, 0.22)' : 'none',
+                                flexShrink: 0,
+                              }} />
+                              {whatsAppStatusMeta.label}
+                            </span>
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.3, marginTop: 10, overflowWrap: 'anywhere' }}>
+                            {whatsAppNumber ?? whatsAppStatus?.instance ?? 'Evolution API'}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--color-texto-medio)', lineHeight: 1.45, marginTop: 4 }}>
+                            {whatsAppNumber
+                              ? (whatsAppStatus?.instance ? `Instância ${whatsAppStatus.instance}` : 'Número retornado pela Evolution API')
+                              : 'Número não informado pela Evolution API'}
+                          </div>
                         </div>
                       </div>
-                      <Btn sm>
-                        <RefreshCw size={12} strokeWidth={1.8} />
-                        Reconectar
-                      </Btn>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTop: '0.6px solid var(--color-cinza)', paddingTop: 12 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--color-texto-medio)', lineHeight: 1.45 }}>
+                            {whatsAppStatusMeta.detail}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10.5, color: 'var(--color-bege)', marginTop: 3, fontFeatureSettings: '"tnum"' }}>
+                            {whatsAppCheckedLabel}
+                          </div>
+                        </div>
+                        <Btn sm onClick={loadWhatsAppStatus} disabled={whatsAppStatusLoading}>
+                          <RefreshCw size={12} strokeWidth={1.8} />
+                          {whatsAppStatusLoading ? 'Atualizando' : 'Atualizar'}
+                        </Btn>
+                      </div>
                     </div>
                     <p style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--color-texto-medio)', lineHeight: 1.5 }}>
-                      Se a conexão cair, leads continuam chegando no Inbox — mas sem resposta automática.
+                      A resposta automática só roda quando a instância está conectada. Se cair, as mensagens continuam no Inbox.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div style={secFoot}>
-                <SavedNote text="Salvo automaticamente · há 4 min" />
-                <div />
+                <SavedNote
+                  text={saveStatus === 'saved' ? 'Status salvo agora' : 'Salve para aplicar mudanças no agente'}
+                  success={saveStatus === 'saved'}
+                />
+                <Btn primary onClick={handleSaveAll}>{savePending ? 'Salvando…' : 'Salvar status'}</Btn>
               </div>
             </section>
 

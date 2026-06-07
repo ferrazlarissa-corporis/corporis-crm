@@ -145,6 +145,26 @@ export async function markAsRead(chatId: string): Promise<unknown> {
   });
 }
 
+// ─── Fetch media as base64 ────────────────────────────────────────────────────
+
+/**
+ * Busca uma mensagem de mídia (áudio, imagem, doc) como base64 via Evolution API.
+ * Retorna null em caso de erro — não bloqueia o fluxo principal.
+ */
+export async function fetchMediaBase64(
+  key: { id: string; remoteJid: string; fromMe?: boolean }
+): Promise<{ base64: string; mimetype: string } | null> {
+  try {
+    const data = await evoFetch("/chat/getBase64FromMediaMessage/{instance}", {
+      message: { key: { id: key.id, remoteJid: key.remoteJid, fromMe: key.fromMe ?? false } },
+    }) as Record<string, unknown>;
+    if (typeof data.base64 !== "string") return null;
+    return { base64: data.base64, mimetype: (data.mimetype as string) ?? "audio/ogg" };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Contact check ────────────────────────────────────────────────────────────
 
 /**
