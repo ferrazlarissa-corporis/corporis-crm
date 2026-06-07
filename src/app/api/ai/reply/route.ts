@@ -190,9 +190,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, skipped: "no_user_message" });
   }
 
-  const { modelId } = resolveModel(config.model_provider, config.model_id);
+  const { provider, modelId } = resolveModel(config.model_provider, config.model_id);
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const systemPrompt = buildSystemPrompt(
     config.persona_prompt,
     config.faq,
@@ -202,42 +201,91 @@ export async function POST(request: NextRequest) {
   );
 
   const toolCtx = { leadId: lead.id, conversationId: conversation_id };
-
-  // Agentic loop
-  let messages = [...anthropicMessages];
   let finalText = "";
 
-  for (let turn = 0; turn < 5; turn++) {
-    const response = await anthropic.messages.create({
-      model:      modelId,
-      max_tokens: 1024,
-      system:     systemPrompt,
-      tools:      AGENT_TOOLS,
-      messages,
-    });
+  if (provider === "openai") {
+    // ─── OpenAI agentic loop ──────────────────────────────────────────────────
+    type OAIToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
+    type OAIMsg =
+      | { role: "system" | "user" | "assistant"; content: string }
+      | { role: "assistant"; content: null; tool_calls: OAIToolCall[] }
+      | { role: "tool"; tool_call_id: string; content: string };
 
-    const textBlocks    = response.content.filter((b) => b.type === "text");
-    const toolUseBlocks = response.content.filter((b) => b.type === "tool_use");
+    const oaiTools = AGENT_TOOLS.map((t) => ({
+      type: "function" as const,
+      function: { name: t.name, description: t.description, parameters: t.input_schema },
+    }));
 
-    if (textBlocks.length > 0) {
-      finalText = textBlocks.map((b) => (b as Anthropic.Messages.TextBlock).text).join(" ");
-    }
-
-    if (response.stop_reason === "end_turn" || toolUseBlocks.length === 0) break;
-
-    // Execute tools
-    const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
-    for (const block of toolUseBlocks) {
-      if (block.type !== "tool_use") continue;
-      const result = await executeTool(block.name, block.input as ToolInput, toolCtx);
-      toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
-    }
-
-    messages = [
-      ...messages,
-      { role: "assistant" as const, content: response.content },
-      { role: "user" as const,      content: toolResults },
+    const oaiMessages: OAIMsg[] = [
+      { role: "system", content: systemPrompt },
+      ...(msgRows ?? []).map((m) => ({
+        role: (m.direcao === "entrada" ? "user" : "assistant") as "user" | "assistant",
+        content: m.conteudo,
+      })),
     ];
+
+    for (let turn = 0; turn < 5; turn++) {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+        body: JSON.stringify({ model: modelId, max_tokens: 1024, messages: oaiMessages, tools: oaiTools, tool_choice: "auto" }),
+      });
+
+      if (!res.ok) {
+        console.error("[ai/reply] OpenAI error", res.status, await res.text().catch(() => ""));
+        break;
+      }
+
+      const data = await res.json() as { choices: [{ finish_reason: string; message: { content: string | null; tool_calls?: OAIToolCall[] } }] };
+      const msg = data.choices[0].message;
+
+      if (msg.content) finalText = msg.content;
+
+      if (data.choices[0].finish_reason === "stop" || !msg.tool_calls?.length) break;
+
+      oaiMessages.push({ role: "assistant", content: null, tool_calls: msg.tool_calls });
+      for (const tc of msg.tool_calls) {
+        const input = JSON.parse(tc.function.arguments) as ToolInput;
+        const result = await executeTool(tc.function.name, input, toolCtx);
+        oaiMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
+      }
+    }
+  } else {
+    // ─── Anthropic agentic loop ───────────────────────────────────────────────
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    let messages = [...anthropicMessages];
+
+    for (let turn = 0; turn < 5; turn++) {
+      const response = await anthropic.messages.create({
+        model:      modelId,
+        max_tokens: 1024,
+        system:     systemPrompt,
+        tools:      AGENT_TOOLS,
+        messages,
+      });
+
+      const textBlocks    = response.content.filter((b) => b.type === "text");
+      const toolUseBlocks = response.content.filter((b) => b.type === "tool_use");
+
+      if (textBlocks.length > 0) {
+        finalText = textBlocks.map((b) => (b as Anthropic.Messages.TextBlock).text).join(" ");
+      }
+
+      if (response.stop_reason === "end_turn" || toolUseBlocks.length === 0) break;
+
+      const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
+      for (const block of toolUseBlocks) {
+        if (block.type !== "tool_use") continue;
+        const result = await executeTool(block.name, block.input as ToolInput, toolCtx);
+        toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
+      }
+
+      messages = [
+        ...messages,
+        { role: "assistant" as const, content: response.content },
+        { role: "user" as const,      content: toolResults },
+      ];
+    }
   }
 
   // Send and store reply — em mensagens curtas (bursts), como uma pessoa digitando.

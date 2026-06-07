@@ -12,8 +12,9 @@ export const AGENT_MODELS: Record<string, AgentModelMeta> = {
   "claude-haiku-4-5-20251001": { provider: "anthropic", label: "Claude Haiku 4.5",  available: true },
   "claude-sonnet-4-6":         { provider: "anthropic", label: "Claude Sonnet 4.6", available: true },
   "claude-opus-4-8":           { provider: "anthropic", label: "Claude Opus 4.8",   available: true },
-  // OpenAI: exibido na UI, runtime ainda não conectado (PR futuro).
-  "gpt-4o":                    { provider: "openai",    label: "GPT-4o (OpenAI)",   available: false },
+  "gpt-5.4-mini":              { provider: "openai",    label: "GPT-5.4 mini",       available: true },
+  "gpt-5.4":                   { provider: "openai",    label: "GPT-5.4",            available: true },
+  "gpt-5.5":                   { provider: "openai",    label: "GPT-5.5",            available: true },
 };
 
 export const DEFAULT_MODEL_ID = "claude-sonnet-4-6";
@@ -25,13 +26,14 @@ export interface ResolvedModel {
 
 /**
  * Resolve o modelo a usar a partir da config. Cai para o default (Sonnet 4.6)
- * quando o modelo é desconhecido, indisponível, ou de um provedor ainda não
- * conectado no runtime (ex.: OpenAI).
+ * quando o modelo é desconhecido ou indisponível.
+ * Exige OPENAI_API_KEY configurada para modelos OpenAI — sem ela cai para o default.
  */
 export function resolveModel(provider: string, modelId: string): ResolvedModel {
   const meta = AGENT_MODELS[modelId];
-  if (meta && meta.available && meta.provider === provider && meta.provider === "anthropic") {
-    return { provider: meta.provider, modelId };
+  if (!meta || !meta.available) return { provider: "anthropic", modelId: DEFAULT_MODEL_ID };
+  if (meta.provider === "openai" && !process.env.OPENAI_API_KEY) {
+    return { provider: "anthropic", modelId: DEFAULT_MODEL_ID };
   }
-  return { provider: "anthropic", modelId: DEFAULT_MODEL_ID };
+  return { provider: meta.provider, modelId };
 }
