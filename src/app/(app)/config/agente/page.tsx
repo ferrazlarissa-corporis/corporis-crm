@@ -18,6 +18,7 @@ import {
   FileQuestion,
   Cpu,
   Sparkles,
+  Upload,
 } from 'lucide-react';
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -563,6 +564,9 @@ export default function AgentePage() {
   // refs
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
+  const zipInputRef = useRef<HTMLInputElement>(null);
+  const [zipImporting, setZipImporting] = useState(false);
+  const [zipImportError, setZipImportError] = useState<string | null>(null);
 
   // scroll spy
   useEffect(() => {
@@ -634,6 +638,36 @@ export default function AgentePage() {
   }
   function deleteEx(id: string) {
     setExemplos(prev => prev.filter(e => e.id !== id));
+  }
+
+  async function handleZipImport(file: File) {
+    setZipImporting(true);
+    setZipImportError(null);
+    try {
+      const form = new FormData();
+      form.append("zip", file);
+      const res = await fetch("/api/config/import-whatsapp-zip", { method: "POST", body: form });
+      const json = await res.json() as { titulo?: string; dialogo?: { autor: "lead" | "clara"; texto: string }[]; error?: string };
+      if (!res.ok || json.error) {
+        const msgs: Record<string, string> = {
+          no_chat_txt: "ZIP não contém _chat.txt. Exporte a conversa pelo WhatsApp.",
+          invalid_zip: "Arquivo inválido. Envie um ZIP exportado pelo WhatsApp.",
+          empty_conversation: "Nenhuma mensagem de texto encontrada na conversa.",
+        };
+        setZipImportError(msgs[json.error ?? ""] ?? "Erro ao importar. Tente novamente.");
+        return;
+      }
+      setExemplos(prev => [...prev, {
+        id: `ex-${Date.now()}`,
+        titulo: json.titulo ?? "Conversa importada",
+        dialogo: json.dialogo ?? [],
+      }]);
+    } catch {
+      setZipImportError("Falha na conexão. Tente novamente.");
+    } finally {
+      setZipImporting(false);
+      if (zipInputRef.current) zipInputRef.current.value = "";
+    }
   }
   function addTurn() {
     setExBuf(b => ({ ...b, dialogo: [...b.dialogo, { autor: b.dialogo.length % 2 === 0 ? 'lead' : 'clara', texto: '' }] }));
@@ -1344,14 +1378,31 @@ export default function AgentePage() {
                   {editingExId === 'new' && renderExEditor()}
                 </div>
 
-                <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                   <Btn ghost onClick={startNewEx}>
                     <Plus size={14} strokeWidth={2} />
                     Adicionar exemplo
                   </Btn>
+                  <Btn ghost disabled={zipImporting} onClick={() => zipInputRef.current?.click()}>
+                    <Upload size={14} strokeWidth={2} />
+                    {zipImporting ? 'Importando…' : 'Importar ZIP do WhatsApp'}
+                  </Btn>
+                  <input
+                    ref={zipInputRef}
+                    type="file"
+                    accept=".zip"
+                    style={{ display: 'none' }}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleZipImport(f); }}
+                  />
                   <span style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--color-texto-medio)', fontStyle: 'italic' }}>
                     {exemplos.length} {exemplos.length === 1 ? 'exemplo cadastrado' : 'exemplos cadastrados'}
                   </span>
+                  {zipImportError && (
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--color-ui-error)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <AlertCircle size={12} strokeWidth={2} />
+                      {zipImportError}
+                    </span>
+                  )}
                 </div>
               </div>
 
