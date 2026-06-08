@@ -44,16 +44,18 @@ export async function POST(request: NextRequest) {
 
   const { event, data } = parsed.data;
 
-  // Only handle incoming text messages
-  // Evolution API v2 sends "messages.upsert"; accept uppercase variant too
+  // Evolution API v2 sends "messages.upsert"; accept uppercase variant too.
+  // `fromMe` messages are direct human replies from WhatsApp/Web and must be synced.
   const normalizedEvent = event.toLowerCase().replace(/_/g, ".");
-  if (normalizedEvent !== "messages.upsert" && normalizedEvent !== "message.any") {
+  if (
+    normalizedEvent !== "messages.upsert" &&
+    normalizedEvent !== "message.any" &&
+    normalizedEvent !== "send.message"
+  ) {
     return NextResponse.json({ ok: true, skipped: event });
   }
-  if (data.key.fromMe) {
-    return NextResponse.json({ ok: true, skipped: "outgoing" });
-  }
 
+  const fromMe             = data.key.fromMe;
   const evolutionMessageId = data.key.id;
   const remoteJid          = data.key.remoteJid;
   const telefone           = jidToE164(remoteJid);
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceRoleClient();
   const db       = supabase.schema("crm");
+  const now      = new Date().toISOString();
 
   // 3. Deduplicate
   const { data: existing } = await db
@@ -90,16 +93,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
-  // 4. Upsert lead
-  const nome = data.pushName ?? telefone;
-  const { data: lead, error: leadErr } = await db
+  // 4. Find or create lead
+  const { data: existingLead, error: existingLeadErr } = await db
     .from("leads")
-    .upsert(
-      { nome, telefone, ultima_interacao_at: new Date().toISOString() },
-      { onConflict: "telefone", ignoreDuplicates: false }
-    )
     .select("id, nome, estagio")
-    .single();
+    .eq("telefone", telefone)
+    .maybeSingle();
+
+  if (existingLeadErr) {
+    console.error("[webhook] lead lookup error:", existingLeadErr);
+    return NextResponse.json({ error: "lead_lookup_failed" }, { status: 500 });
+  }
+
+  const { data: lead, error: leadErr } = existingLead
+    ? await db
+        .from("leads")
+        .update({ ultima_interacao_at: now })
+        .eq("id", existingLead.id)
+        .select("id, nome, estagio")
+        .single()
+    : await db
+        .from("leads")
+        .insert({
+          nome: data.pushName?.trim() || telefone,
+          telefone,
+          ultima_interacao_at: now,
+        })
+        .select("id, nome, estagio")
+        .single();
 
   if (leadErr || !lead) {
     console.error("[webhook] lead upsert error:", leadErr);
@@ -115,7 +136,8 @@ export async function POST(request: NextRequest) {
         lead_id:            lead.id,
         evolution_chat_id:  remoteJid,
         janela_24h_expira_at: window24h,
-        nao_lida:           true,
+        nao_lida:           !fromMe,
+        ...(fromMe ? { modo: "humano" as const } : {}),
       },
       { onConflict: "evolution_chat_id", ignoreDuplicates: false }
     )
@@ -127,26 +149,88 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "conv_upsert_failed" }, { status: 500 });
   }
 
-  // 6. Insert message
-  await db.from("messages").insert({
-    conversation_id:      conv.id,
-    direcao:              "entrada",
-    autor:                "lead",
-    conteudo:             effectiveContent,
-    tipo:                 isAudio ? "audio" : "texto",
-    evolution_message_id: evolutionMessageId,
-  });
+  // 6. Reset command — intercept before storing message
+  const resetSecret = process.env.AGENT_RESET_SECRET;
+  if (resetSecret && !fromMe && effectiveContent.trim() === resetSecret) {
+    await db.from("messages").delete().eq("conversation_id", conv.id);
+
+    await db.from("leads").update({
+      estagio:             "qualificacao",
+      score_qualificacao:  null,
+      interesse:           "indefinido",
+      ultima_interacao_at: now,
+    }).eq("id", lead.id);
+
+    await db.from("conversations").update({ modo: "ia", nao_lida: false }).eq("id", conv.id);
+
+    await db.from("activities").insert({
+      lead_id:   lead.id,
+      tipo:      "sistema",
+      descricao: "Conversa resetada para teste via comando secreto",
+      meta:      { comando: "reset", conversation_id: conv.id },
+    });
+
+    return NextResponse.json({ ok: true, reset: true });
+  }
+
+  // 7. Insert message
+  if (fromMe) {
+    const recentThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: recentManualMessage } = await db
+      .from("messages")
+      .select("id")
+      .eq("conversation_id", conv.id)
+      .eq("direcao", "saida")
+      .eq("autor", "humano")
+      .eq("conteudo", effectiveContent)
+      .is("evolution_message_id", null)
+      .gte("created_at", recentThreshold)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentManualMessage) {
+      await db
+        .from("messages")
+        .update({ evolution_message_id: evolutionMessageId })
+        .eq("id", recentManualMessage.id);
+    } else {
+      await db.from("messages").insert({
+        conversation_id:      conv.id,
+        direcao:              "saida",
+        autor:                "humano",
+        conteudo:             effectiveContent,
+        tipo:                 isAudio ? "audio" : "texto",
+        evolution_message_id: evolutionMessageId,
+      });
+    }
+  } else {
+    await db.from("messages").insert({
+      conversation_id:      conv.id,
+      direcao:              "entrada",
+      autor:                "lead",
+      conteudo:             effectiveContent,
+      tipo:                 isAudio ? "audio" : "texto",
+      evolution_message_id: evolutionMessageId,
+    });
+  }
 
   // 7. Log activity
   await db.from("activities").insert({
     lead_id:  lead.id,
     tipo:     "mensagem",
-    descricao: isAudio ? "Áudio recebido no WhatsApp (transcrição automática)" : "Mensagem recebida no WhatsApp",
-    meta:     { evolution_message_id: evolutionMessageId, preview: effectiveContent.slice(0, 120) },
+    descricao: fromMe
+      ? (isAudio ? "Áudio enviado manualmente pelo WhatsApp" : "Mensagem enviada manualmente pelo WhatsApp")
+      : (isAudio ? "Áudio recebido no WhatsApp (transcrição automática)" : "Mensagem recebida no WhatsApp"),
+    meta:     {
+      evolution_message_id: evolutionMessageId,
+      preview: effectiveContent.slice(0, 120),
+      from_me: fromMe,
+    },
   });
 
   // 8. Trigger AI if mode = 'ia' and agent is active
-  if (conv.modo === "ia") {
+  if (!fromMe && conv.modo === "ia") {
     const { data: agentConf } = await db
       .from("agent_config")
       .select("ativo, apenas_desconhecidos, numeros_bypass")
