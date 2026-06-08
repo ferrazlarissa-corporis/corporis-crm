@@ -1,4 +1,4 @@
-import { NextResponse, after, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { jidToE164, extractMessageText, isContactSaved, fetchMediaBase64 } from "@/lib/evolution/client";
@@ -255,25 +255,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Bypassed numbers always reach Clara regardless of ativo or filters
+    // Bypass numbers always reach Clara regardless of ativo or filters.
+    // Call ai/reply synchronously — Evolution API tolerates the extra seconds
+    // and this avoids relying on after() which may not keep the function alive on all plans.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    after(async () => {
-      try {
-        const res = await fetch(`${appUrl}/api/ai/reply`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
-          },
-          body: JSON.stringify({ conversation_id: conv.id }),
-        });
-        if (!res.ok) {
-          console.error("[webhook] ai/reply non-ok:", res.status, await res.text().catch(() => ""));
-        }
-      } catch (err) {
-        console.error("[webhook] ai/reply fire error:", err);
+    try {
+      const res = await fetch(`${appUrl}/api/ai/reply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
+        },
+        body: JSON.stringify({ conversation_id: conv.id }),
+      });
+      if (!res.ok) {
+        console.error("[webhook] ai/reply non-ok:", res.status, await res.text().catch(() => ""));
       }
-    });
+    } catch (err) {
+      console.error("[webhook] ai/reply fire error:", err);
+    }
   }
 
   return NextResponse.json({ ok: true, conversation_id: conv.id });
