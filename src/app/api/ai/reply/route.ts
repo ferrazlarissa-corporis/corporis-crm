@@ -127,7 +127,16 @@ function splitIntoBursts(text: string): string[] {
     .slice(0, MAX_BURSTS);
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Random int between min and max (inclusive), in ms. */
+function randomDelay(minMs: number, maxMs: number): number {
+  return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+}
+
+/** Typing delay proportional to message length (simulates reading + writing time). */
+function typingDelay(text: string): number {
+  // ~50 chars/s typing speed, min 1.5s, max 6s for inter-burst gaps
+  return Math.min(6000, Math.max(1500, text.length * 40));
+}
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -343,13 +352,13 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < bursts.length; i++) {
       const chunk = bursts[i];
 
-      // Pausa curta entre mensagens (levemente proporcional ao tamanho).
-      if (i > 0) {
-        const delay = Math.min(1400, 700 + chunk.length * 12);
-        await sleep(delay);
-      }
+      // Primeira mensagem: delay aleatório (2–9s) simula Clara "pensando/digitando".
+      // Demais bursts: delay proporcional ao tamanho da mensagem.
+      const delay = i === 0
+        ? randomDelay(2000, 9000)
+        : typingDelay(chunk);
 
-      await sendTextMessage({ phone: lead.telefone, text: chunk });
+      await sendTextMessage({ phone: lead.telefone, text: chunk }, delay);
 
       await db.from("messages").insert({
         conversation_id,

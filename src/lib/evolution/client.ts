@@ -76,11 +76,16 @@ const sendTextSchema = z.object({
 
 export type SendTextInput = z.infer<typeof sendTextSchema>;
 
-export async function sendTextMessage(input: SendTextInput): Promise<unknown> {
+/**
+ * Send a text message via Evolution API.
+ * @param delayMs - If provided, shows "typing..." indicator for this many ms before sending.
+ */
+export async function sendTextMessage(input: SendTextInput, delayMs?: number): Promise<unknown> {
   const { phone, text } = sendTextSchema.parse(input);
   return evoFetch("/message/sendText/{instance}", {
     number: e164ToEvolution(phone),
     text,
+    ...(delayMs ? { options: { delay: delayMs, presence: "composing" } } : {}),
   });
 }
 
@@ -173,11 +178,16 @@ export async function fetchMediaBase64(
  * defaults to responding when the check is unavailable.
  */
 export async function isContactSaved(jid: string): Promise<boolean> {
+  const status = await getContactSavedStatus(jid);
+  return status ?? false;
+}
+
+export async function getContactSavedStatus(jid: string): Promise<boolean | null> {
   try {
-    const result = await evoFetch("/contact/findContacts/{instance}", { where: { id: jid } });
+    const result = await evoFetch("/chat/findContacts/{instance}", { where: { id: jid } });
     const list = Array.isArray(result) ? result : [];
     return list.length > 0;
   } catch {
-    return false;
+    return null;
   }
 }
