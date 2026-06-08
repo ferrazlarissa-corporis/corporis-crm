@@ -3,7 +3,7 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendTextMessage } from "@/lib/evolution/client";
-import { AGENT_TOOLS, executeTool, type ToolInput } from "@/lib/ai/tools";
+import { AGENT_TOOLS, HANDOFF_RULE_AGENDAMENTO, executeTool, type ToolInput } from "@/lib/ai/tools";
 import { resolveModel } from "@/lib/ai/model";
 import type { Json } from "@/types/database";
 
@@ -47,11 +47,23 @@ function isWithinBusinessHours(schedule: Json): boolean {
 
 function buildSystemPrompt(
   personaPrompt: string,
+  boasPraticas: Json,
   faq: Json,
   regrasHandoff: Json,
   exemplos: Json,
   lead: { nome: string; interesse: string; estagio: string; score_qualificacao: number | null }
 ): string {
+  const boasPraticasStr = Array.isArray(boasPraticas) && boasPraticas.length > 0
+    ? "\n\n## Boas práticas de tom e marca\n" + (boasPraticas as { title?: string; detail?: string }[])
+        .filter((item) => item.title?.trim() || item.detail?.trim())
+        .map((item) => {
+          const title = item.title?.trim();
+          const detail = item.detail?.trim();
+          return title && detail ? `- ${title} ${detail}` : `- ${title ?? detail}`;
+        })
+        .join("\n")
+    : "";
+
   const faqStr = Array.isArray(faq) && faq.length > 0
     ? "\n\n## FAQ\n" + (faq as { q: string; a: string }[])
         .map((item) => `P: ${item.q}\nR: ${item.a}`)
@@ -103,7 +115,7 @@ function buildSystemPrompt(
 - Sem urgência fabricada, sem "últimas vagas", sem CAPS LOCK.
 - Em caso de dúvida clínica específica: use solicitar_handoff.
 - Responda sempre em português brasileiro.
-${exemplosStr}${faqStr}${handoffStr}`;
+${boasPraticasStr}${exemplosStr}${faqStr}${handoffStr}`;
 }
 
 // Quebra a resposta do modelo em mensagens curtas (bursts).
@@ -192,15 +204,45 @@ export async function POST(request: NextRequest) {
 
   const { provider, modelId } = resolveModel(config.model_provider, config.model_id);
 
-  const systemPrompt = buildSystemPrompt(
+  const regrasHandoffArr = Array.isArray(config.regras_handoff)
+    ? (config.regras_handoff as string[])
+    : [];
+  const agendamentoHandoffAtivo = regrasHandoffArr.includes(HANDOFF_RULE_AGENDAMENTO);
+
+  let systemPrompt = buildSystemPrompt(
     config.persona_prompt,
+    config.boas_praticas,
     config.faq,
     config.regras_handoff,
     config.exemplos_conversa,
     lead
   );
 
-  const toolCtx = { leadId: lead.id, conversationId: conversation_id };
+  if (agendamentoHandoffAtivo) {
+    systemPrompt +=
+      "\n\n## Restrição crítica — agendamento de avaliações\n" +
+      "Você NÃO agenda avaliações diretamente. Quando o lead demonstrar interesse em agendar " +
+      "(ou perguntar sobre horários/disponibilidade), use OBRIGATORIAMENTE a ferramenta " +
+      "solicitar_handoff com motivo \"agendamento_avaliacao\". " +
+      "A equipe fará o agendamento. Nunca use a ferramenta agendar_avaliacao.";
+  }
+
+  const notificacaoHandoff = config.notificacao_handoff as { ativo?: boolean; numero?: string } | null;
+  const toolCtx = {
+    leadId: lead.id,
+    conversationId: conversation_id,
+    agentConfig: {
+      mensagem_handoff_agendamento: config.mensagem_handoff_agendamento ?? null,
+      notificacao_handoff: notificacaoHandoff?.ativo && notificacaoHandoff.numero
+        ? { ativo: true, numero: notificacaoHandoff.numero }
+        : null,
+    },
+  };
+
+  const activeTools = agendamentoHandoffAtivo
+    ? AGENT_TOOLS.filter((t) => t.name !== "agendar_avaliacao")
+    : AGENT_TOOLS;
+
   let finalText = "";
 
   if (provider === "openai") {
@@ -211,7 +253,7 @@ export async function POST(request: NextRequest) {
       | { role: "assistant"; content: null; tool_calls: OAIToolCall[] }
       | { role: "tool"; tool_call_id: string; content: string };
 
-    const oaiTools = AGENT_TOOLS.map((t) => ({
+    const oaiTools = activeTools.map((t) => ({
       type: "function" as const,
       function: { name: t.name, description: t.description, parameters: t.input_schema },
     }));
@@ -260,7 +302,7 @@ export async function POST(request: NextRequest) {
         model:      modelId,
         max_tokens: 1024,
         system:     systemPrompt,
-        tools:      AGENT_TOOLS,
+        tools:      activeTools,
         messages,
       });
 

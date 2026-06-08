@@ -42,10 +42,28 @@ export async function toggleHandoff(
       lead_id:  conv.lead_id,
       tipo:     "handoff",
       descricao: parsed.data.modo === "humano"
-        ? "Conversa assumida por humano — IA pausada"
-        : "Conversa devolvida para o agente IA",
+        ? "Conversa assumida por humano — Clara pausada"
+        : "Conversa devolvida para a Clara",
       meta:     { modo: parsed.data.modo },
     });
+
+    // Notificação WhatsApp quando handoff manual para humano
+    if (parsed.data.modo === "humano") {
+      try {
+        const { data: config } = await db.from("agent_config").select("notificacao_handoff").single();
+        const notif = config?.notificacao_handoff as { ativo?: boolean; numero?: string } | null;
+        if (notif?.ativo && notif.numero) {
+          const { data: lead } = await db.from("leads").select("nome, telefone").eq("id", conv.lead_id).single();
+          if (lead) {
+            const hora = new Date().toLocaleTimeString("pt-BR", {
+              hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo",
+            });
+            const texto = `*[Corporis CRM] Handoff necessário*\n\nLead: ${lead.nome}\nTelefone: ${lead.telefone}\nMotivo: Assumido manualmente pela equipe\nHorário: ${hora}\n\nAcesse o inbox para continuar.`;
+            await sendTextMessage({ phone: notif.numero, text: texto });
+          }
+        }
+      } catch { /* não bloqueia o handoff */ }
+    }
   }
 
   revalidatePath("/inbox");
@@ -86,6 +104,23 @@ export type SendMessageResult =
   | { success: true; message: MessageRow }
   | { success: false; error: string };
 
+function extractEvolutionMessageId(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const data = payload as Record<string, unknown>;
+  const key = data.key;
+  if (key && typeof key === "object" && typeof (key as Record<string, unknown>).id === "string") {
+    return (key as Record<string, string>).id;
+  }
+  const message = data.message;
+  if (message && typeof message === "object") {
+    const messageKey = (message as Record<string, unknown>).key;
+    if (messageKey && typeof messageKey === "object" && typeof (messageKey as Record<string, unknown>).id === "string") {
+      return (messageKey as Record<string, string>).id;
+    }
+  }
+  return null;
+}
+
 export async function sendMessage(
   input: z.infer<typeof sendMessageSchema>
 ): Promise<SendMessageResult> {
@@ -107,11 +142,18 @@ export async function sendMessage(
   const telefone = (lead as { telefone?: string })?.telefone;
   if (!telefone) return { success: false, error: "Telefone do lead não encontrado." };
 
+  let evolutionMessageId: string | null = null;
   try {
-    await sendTextMessage({ phone: telefone, text: parsed.data.text });
+    const sent = await sendTextMessage({ phone: telefone, text: parsed.data.text });
+    evolutionMessageId = extractEvolutionMessageId(sent);
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Erro ao enviar mensagem." };
   }
+
+  await db
+    .from("conversations")
+    .update({ modo: "humano", nao_lida: false })
+    .eq("id", parsed.data.conversationId);
 
   const { data: msg, error: msgErr } = await db
     .from("messages")
@@ -121,6 +163,7 @@ export async function sendMessage(
       autor:           "humano",
       conteudo:        parsed.data.text,
       tipo:            "texto",
+      evolution_message_id: evolutionMessageId,
     })
     .select("id, direcao, autor, conteudo, created_at, entregue_at, lida_at")
     .single();

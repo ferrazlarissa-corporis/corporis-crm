@@ -24,6 +24,11 @@ const agentConfigSchema = z.object({
   apenas_desconhecidos: z.boolean(),
   numeros_bypass:       z.array(z.string()),
   persona_prompt:       z.string().min(10),
+  boas_praticas:         z.array(z.object({
+    id:     z.string().min(1),
+    title:  z.string().trim().min(1).max(120),
+    detail: z.string().trim().min(1).max(500),
+  })).max(12),
   mensagem_fora_horario: z.string(),
   horario_atendimento:  z.record(z.string(), z.string()),
   faq:                  z.array(z.object({ q: z.string(), a: z.string() })),
@@ -41,6 +46,8 @@ const agentConfigSchema = z.object({
     (id) => Boolean(AGENT_MODELS[id]?.available),
     { message: "Modelo de IA indisponível." },
   ),
+  mensagem_handoff_agendamento: z.string().optional(),
+  notificacao_handoff: z.object({ ativo: z.boolean(), numero: z.string() }).nullable().optional(),
 });
 
 export type AgentConfigInput = z.infer<typeof agentConfigSchema>;
@@ -84,6 +91,7 @@ export async function updateAgentConfig(input: AgentConfigInput): Promise<Config
     apenas_desconhecidos:  parsed.data.apenas_desconhecidos,
     numeros_bypass:        parsed.data.numeros_bypass,
     persona_prompt:        parsed.data.persona_prompt,
+    boas_praticas:         parsed.data.boas_praticas,
     mensagem_fora_horario: parsed.data.mensagem_fora_horario,
     horario_atendimento:   parsed.data.horario_atendimento,
     faq:                   parsed.data.faq,
@@ -91,6 +99,8 @@ export async function updateAgentConfig(input: AgentConfigInput): Promise<Config
     exemplos_conversa:     parsed.data.exemplos_conversa,
     model_provider:        parsed.data.model_provider,
     model_id:              parsed.data.model_id,
+    mensagem_handoff_agendamento: parsed.data.mensagem_handoff_agendamento ?? null,
+    notificacao_handoff:   parsed.data.notificacao_handoff ?? null,
   }).neq("id", "00000000-0000-0000-0000-000000000000"); // update the singleton
 
   if (error) return { success: false, error: error.message };

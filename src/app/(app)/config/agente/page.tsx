@@ -19,6 +19,8 @@ import {
   Cpu,
   Sparkles,
   Upload,
+  CalendarCheck,
+  Bell,
 } from 'lucide-react';
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -54,6 +56,12 @@ interface ConversaExemplo {
   dialogo: DialogTurn[];
 }
 
+interface BestPracticeItem {
+  id: string;
+  title: string;
+  detail: string;
+}
+
 // ─── initial data ─────────────────────────────────────────────────────────────
 const INITIAL_FAQ: FaqItem[] = [
   {
@@ -87,6 +95,34 @@ Tom: cuidadosa, técnica e acolhedora. Você escuta antes de informar. Você nun
 Linguagem: trate quem chega por "você", nunca "paciente" — aqui dizemos "aluna". Fisioterapia pélvica é assunto íntimo: trate com discrição, sem eufemismos infantis e sem soar clínica demais.
 
 Objetivo principal: acolher o primeiro contato, entender o que a pessoa busca (pilates, gestante, fisio pélvica), oferecer a avaliação inicial gratuita de 50 minutos e ajudar a marcar um horário. Nunca venda pacote no primeiro contato.`;
+
+const DEFAULT_BEST_PRACTICES: BestPracticeItem[] = [
+  {
+    id: 'acolha-antes',
+    title: 'Acolha antes de informar.',
+    detail: 'Antes de mandar valor ou link, demonstre que entendeu o que a aluna trouxe.',
+  },
+  {
+    id: 'nunca-prometa-cura',
+    title: 'Nunca prometa cura.',
+    detail: 'Evite "vai resolver". Prefira "podemos te ajudar a entender melhor".',
+  },
+  {
+    id: 'aluna-nao-paciente',
+    title: '"Aluna", não "paciente".',
+    detail: 'É um valor da marca.',
+  },
+  {
+    id: 'fisio-pelvica',
+    title: 'Fisio pélvica é íntimo.',
+    detail: 'Discrição sempre — sem eufemismo, sem clínica demais.',
+  },
+  {
+    id: 'sem-venda-forcada',
+    title: 'Sem venda forçada.',
+    detail: 'O primeiro objetivo é a avaliação gratuita, não fechar pacote.',
+  },
+];
 
 const OFF_HOURS_DEFAULT = `Oi! Aqui é a Clara, da Corporis 🌿 No momento estamos fora do horário de atendimento — a Larissa e a Tainara respondem pessoalmente assim que abrirmos.
 
@@ -431,6 +467,8 @@ export default function AgentePage() {
   // Stored as E.164, edited as newline-separated text
   const [numerosbypassText, setNumerosbypassText] = useState('+5547991719570');
   const [personaText, setPersonaText] = useState(PERSONA_DEFAULT);
+  const [bestPractices, setBestPractices] = useState<BestPracticeItem[]>(DEFAULT_BEST_PRACTICES);
+  const [personaPreviewOpen, setPersonaPreviewOpen] = useState(false);
   const [faqItems, setFaqItems] = useState<FaqItem[]>(INITIAL_FAQ);
   const [editingId, setEditingId] = useState<number | 'new' | null>(4); // editing "Preciso de pedido?"
   const [editBuf, setEditBuf] = useState({
@@ -438,12 +476,18 @@ export default function AgentePage() {
     a: 'Para a avaliação inicial não é necessário pedido médico. Se você já tem um (do ginecologista, ortopedista ou obstetra), pode trazer — ajuda a fisioterapeuta a desenhar o plano. Para alguns convênios o pedido pode ser solicitado depois — a gente avisa.',
   });
   const [handoffRules, setHandoffRules] = useState<HandoffRule[]>([
-    { id: 1, enabled: true,  title: 'Lead pede para falar com uma pessoa',          icon: <MessageSquare size={17} strokeWidth={1.6} />, desc: 'Frases como "quero falar com alguém", "tem uma humana aí?", "prefiro falar com a Larissa". Encaminha imediatamente.' },
-    { id: 2, enabled: true,  title: 'Pergunta clínica específica',                   icon: <FileQuestion  size={17} strokeWidth={1.6} />, desc: 'Dor persistente, sintoma novo, dúvida sobre diagnóstico médico, gestação de risco. A Clara nunca responde — sempre encaminha.' },
-    { id: 3, enabled: true,  title: 'Reclamação ou insatisfação',                    icon: <AlertCircle   size={17} strokeWidth={1.6} />, desc: 'Detecta tom negativo, palavras como "decepcionada", "horrível", "cancelar". Encaminha em até 1 minuto e marca como prioritário.' },
-    { id: 4, enabled: true,  title: 'Agente não sabe responder com confiança',       icon: <HelpCircle    size={17} strokeWidth={1.6} />, desc: 'Quando a IA não encontra resposta no FAQ ou na persona e teria que improvisar. Prefere passar para humano a inventar.' },
-    { id: 5, enabled: false, title: 'Conversa passou de 8 mensagens sem agendar',   icon: <Clock         size={17} strokeWidth={1.6} />, desc: 'Se o agente trocou muitas mensagens e a lead ainda não marcou avaliação, chama você para empurrar pessoalmente.' },
+    { id: 1, enabled: true,  title: 'Lead pede para falar com uma pessoa',                            icon: <MessageSquare  size={17} strokeWidth={1.6} />, desc: 'Frases como "quero falar com alguém", "tem uma humana aí?", "prefiro falar com a Larissa". Encaminha imediatamente.' },
+    { id: 2, enabled: true,  title: 'Pergunta clínica específica',                                    icon: <FileQuestion   size={17} strokeWidth={1.6} />, desc: 'Dor persistente, sintoma novo, dúvida sobre diagnóstico médico, gestação de risco. A Clara nunca responde — sempre encaminha.' },
+    { id: 3, enabled: true,  title: 'Reclamação ou insatisfação',                                     icon: <AlertCircle    size={17} strokeWidth={1.6} />, desc: 'Detecta tom negativo, palavras como "decepcionada", "horrível", "cancelar". Encaminha em até 1 minuto e marca como prioritário.' },
+    { id: 4, enabled: true,  title: 'Agente não sabe responder com confiança',                        icon: <HelpCircle     size={17} strokeWidth={1.6} />, desc: 'Quando a IA não encontra resposta no FAQ ou na persona e teria que improvisar. Prefere passar para humano a inventar.' },
+    { id: 5, enabled: false, title: 'Conversa passou de 8 mensagens sem agendar',                    icon: <Clock          size={17} strokeWidth={1.6} />, desc: 'Se o agente trocou muitas mensagens e a lead ainda não marcou avaliação, chama você para empurrar pessoalmente.' },
+    { id: 6, enabled: true,  title: 'Quando lead quiser agendar uma avaliação, transferir para humano', icon: <CalendarCheck size={17} strokeWidth={1.6} />, desc: 'A Clara não agenda diretamente. Quando a lead quiser marcar horário, avisa que vai verificar e passa para você. Desative quando a agenda do sistema estiver completa.' },
   ]);
+  const [mensagemHandoffAgendamento, setMensagemHandoffAgendamento] = useState(
+    'Perfeito! Vou verificar os horários disponíveis com a nossa equipe e entro em contato em breve.',
+  );
+  const [notificacaoHandoffAtivo, setNotificacaoHandoffAtivo] = useState(false);
+  const [notificacaoHandoffNumero, setNotificacaoHandoffNumero] = useState('');
   const [hours, setHours] = useState<DaySchedule[]>([
     { day: 'Segunda', open: true,  from: '07:00', to: '19:00' },
     { day: 'Terça',   open: true,  from: '07:00', to: '19:00' },
@@ -477,6 +521,9 @@ export default function AgentePage() {
         setNumerosbypassText((data.numeros_bypass as string[]).join('\n'));
       }
       if (data.persona_prompt) setPersonaText(data.persona_prompt);
+      if (Array.isArray(data.boas_praticas) && (data.boas_praticas as unknown[]).length > 0) {
+        setBestPractices((data.boas_praticas as BestPracticeItem[]).filter(item => item.title?.trim() && item.detail?.trim()));
+      }
       if (data.mensagem_fora_horario) setOffHoursText(data.mensagem_fora_horario);
       if (Array.isArray(data.faq) && (data.faq as unknown[]).length > 0) {
         setFaqItems((data.faq as { q: string; a: string }[]).map((item, i) => ({ id: i + 1, ...item })));
@@ -506,6 +553,14 @@ export default function AgentePage() {
       if (Array.isArray(data.regras_handoff)) {
         const enabled = new Set(data.regras_handoff as string[]);
         setHandoffRules(prev => prev.map(r => ({ ...r, enabled: enabled.has(r.title) })));
+      }
+      if (data.mensagem_handoff_agendamento) {
+        setMensagemHandoffAgendamento(data.mensagem_handoff_agendamento);
+      }
+      const notif = data.notificacao_handoff as { ativo?: boolean; numero?: string } | null;
+      if (notif) {
+        setNotificacaoHandoffAtivo(notif.ativo ?? false);
+        setNotificacaoHandoffNumero(notif.numero ?? '');
       }
     });
   }, []);
@@ -548,6 +603,9 @@ export default function AgentePage() {
         apenas_desconhecidos: apenasDesconhecidos,
         numeros_bypass:       numerosbypassText.split('\n').map(s => s.trim()).filter(Boolean),
         persona_prompt:       personaText,
+        boas_praticas:        bestPractices
+          .map(item => ({ id: item.id, title: item.title.trim(), detail: item.detail.trim() }))
+          .filter(item => item.title && item.detail),
         mensagem_fora_horario: offHoursText,
         horario_atendimento:  horarioAtendimento,
         faq:                  faqItems.map(({ q, a }) => ({ q, a })),
@@ -555,6 +613,10 @@ export default function AgentePage() {
         exemplos_conversa:    exemplos,
         model_provider:       provider === 'openai' ? 'openai' : 'anthropic',
         model_id:             modelId,
+        mensagem_handoff_agendamento: mensagemHandoffAgendamento.trim() || undefined,
+        notificacao_handoff:  notificacaoHandoffAtivo && notificacaoHandoffNumero.trim()
+          ? { ativo: true, numero: notificacaoHandoffNumero.trim() }
+          : null,
       });
       setSaveStatus(result.success ? 'saved' : 'error');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -613,6 +675,20 @@ export default function AgentePage() {
   }
   function deleteItem(id: number) {
     setFaqItems(prev => prev.filter(f => f.id !== id));
+  }
+
+  // best practice helpers
+  function addBestPractice() {
+    setBestPractices(prev => [
+      ...prev,
+      { id: `bp-${Date.now()}`, title: 'Nova prática.', detail: 'Descreva como a Clara deve agir nesse caso.' },
+    ]);
+  }
+  function updateBestPractice(id: string, patch: Partial<BestPracticeItem>) {
+    setBestPractices(prev => prev.map(item => item.id === id ? { ...item, ...patch } : item));
+  }
+  function deleteBestPractice(id: string) {
+    setBestPractices(prev => prev.filter(item => item.id !== id));
   }
 
   // example helpers
@@ -1245,7 +1321,7 @@ export default function AgentePage() {
               </div>
 
               <div style={secBody}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: 24, alignItems: 'stretch' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(320px, 360px)', gap: 28, alignItems: 'stretch' }}>
                   <div>
                     {/* persona tags */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
@@ -1277,9 +1353,10 @@ export default function AgentePage() {
                     </div>
                     <textarea
                       className="crm-config-ta"
-                      style={{ minHeight: 280 }}
+                      style={{ minHeight: 320 }}
                       value={personaText}
                       onChange={e => setPersonaText(e.target.value)}
+                      maxLength={2000}
                       spellCheck={false}
                     />
                   </div>
@@ -1287,38 +1364,83 @@ export default function AgentePage() {
                   <aside style={{
                     background: 'var(--bg-2)',
                     borderLeft: '2px solid var(--color-bege)',
-                    borderRadius: '0 var(--radius-md) var(--radius-md) 0',
+                    borderRadius: 'var(--radius-md)',
                     padding: '16px 18px',
                     fontFamily: 'var(--font-body)',
                     fontSize: 12.5,
                     color: 'var(--color-texto-escuro)',
                     lineHeight: 1.6,
                   }}>
-                    <h4 style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 500, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'var(--color-bege)', margin: '0 0 10px' }}>
-                      Boas práticas
-                    </h4>
-                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {[
-                        ['Acolha antes de informar.', 'Antes de mandar valor ou link, demonstre que entendeu o que a aluna trouxe.'],
-                        ['Nunca prometa cura.', 'Evite "vai resolver". Prefira "podemos te ajudar a entender melhor".'],
-                        ['"Aluna", não "paciente".', 'É um valor da marca.'],
-                        ['Fisio pélvica é íntimo.', 'Discrição sempre — sem eufemismo, sem clínica demais.'],
-                        ['Sem venda forçada.', 'O primeiro objetivo é a avaliação gratuita, não fechar pacote.'],
-                      ].map(([bold, rest], i) => (
-                        <li key={i} style={{ paddingLeft: 16, position: 'relative' }}>
-                          <span style={{ position: 'absolute', left: 0, top: 8, width: 6, height: 6, borderRadius: 'var(--radius-pill)', background: 'var(--color-bege)' }} />
-                          <strong style={{ fontWeight: 500 }}>{bold}</strong>{' '}{rest}
-                        </li>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                      <h4 style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 500, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'var(--color-bege)', margin: 0 }}>
+                        Boas práticas
+                      </h4>
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 10.5, color: 'var(--color-texto-medio)', fontFeatureSettings: '"tnum"' }}>
+                        {bestPractices.length} itens
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {bestPractices.map((item) => (
+                        <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto', gap: 10, alignItems: 'start' }}>
+                          <span style={{ width: 6, height: 6, marginTop: 13, borderRadius: 'var(--radius-pill)', background: 'var(--color-bege)' }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <input
+                              className="crm-faq-input"
+                              value={item.title}
+                              onChange={e => updateBestPractice(item.id, { title: e.target.value })}
+                              placeholder="Regra curta"
+                              style={{ background: '#fff', padding: '8px 10px', fontWeight: 500 }}
+                            />
+                            <textarea
+                              className="crm-faq-ans"
+                              value={item.detail}
+                              onChange={e => updateBestPractice(item.id, { detail: e.target.value })}
+                              placeholder="Como a Clara deve aplicar isso"
+                              style={{ background: '#fff', minHeight: 62, fontSize: 12.5 }}
+                            />
+                          </div>
+                          <IconBtn title="Remover prática" danger onClick={() => deleteBestPractice(item.id)}>
+                            <Trash2 size={13} strokeWidth={1.7} />
+                          </IconBtn>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
+                    <div style={{ marginTop: 12 }}>
+                      <Btn ghost sm onClick={addBestPractice}>
+                        <Plus size={13} strokeWidth={2} />
+                        Adicionar prática
+                      </Btn>
+                    </div>
                   </aside>
                 </div>
+
+                {personaPreviewOpen && (
+                  <div style={{ marginTop: 20, borderTop: '0.6px solid var(--color-cinza)', paddingTop: 18 }}>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 500, letterSpacing: '1.6px', textTransform: 'uppercase', color: 'var(--color-bege)', marginBottom: 12 }}>
+                      Prévia do tom
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 760 }}>
+                      <div style={{ alignSelf: 'flex-start', maxWidth: 460, background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-md)', padding: '10px 13px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-escuro)', lineHeight: 1.55 }}>
+                        Oi, queria saber sobre pilates. Estou com dor nas costas.
+                      </div>
+                      <div style={{ alignSelf: 'flex-end', maxWidth: 560, background: 'var(--color-bege-claro)', border: '0.6px solid rgba(210, 176, 110, 0.45)', borderRadius: 'var(--radius-md)', padding: '10px 13px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-escuro)', lineHeight: 1.55 }}>
+                        Oi! Claro, posso te ajudar. Me conta um pouquinho: essa dor aparece mais em algum momento do dia ou em algum movimento específico?
+                      </div>
+                      <div style={{ alignSelf: 'flex-end', maxWidth: 560, background: 'var(--color-bege-claro)', border: '0.6px solid rgba(210, 176, 110, 0.45)', borderRadius: 'var(--radius-md)', padding: '10px 13px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-escuro)', lineHeight: 1.55 }}>
+                        A gente começa pela avaliação inicial gratuita, para a fisioterapeuta entender seu incômodo com calma e orientar o melhor caminho.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={secFoot}>
                 <SavedNote text="Última edição há 2 dias · por Larissa" />
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Btn ghost>Pré-visualizar conversa</Btn>
+                  <Btn ghost onClick={() => setPersonaPreviewOpen(open => !open)}>
+                    <MessageSquare size={13} strokeWidth={1.8} />
+                    {personaPreviewOpen ? 'Ocultar prévia' : 'Pré-visualizar conversa'}
+                  </Btn>
                   <Btn primary onClick={handleSaveAll}>{savePending ? 'Salvando…' : 'Salvar configuração'}</Btn>
                   {saveStatus === 'saved' && <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-verde)' }}>✓ Salvo</span>}
                   {saveStatus === 'error' && <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-ui-error)' }}>Erro ao salvar</span>}
@@ -1573,11 +1695,77 @@ export default function AgentePage() {
                     Adicionar pessoa
                   </Btn>
                 </div>
+
+                {/* ── Mensagem ao lead após handoff de agendamento ── */}
+                <div style={{ marginTop: 24, borderTop: '0.6px solid var(--color-cinza)', paddingTop: 22 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 'var(--radius-md)', background: 'var(--bg-2)', color: 'var(--color-bege)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <MessageSquare size={15} strokeWidth={1.6} />
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.3 }}>
+                        Mensagem enviada ao lead no handoff de agendamento
+                      </div>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', lineHeight: 1.5, marginTop: 2 }}>
+                        Quando a regra de agendamento acionar o handoff, a Clara envia essa mensagem antes de passar para você — evita silêncio na conversa.
+                      </p>
+                    </div>
+                  </div>
+                  <textarea
+                    className="crm-config-ta"
+                    style={{ minHeight: 80, marginTop: 10 }}
+                    value={mensagemHandoffAgendamento}
+                    onChange={e => setMensagemHandoffAgendamento(e.target.value)}
+                    placeholder="Ex.: Perfeito! Vou verificar os horários disponíveis com a nossa equipe e entro em contato em breve."
+                    spellCheck={false}
+                  />
+                </div>
+
+                {/* ── Notificação no WhatsApp da equipe ── */}
+                <div style={{ marginTop: 24, borderTop: '0.6px solid var(--color-cinza)', paddingTop: 22 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <Toggle
+                      checked={notificacaoHandoffAtivo}
+                      onChange={setNotificacaoHandoffAtivo}
+                      size="sm"
+                      label="Ativar notificação de handoff"
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Bell size={14} strokeWidth={1.6} color="var(--color-bege)" />
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, fontWeight: 500, color: 'var(--color-texto-escuro)', lineHeight: 1.3 }}>
+                          Notificação de handoff no WhatsApp
+                        </span>
+                      </div>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-texto-medio)', lineHeight: 1.5, marginTop: 3 }}>
+                        Quando qualquer handoff ocorrer (IA ou manual), esse número recebe uma mensagem com o nome, telefone e motivo do lead — para você agir sem precisar estar no inbox.
+                      </p>
+                      {notificacaoHandoffAtivo && (
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 500, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'var(--color-bege)', marginBottom: 6 }}>
+                            Número para notificação
+                          </div>
+                          <input
+                            type="tel"
+                            className="crm-faq-input"
+                            placeholder="+5549999999999"
+                            value={notificacaoHandoffNumero}
+                            onChange={e => setNotificacaoHandoffNumero(e.target.value)}
+                            style={{ maxWidth: 240 }}
+                          />
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--color-texto-medio)', marginTop: 4 }}>
+                            Formato E.164 — ex.: +5549999999999
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div style={secFoot}>
-                <SavedNote text={`${handoffRules.filter(r => r.enabled).length} de ${handoffRules.length} gatilhos ativos · salvo há 6 min`} />
-                <Btn primary>Salvar regras</Btn>
+                <SavedNote text={`${handoffRules.filter(r => r.enabled).length} de ${handoffRules.length} gatilhos ativos`} />
+                <Btn primary onClick={handleSaveAll}>{savePending ? 'Salvando…' : 'Salvar regras'}</Btn>
               </div>
             </section>
 

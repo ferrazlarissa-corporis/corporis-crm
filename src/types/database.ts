@@ -302,6 +302,9 @@ export interface Database {
           model_id: string;
           apenas_desconhecidos: boolean;
           numeros_bypass: Json;
+          boas_praticas: Json;
+          mensagem_handoff_agendamento: string | null;
+          notificacao_handoff: Json;
           created_at: string;
           updated_at: string;
         };
@@ -318,6 +321,9 @@ export interface Database {
           model_id?: string;
           apenas_desconhecidos?: boolean;
           numeros_bypass?: Json;
+          boas_praticas?: Json;
+          mensagem_handoff_agendamento?: string | null;
+          notificacao_handoff?: Json;
           created_at?: string;
           updated_at?: string;
         };

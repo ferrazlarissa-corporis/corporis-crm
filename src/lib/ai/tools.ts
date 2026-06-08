@@ -6,7 +6,12 @@ import {
   validateAppointmentWithinClinicHours,
 } from "@/lib/clinic-config";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { sendTextMessage } from "@/lib/evolution/client";
 import type { AppointmentType, LeadInterest } from "@/types/database";
+
+/** Título da regra de handoff para agendamento — deve coincidir com o salvo no DB. */
+export const HANDOFF_RULE_AGENDAMENTO =
+  "Quando lead quiser agendar uma avaliação, transferir para humano";
 
 // ─── Tool definitions for Claude ─────────────────────────────────────────────
 
@@ -75,7 +80,7 @@ export const AGENT_TOOLS: Tool[] = [
       properties: {
         motivo: {
           type: "string",
-          enum: ["pedido_humano", "duvida_clinica_especifica", "reclamacao", "agente_nao_sabe"],
+          enum: ["pedido_humano", "duvida_clinica_especifica", "reclamacao", "agente_nao_sabe", "agendamento_avaliacao"],
         },
       },
       required: ["motivo"],
@@ -91,6 +96,10 @@ export type ToolInput = Record<string, unknown>;
 export interface ToolContext {
   leadId: string;
   conversationId: string;
+  agentConfig?: {
+    mensagem_handoff_agendamento: string | null;
+    notificacao_handoff: { ativo: boolean; numero: string } | null;
+  };
 }
 
 export async function executeTool(
@@ -221,6 +230,13 @@ export async function executeTool(
       case "solicitar_handoff": {
         const { motivo } = input as { motivo: string };
         const conversation_id = ctx.conversationId;
+
+        const { data: lead } = await db
+          .from("leads")
+          .select("nome, telefone")
+          .eq("id", ctx.leadId)
+          .single();
+
         await db.from("conversations").update({ modo: "humano", nao_lida: true }).eq("id", conversation_id);
 
         await db.from("activities").insert({
@@ -229,6 +245,41 @@ export async function executeTool(
           descricao: `Handoff solicitado pelo agente IA — motivo: ${motivo}`,
           meta: { motivo, conversation_id },
         });
+
+        const cfg = ctx.agentConfig;
+
+        // Mensagem ao lead quando o handoff é por agendamento
+        if (motivo === "agendamento_avaliacao" && cfg?.mensagem_handoff_agendamento && lead?.telefone) {
+          try {
+            await sendTextMessage({ phone: lead.telefone, text: cfg.mensagem_handoff_agendamento });
+            await db.from("messages").insert({
+              conversation_id,
+              direcao: "saida",
+              autor: "ia",
+              conteudo: cfg.mensagem_handoff_agendamento,
+              tipo: "texto",
+            });
+          } catch { /* não bloqueia o handoff */ }
+        }
+
+        // Notificação no WhatsApp pessoal da equipe (qualquer motivo)
+        if (cfg?.notificacao_handoff?.ativo && cfg.notificacao_handoff.numero && lead) {
+          try {
+            const hora = new Date().toLocaleTimeString("pt-BR", {
+              hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo",
+            });
+            const motivoDesc: Record<string, string> = {
+              pedido_humano:            "Lead pediu atendimento humano",
+              duvida_clinica_especifica: "Dúvida clínica específica",
+              reclamacao:               "Reclamação ou insatisfação",
+              agente_nao_sabe:          "Agente não soube responder",
+              agendamento_avaliacao:    "Lead quer agendar uma avaliação",
+            };
+            const texto = `*[Corporis CRM] Handoff necessário*\n\nLead: ${lead.nome}\nTelefone: ${lead.telefone}\nMotivo: ${motivoDesc[motivo] ?? motivo}\nHorário: ${hora}\n\nAcesse o inbox para continuar.`;
+            await sendTextMessage({ phone: cfg.notificacao_handoff.numero, text: texto });
+          } catch { /* não bloqueia o handoff */ }
+        }
+
         return JSON.stringify({ success: true, modo: "humano" });
       }
 

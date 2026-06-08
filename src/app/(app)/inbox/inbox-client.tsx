@@ -80,6 +80,29 @@ const STAGE_LABEL: Record<LeadStage, string> = {
   perdido:            "Perdido",
 };
 
+type RealtimeMessageRow = MessageRow & { conversation_id: string };
+
+function sortConversations(conversations: ConversationRow[]) {
+  return [...conversations].sort((a, b) => (
+    new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  ));
+}
+
+function upsertMessage(messages: MessageRow[], message: MessageRow) {
+  if (messages.some((m) => m.id === message.id)) return messages;
+  return [...messages, message].sort((a, b) => (
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  ));
+}
+
+function mergeConversation(conversations: ConversationRow[], conversation: ConversationRow) {
+  const exists = conversations.some((c) => c.id === conversation.id);
+  const next = exists
+    ? conversations.map((c) => c.id === conversation.id ? { ...c, ...conversation } : c)
+    : [conversation, ...conversations];
+  return sortConversations(next);
+}
+
 // ─── Mock messages (replaced in Fase 3 with real data) ───────────────────────
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -106,7 +129,7 @@ function ModePill({ mode }: { mode: "ia" | "humano" }) {
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-[7px] py-0.5 text-[10px] font-medium tracking-[0.4px]", humano ? "bg-[rgba(240,131,83,0.12)] text-[#B85A2E]" : "bg-accent-soft text-[#6B5526]")}>
       <span className="h-[5px] w-[5px] rounded-[var(--radius-pill)] bg-current" />
-      {humano ? "Humano" : "IA"}
+      {humano ? "Humano" : "Clara"}
     </span>
   );
 }
@@ -127,12 +150,12 @@ function HandoffControl({ compact = false, modo, onToggle }: { compact?: boolean
         <span className="text-[10px] font-medium uppercase tracking-[1.4px] text-text-secondary">Atendimento</span>
         <span className="flex items-center gap-1.5 text-[13px] font-medium text-text-primary">
           <span className={cn("h-1.5 w-1.5 rounded-full shadow-[0_0_0_3px_rgba(240,131,83,0.18)]", isHumano ? "bg-primary" : "bg-accent")} />
-          {isHumano ? "Você está respondendo" : "Agente IA respondendo"}
+          {isHumano ? "Você está respondendo" : "Clara respondendo"}
         </span>
       </div>
       <div className="inline-flex shrink-0 rounded-[var(--radius-pill)] bg-muted p-[3px]">
         <button type="button" aria-pressed={!isHumano} onClick={() => onToggle("ia")} className={cn("inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-[7px] text-xs font-medium", !isHumano ? "bg-card text-primary shadow-[var(--shadow-sm)]" : "text-text-secondary")}>
-          <Bot className="h-[13px] w-[13px]" strokeWidth={1.6} />IA
+          <Bot className="h-[13px] w-[13px]" strokeWidth={1.6} />Clara
         </button>
         <button type="button" aria-pressed={isHumano} onClick={() => onToggle("humano")} className={cn("inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-[7px] text-xs font-medium", isHumano ? "bg-card text-primary shadow-[var(--shadow-sm)]" : "text-text-secondary")}>
           <UserRound className="h-[13px] w-[13px]" strokeWidth={1.6} />Humano
@@ -156,6 +179,16 @@ export default function InboxClient({ initialConversations }: { initialConversat
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const selectedIdRef = useRef<string | null>(selectedId);
+  const convsRef = useRef(initialConversations);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  useEffect(() => {
+    convsRef.current = convs;
+  }, [convs]);
 
   const handleSelectConversation = (id: string) => {
     setSelectedId(id);
@@ -194,7 +227,25 @@ export default function InboxClient({ initialConversations }: { initialConversat
     setIsSending(false);
 
     if (result.success) {
-      setMessages((prev) => prev.map((m) => m.id === optimisticId ? result.message : m));
+      setMessages((prev) => upsertMessage(
+        prev.filter((m) => m.id !== optimisticId && m.id !== result.message.id),
+        result.message,
+      ));
+      setConvs((prev) => sortConversations(prev.map((c) =>
+        c.id === selectedId
+          ? {
+              ...c,
+              modo: "humano",
+              nao_lida: false,
+              updated_at: result.message.created_at,
+              last_message: {
+                conteudo: result.message.conteudo,
+                created_at: result.message.created_at,
+                autor: result.message.autor,
+              },
+            }
+          : c
+      )));
     } else {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
     }
@@ -219,7 +270,7 @@ export default function InboxClient({ initialConversations }: { initialConversat
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   }, [selectedId]);
 
-  // Load messages + Realtime subscription when conversation selected
+  // Load messages when conversation selected
   useEffect(() => {
     if (!selectedId) { setMessages([]); return; }
     const supabase = createClient();
@@ -232,80 +283,119 @@ export default function InboxClient({ initialConversations }: { initialConversat
       .order("created_at", { ascending: true })
       .limit(50)
       .then(({ data }) => { setMessages((data as MessageRow[]) ?? []); setLoadingMsgs(false); });
-
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let cancelled = false;
-
-    // Set Realtime auth from the recovered session BEFORE subscribing —
-    // otherwise the socket connects as `anon` and RLS on `crm` blocks events.
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      if (data.session) supabase.realtime.setAuth(data.session.access_token);
-
-      channel = supabase
-        .channel(`messages_${selectedId}`)
-        .on("postgres_changes", {
-          event: "INSERT", schema: "crm", table: "messages",
-          filter: `conversation_id=eq.${selectedId}`,
-        }, (payload) => {
-          const incoming = payload.new as MessageRow;
-          setMessages((prev) =>
-            prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]
-          );
-        })
-        .subscribe();
-    });
-
-    return () => {
-      cancelled = true;
-      if (channel) supabase.removeChannel(channel);
-    };
   }, [selectedId]);
 
-  // Realtime: update conversation list on changes
+  // Realtime: update conversation list and selected thread on changes
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
 
+    async function fetchConversationSummary(
+      conversationId: string,
+      lastMessage: ConversationRow["last_message"] = null,
+    ) {
+      const { data: nc } = await supabase.schema("crm")
+        .from("conversations")
+        .select("id, modo, status, nao_lida, updated_at, leads!inner(id, nome, estagio)")
+        .eq("id", conversationId)
+        .single();
+
+      if (!nc) return null;
+      const lead = Array.isArray(nc.leads) ? nc.leads[0] : nc.leads;
+      return {
+        id: nc.id,
+        lead: {
+          id: lead?.id ?? "",
+          nome: lead?.nome ?? "",
+          estagio: (lead?.estagio ?? "novo") as ConversationRow["lead"]["estagio"],
+        },
+        modo: nc.modo,
+        status: nc.status,
+        nao_lida: nc.nao_lida,
+        last_message: lastMessage,
+        updated_at: nc.updated_at,
+      } satisfies ConversationRow;
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       if (data.session) supabase.realtime.setAuth(data.session.access_token);
 
       channel = supabase
-        .channel("conversations_changes")
+        .channel("inbox_changes")
         .on("postgres_changes", {
           event: "*", schema: "crm", table: "conversations",
         }, (payload) => {
-        if (payload.eventType === "UPDATE") {
-          setConvs((prev) => prev.map((c) =>
-            c.id === (payload.new as { id: string }).id
-              ? { ...c, ...(payload.new as Partial<ConversationRow>) }
-              : c
-          ));
-        }
-        if (payload.eventType === "INSERT") {
-          const newId = (payload.new as { id: string }).id;
-          supabase.schema("crm")
-            .from("conversations")
-            .select("id, modo, status, nao_lida, updated_at, leads!inner(id, nome, estagio)")
-            .eq("id", newId)
-            .single()
-            .then(({ data: nc }) => {
-              if (!nc) return;
-              const lead = Array.isArray(nc.leads) ? nc.leads[0] : nc.leads;
-              const full: ConversationRow = {
-                id: nc.id,
-                lead: { id: lead?.id ?? "", nome: lead?.nome ?? "", estagio: (lead?.estagio ?? "novo") as ConversationRow["lead"]["estagio"] },
-                modo: nc.modo,
-                status: nc.status,
-                nao_lida: nc.nao_lida,
-                last_message: null,
-                updated_at: nc.updated_at,
-              };
-              setConvs((prev) => prev.some((c) => c.id === full.id) ? prev : [full, ...prev]);
+          const changed = payload.new as Partial<ConversationRow> & { id: string };
+          if (payload.eventType === "UPDATE") {
+            setConvs((prev) => sortConversations(prev.map((c) =>
+              c.id === changed.id
+                ? {
+                    ...c,
+                    modo: changed.modo ?? c.modo,
+                    status: changed.status ?? c.status,
+                    nao_lida: changed.nao_lida ?? c.nao_lida,
+                    updated_at: changed.updated_at ?? c.updated_at,
+                  }
+                : c
+            )));
+          }
+          if (payload.eventType === "INSERT") {
+            void fetchConversationSummary(changed.id).then((full) => {
+              if (!full || cancelled) return;
+              setConvs((prev) => mergeConversation(prev, full));
             });
-        }
+          }
+        })
+        .on("postgres_changes", {
+          event: "INSERT", schema: "crm", table: "messages",
+        }, (payload) => {
+          const message = payload.new as RealtimeMessageRow;
+          const lastMessage = {
+            conteudo: message.conteudo,
+            created_at: message.created_at,
+            autor: message.autor,
+          };
+
+          if (selectedIdRef.current === message.conversation_id) {
+            setMessages((prev) => upsertMessage(prev, message));
+            if (message.direcao === "entrada") {
+              void markConversationRead({ conversationId: message.conversation_id });
+            }
+          }
+
+          const foundConversation = convsRef.current.some((c) => c.id === message.conversation_id);
+          setConvs((prev) => {
+            if (!foundConversation) return prev;
+            return sortConversations(prev.map((c) =>
+              c.id === message.conversation_id
+                ? {
+                    ...c,
+                    modo: message.autor === "humano" ? "humano" : c.modo,
+                    nao_lida: selectedIdRef.current === message.conversation_id
+                      ? false
+                      : message.direcao === "entrada" || c.nao_lida,
+                    updated_at: message.created_at,
+                    last_message: lastMessage,
+                  }
+                : c
+            ));
+          });
+
+          if (!foundConversation) {
+            void fetchConversationSummary(message.conversation_id, lastMessage).then((full) => {
+              if (!full || cancelled) return;
+              setConvs((prev) => mergeConversation(prev, {
+                ...full,
+                modo: message.autor === "humano" ? "humano" : full.modo,
+                nao_lida: selectedIdRef.current === full.id
+                  ? false
+                  : message.direcao === "entrada" || full.nao_lida,
+                updated_at: message.created_at,
+              }));
+            });
+          }
         })
         .subscribe();
     });
@@ -358,7 +448,7 @@ export default function InboxClient({ initialConversations }: { initialConversat
             {[
               ["Todas", String(convs.length), true],
               ["Não lidas", String(unreadTotal), false],
-              ["IA",     String(convs.filter((c) => c.modo === "ia").length),     false],
+              ["Clara",  String(convs.filter((c) => c.modo === "ia").length),     false],
               ["Humano", String(convs.filter((c) => c.modo === "humano").length), false],
             ].map(([label, count, active]) => (
               <button key={label as string} type="button" aria-pressed={Boolean(active)} className={cn("inline-flex h-5 shrink-0 items-center justify-center gap-1 rounded-[var(--radius-pill)] border border-border px-2 text-[8px] font-medium leading-none text-text-secondary transition-colors hover:border-primary-hover hover:bg-accent-soft hover:text-text-primary", active && "border-transparent bg-accent-soft text-text-primary")}>
@@ -458,7 +548,7 @@ export default function InboxClient({ initialConversations }: { initialConversat
                     const incoming = msg.direcao === "entrada";
                     const isSystem = msg.autor === "sistema";
                     const timeStr  = format(new Date(msg.created_at), "HH:mm");
-                    const senderLabel = msg.autor === "ia" ? "Agente IA" : msg.autor === "humano" ? "Equipe" : null;
+                    const senderLabel = msg.autor === "ia" ? "Clara" : msg.autor === "humano" ? "Equipe" : null;
 
                     if (isSystem) {
                       return (
@@ -471,7 +561,7 @@ export default function InboxClient({ initialConversations }: { initialConversat
 
                     return (
                       <div key={msg.id} className={cn("flex max-w-[78%] gap-2.5", incoming ? "self-start" : "self-end flex-row-reverse")}>
-                        <Avatar initials={incoming ? getInitials(selectedConv?.lead.nome ?? "?") : (msg.autor === "ia" ? "IA" : "CF")} className={cn("mt-auto h-7 w-7 text-[11px]", incoming ? "bg-[rgba(122,110,104,0.14)] text-text-secondary" : "bg-accent-soft text-[#6B5526]")} />
+                        <Avatar initials={incoming ? getInitials(selectedConv?.lead.nome ?? "?") : (msg.autor === "ia" ? "CL" : "CF")} className={cn("mt-auto h-7 w-7 text-[11px]", incoming ? "bg-[rgba(122,110,104,0.14)] text-text-secondary" : "bg-accent-soft text-[#6B5526]")} />
                         <div className={cn("flex min-w-0 flex-col gap-1", !incoming && "items-end")}>
                           {!incoming && senderLabel ? (
                             <div className="inline-flex items-center gap-1.5 text-[10px] font-medium tracking-[0.3px] text-text-secondary">
@@ -538,7 +628,7 @@ export default function InboxClient({ initialConversations }: { initialConversat
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-border py-[18px]">
               {[
                 ["Estágio", STAGE_LABEL[selectedConv.lead.estagio]],
-                ["Modo",    selectedConv.modo === "ia" ? "Agente IA" : "Humano"],
+                ["Modo",    selectedConv.modo === "ia" ? "Clara" : "Humano"],
                 ["Status",  selectedConv.status],
               ].map(([label, value]) => (
                 <div key={label}>
