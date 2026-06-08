@@ -151,11 +151,8 @@ export async function POST(request: NextRequest) {
 
   // Load agent config
   const { data: config } = await db.from("agent_config").select("*").single();
-  if (!config?.ativo) {
-    return NextResponse.json({ ok: true, skipped: "agent_inactive" });
-  }
 
-  // Load conversation + lead
+  // Load conversation + lead (needed before bypass/ativo checks)
   const { data: conv } = await db
     .from("conversations")
     .select("id, modo, leads!inner(id, nome, telefone, interesse, estagio, score_qualificacao)")
@@ -174,12 +171,22 @@ export async function POST(request: NextRequest) {
     interesse: string; estagio: string; score_qualificacao: number | null;
   };
 
-  // Check business hours (after confirming we have a lead to message)
-  if (!isWithinBusinessHours(config.horario_atendimento)) {
-    if (config.mensagem_fora_horario) {
-      await sendTextMessage({ phone: lead.telefone, text: config.mensagem_fora_horario });
+  // Numbers in bypass list always get Clara — ignore ativo and business hours
+  const bypassList = Array.isArray(config?.numeros_bypass)
+    ? (config.numeros_bypass as string[])
+    : [];
+  const isBypassed = bypassList.includes(lead.telefone);
+
+  if (!isBypassed) {
+    if (!config?.ativo) {
+      return NextResponse.json({ ok: true, skipped: "agent_inactive" });
     }
-    return NextResponse.json({ ok: true, skipped: "outside_hours" });
+    if (!isWithinBusinessHours(config.horario_atendimento)) {
+      if (config.mensagem_fora_horario) {
+        await sendTextMessage({ phone: lead.telefone, text: config.mensagem_fora_horario });
+      }
+      return NextResponse.json({ ok: true, skipped: "outside_hours" });
+    }
   }
 
   // Load last 20 messages

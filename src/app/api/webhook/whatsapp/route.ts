@@ -229,51 +229,51 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // 8. Trigger AI if mode = 'ia' and agent is active
+  // 8. Trigger AI if mode = 'ia'
   if (!fromMe && conv.modo === "ia") {
     const { data: agentConf } = await db
       .from("agent_config")
       .select("ativo, apenas_desconhecidos, numeros_bypass")
       .single();
 
-    // If filter is active, skip AI for contacts saved in the phone's address book,
-    // unless the number is in the bypass list (test numbers, staff, etc.)
-    if (agentConf?.apenas_desconhecidos) {
-      const bypass = Array.isArray(agentConf.numeros_bypass)
-        ? (agentConf.numeros_bypass as string[])
-        : [];
-      const isBypassed = bypass.includes(telefone);
-      if (!isBypassed) {
+    const bypass = Array.isArray(agentConf?.numeros_bypass)
+      ? (agentConf.numeros_bypass as string[])
+      : [];
+    const isBypassed = bypass.includes(telefone);
+
+    if (!isBypassed) {
+      // Skip known contacts when filter is active
+      if (agentConf?.apenas_desconhecidos) {
         const saved = await isContactSaved(remoteJid);
         if (saved) {
           return NextResponse.json({ ok: true, skipped: "known_contact", conversation_id: conv.id });
         }
       }
+      // Skip if agent is globally disabled
+      if (!agentConf?.ativo) {
+        return NextResponse.json({ ok: true, skipped: "agent_inactive", conversation_id: conv.id });
+      }
     }
 
-    if (agentConf?.ativo) {
-      // Run after the response is sent. Unlike a bare fire-and-forget fetch,
-      // after() keeps the serverless function alive until this completes,
-      // so the internal call to /api/ai/reply is not killed on Vercel.
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-      after(async () => {
-        try {
-          const res = await fetch(`${appUrl}/api/ai/reply`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
-            },
-            body: JSON.stringify({ conversation_id: conv.id }),
-          });
-          if (!res.ok) {
-            console.error("[webhook] ai/reply non-ok:", res.status, await res.text().catch(() => ""));
-          }
-        } catch (err) {
-          console.error("[webhook] ai/reply fire error:", err);
+    // Bypassed numbers always reach Clara regardless of ativo or filters
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    after(async () => {
+      try {
+        const res = await fetch(`${appUrl}/api/ai/reply`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
+          },
+          body: JSON.stringify({ conversation_id: conv.id }),
+        });
+        if (!res.ok) {
+          console.error("[webhook] ai/reply non-ok:", res.status, await res.text().catch(() => ""));
         }
-      });
-    }
+      } catch (err) {
+        console.error("[webhook] ai/reply fire error:", err);
+      }
+    });
   }
 
   return NextResponse.json({ ok: true, conversation_id: conv.id });
