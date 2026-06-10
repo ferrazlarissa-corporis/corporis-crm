@@ -40,30 +40,43 @@ const STAGE_LABEL: Record<LeadStage, string> = {
 };
 
 const createLeadSchema = z.object({
-  nome:      z.string().min(2),
-  telefone:  z.string().min(10),
-  email:     z.string().email().optional().or(z.literal("")),
-  estagio:   z.enum(LEAD_STAGE_VALUES).default("novo"),
-  origem:    z.enum(["whatsapp","instagram","indicacao","google","outro"]).default("whatsapp"),
-  interesse: z.enum(["pilates","pilates_gestante","fisio_pelvica","indefinido"]).default("indefinido"),
+  nome:         z.string().min(2),
+  telefone:     z.string().min(10),
+  email:        z.string().email().optional().or(z.literal("")),
+  estagio:      z.enum(LEAD_STAGE_VALUES).default("novo"),
+  origem:       z.enum(["whatsapp","instagram","indicacao","google","outro"]).default("whatsapp"),
+  interesse:    z.enum(["pilates","pilates_gestante","fisio_pelvica","indefinido"]).default("indefinido"),
+  data_entrada: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 export type CreateLeadResult = { success: true; lead: FunilLead } | { success: false; error: string };
 
 export async function createLead(formData: FormData): Promise<CreateLeadResult> {
   const raw = {
-    nome:      formData.get("nome"),
-    telefone:  formData.get("telefone"),
-    email:     formData.get("email") ?? "",
-    estagio:   formData.get("estagio") ?? "novo",
-    origem:    formData.get("origem") ?? "whatsapp",
-    interesse: formData.get("interesse") ?? "indefinido",
+    nome:         formData.get("nome"),
+    telefone:     formData.get("telefone"),
+    email:        formData.get("email") ?? "",
+    estagio:      formData.get("estagio") ?? "novo",
+    origem:       formData.get("origem") ?? "whatsapp",
+    interesse:    formData.get("interesse") ?? "indefinido",
+    data_entrada: formData.get("data_entrada") || undefined,
   };
 
   const parsed = createLeadSchema.safeParse(raw);
   if (!parsed.success) return { success: false, error: "Dados inválidos: " + parsed.error.message };
   if (stageRequiresAppointment(parsed.data.estagio as LeadStage)) {
     return { success: false, error: "Para criar lead nesta etapa, primeiro registre a lead em qualificação e confirme a data da avaliação." };
+  }
+
+  let entradaAt: string | undefined;
+  if (parsed.data.data_entrada) {
+    const entradaDate = new Date(parsed.data.data_entrada + "T12:00:00Z");
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+    if (entradaDate > todayEnd) {
+      return { success: false, error: "A data de entrada não pode ser futura." };
+    }
+    entradaAt = entradaDate.toISOString();
   }
 
   const supabase = await createClient();
@@ -76,16 +89,18 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
     estagio:   parsed.data.estagio as LeadStage,
     origem:    parsed.data.origem as LeadOrigin,
     interesse: parsed.data.interesse as LeadInterest,
+    ...(entradaAt ? { created_at: entradaAt, ultima_interacao_at: entradaAt } : {}),
   }).select(FUNIL_LEAD_SELECT).single();
 
   if (error) return { success: false, error: error.message };
 
-  // Log activity
+  // Log activity with the same historical timestamp when applicable
   await db.from("activities").insert({
-    lead_id:  data.id,
-    tipo:     "mudanca_estagio",
+    lead_id:   data.id,
+    tipo:      "mudanca_estagio",
     descricao: `Lead criada no funil — estágio ${parsed.data.estagio}`,
-    meta:     { estagio: parsed.data.estagio, origem: parsed.data.origem },
+    meta:      { estagio: parsed.data.estagio, origem: parsed.data.origem },
+    ...(entradaAt ? { created_at: entradaAt } : {}),
   });
 
   revalidatePath("/funil");

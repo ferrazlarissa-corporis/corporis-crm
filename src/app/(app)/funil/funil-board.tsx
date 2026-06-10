@@ -63,6 +63,7 @@ interface Lead {
   interest: Interest;
   origin: Origin;
   score: number;
+  createdAt: string;
   daysIn: number;
   owner: LeadOwner;
   last: LastKind;
@@ -189,17 +190,18 @@ function mapFunilLead(fl: FunilLead): Lead {
     : { initials: "IA", name: "Agente IA", bg: "rgba(210,176,110,0.30)", fg: "#7A5E1F" };
 
   return {
-    id:       fl.id,
-    stage:    (stageMap[fl.estagio] ?? fl.estagio) as StageId,
-    name:     fl.nome,
-    interest: (interestMap[fl.interesse] ?? fl.interesse) as Interest,
-    origin:   (fl.origem === "outro" ? "site" : fl.origem) as Origin,
-    score:    fl.score_qualificacao,
-    daysIn:   fl.daysIn,
+    id:        fl.id,
+    stage:     (stageMap[fl.estagio] ?? fl.estagio) as StageId,
+    name:      fl.nome,
+    interest:  (interestMap[fl.interesse] ?? fl.interesse) as Interest,
+    origin:    (fl.origem === "outro" ? "site" : fl.origem) as Origin,
+    score:     fl.score_qualificacao,
+    createdAt: fl.created_at,
+    daysIn:    fl.daysIn,
     owner,
-    last:     "msg_ia" as LastKind,
-    lastWhen: fl.lastWhen,
-    stale:    fl.stale,
+    last:      "msg_ia" as LastKind,
+    lastWhen:  fl.lastWhen,
+    stale:     fl.stale,
   };
 }
 
@@ -505,13 +507,22 @@ function ScheduleAppointmentModal({
       return;
     }
 
-    const end = new Date(start.getTime() + APPOINTMENT_DURATION_MINUTES * 60_000);
-    const scheduleValidation = validateAppointmentWithinClinicHours(clinicHours, start, end);
-
-    if (!scheduleValidation.ok) {
-      setError(scheduleValidation.message);
+    const leadEntry = new Date(lead.createdAt);
+    if (start < leadEntry) {
+      setError("A data da avaliação deve ser igual ou posterior à data de entrada no funil.");
       setErrorField("inicio");
       return;
+    }
+
+    const end = new Date(start.getTime() + APPOINTMENT_DURATION_MINUTES * 60_000);
+    const isPast = start < new Date();
+    if (!isPast) {
+      const scheduleValidation = validateAppointmentWithinClinicHours(clinicHours, start, end);
+      if (!scheduleValidation.ok) {
+        setError(scheduleValidation.message);
+        setErrorField("inicio");
+        return;
+      }
     }
 
     if (!observations) {
@@ -751,6 +762,21 @@ function NewLeadModal({
               />
             </div>
           ))}
+
+          {/* Data de entrada no funil */}
+          <div>
+            <label style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: "6px" }}>
+              Entrada no funil
+            </label>
+            <input
+              name="data_entrada"
+              type="date"
+              required
+              defaultValue={new Date().toISOString().slice(0, 10)}
+              max={new Date().toISOString().slice(0, 10)}
+              style={{ width: "100%", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
 
           {/* Origem + Interesse */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>

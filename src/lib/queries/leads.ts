@@ -11,6 +11,7 @@ export type FunilLead = {
   interesse: LeadInterest;
   origem: LeadOrigin;
   score_qualificacao: number;
+  created_at: string;
   daysIn: number;
   stale: boolean;
   lastWhen: string;
@@ -65,6 +66,7 @@ export function mapLeadRowForFunil(row: FunilLeadQueryRow, now = new Date()): Fu
     interesse: row.interesse,
     origem: row.origem,
     score_qualificacao: row.score_qualificacao ?? 0,
+    created_at: row.created_at,
     daysIn,
     stale,
     lastWhen,
