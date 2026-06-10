@@ -208,7 +208,17 @@ export async function executeTool(
       case "atualizar_interesse": {
         const { interesse } = input as { interesse: LeadInterest };
         const lead_id = ctx.leadId;
-        await db.from("leads").update({ interesse }).eq("id", lead_id);
+        const { data: current } = await db.from("leads").select("estagio").eq("id", lead_id).single();
+        const advance = current?.estagio === "novo" ? { estagio: "qualificacao" as const } : {};
+        await db.from("leads").update({ interesse, ...advance }).eq("id", lead_id);
+        if (advance.estagio) {
+          await db.from("activities").insert({
+            lead_id,
+            tipo: "mudanca_estagio",
+            descricao: "Lead avançou para Em qualificação (interesse identificado)",
+            meta: { de: "novo", para: "qualificacao", interesse },
+          });
+        }
         return JSON.stringify({ success: true, interesse });
       }
 
@@ -217,13 +227,23 @@ export async function executeTool(
           score: number; justificativa: string;
         };
         const lead_id = ctx.leadId;
-        await db.from("leads").update({ score_qualificacao: score }).eq("id", lead_id);
+        const { data: current } = await db.from("leads").select("estagio").eq("id", lead_id).single();
+        const advance = current?.estagio === "novo" ? { estagio: "qualificacao" as const } : {};
+        await db.from("leads").update({ score_qualificacao: score, ...advance }).eq("id", lead_id);
         await db.from("activities").insert({
           lead_id,
           tipo: "sistema",
           descricao: `Score de qualificação atualizado para ${score}/100`,
           meta: { score, justificativa },
         });
+        if (advance.estagio) {
+          await db.from("activities").insert({
+            lead_id,
+            tipo: "mudanca_estagio",
+            descricao: "Lead avançou para Em qualificação (score registrado)",
+            meta: { de: "novo", para: "qualificacao", score },
+          });
+        }
         return JSON.stringify({ success: true, score });
       }
 
