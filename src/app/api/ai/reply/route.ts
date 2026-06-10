@@ -154,12 +154,26 @@ function humanDelay(text: string, isFirst: boolean): number {
 
 /**
  * Sleep `totalMs` ms while continuously re-sending the "composing" presence
- * every 4.5s so WhatsApp keeps showing the typing indicator throughout.
+ * so WhatsApp keeps showing the typing indicator throughout — inclusive nos
+ * gaps curtos entre bursts.
+ *
+ * Detalhe importante: logo após enviar uma mensagem o WhatsApp volta a presença
+ * para "available". Um único "composing" disparado imediatamente depois é
+ * frequentemente engolido. Por isso reasseramos o "composing" cedo (~700ms) e
+ * mantemos um tick denso para que a digitação apareça mesmo em gaps de 2-3s.
  */
 async function sleepWithPresence(phone: string, totalMs: number): Promise<void> {
-  const TICK = 4500;
+  const TICK = 2500;
   const end = Date.now() + totalMs;
+
   await sendPresence(phone, "composing").catch(() => {});
+
+  // Reassert cedo para vencer o "available" deixado pelo envio anterior.
+  if (totalMs > 900) {
+    await sleep(700);
+    await sendPresence(phone, "composing").catch(() => {});
+  }
+
   let remaining = end - Date.now();
   while (remaining > 0) {
     await sleep(Math.min(TICK, remaining));
