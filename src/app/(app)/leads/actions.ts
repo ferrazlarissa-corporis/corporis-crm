@@ -194,3 +194,22 @@ export async function updateLeadData(input: z.infer<typeof updateLeadDataSchema>
   revalidatePath(`/leads/${id}`);
   return { success: true };
 }
+
+export async function archiveLead(leadId: string): Promise<UpdateStageResult> {
+  const parsed = z.string().uuid().safeParse(leadId);
+  if (!parsed.success) return { success: false, error: "ID inválido" };
+
+  const supabase = await createClient();
+  const db = supabase.schema("crm");
+
+  const { error } = await db
+    .from("leads")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", parsed.data);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/funil");
+  revalidatePath("/dashboard");
+  return { success: true };
+}

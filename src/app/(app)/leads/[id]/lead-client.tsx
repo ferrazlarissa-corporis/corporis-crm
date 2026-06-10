@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeftRight,
   CalendarDays,
@@ -26,7 +27,7 @@ import type { LeadDetail } from "@/lib/queries/leads";
 import type { ActivityRow } from "@/lib/queries/activities";
 import type { AppointmentRow } from "@/lib/queries/appointments";
 import type { ActivityType, LeadInterest, LeadOrigin, LeadStage, AppointmentType } from "@/types/database";
-import { addNote } from "../actions";
+import { addNote, updateLeadStage, archiveLead } from "../actions";
 
 // ─── Label maps ──────────────────────────────────────────────────────────────
 
@@ -148,10 +149,10 @@ function TlIconBox({ tipo }: { tipo: TlType }) {
   );
 }
 
-function Btn({ children, primary, small, iconOnly, style: extraStyle }: { children: React.ReactNode; primary?: boolean; small?: boolean; iconOnly?: boolean; style?: React.CSSProperties }) {
+function Btn({ children, primary, small, iconOnly, disabled, onClick, style: extraStyle }: { children: React.ReactNode; primary?: boolean; small?: boolean; iconOnly?: boolean; disabled?: boolean; onClick?: () => void; style?: React.CSSProperties }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <button type="button" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ appearance: "none", border: primary ? `0.6px solid ${hovered ? "var(--color-tangerina)" : "var(--color-alaranjado)"}` : `0.6px solid ${hovered ? "var(--color-tangerina)" : "var(--color-cinza)"}`, background: primary ? (hovered ? "var(--color-tangerina)" : "var(--color-alaranjado)") : (hovered ? "var(--color-bege-claro)" : "var(--bg-card)"), color: primary ? "#fff" : "var(--color-texto-escuro)", borderRadius: "var(--radius-pill)", padding: small ? (iconOnly ? "7px 9px" : "7px 12px") : (iconOnly ? "9px 11px" : "9px 16px"), fontFamily: "var(--font-body)", fontSize: small ? "12px" : "13px", fontWeight: 500, letterSpacing: "0.2px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "8px", transition: "all 160ms cubic-bezier(.4,0,.2,1)", lineHeight: 1, ...extraStyle }}>
+    <button type="button" disabled={disabled} onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ appearance: "none", border: primary ? `0.6px solid ${hovered ? "var(--color-tangerina)" : "var(--color-alaranjado)"}` : `0.6px solid ${hovered ? "var(--color-tangerina)" : "var(--color-cinza)"}`, background: primary ? (hovered ? "var(--color-tangerina)" : "var(--color-alaranjado)") : (hovered ? "var(--color-bege-claro)" : "var(--bg-card)"), color: primary ? "#fff" : "var(--color-texto-escuro)", borderRadius: "var(--radius-pill)", padding: small ? (iconOnly ? "7px 9px" : "7px 12px") : (iconOnly ? "9px 11px" : "9px 16px"), fontFamily: "var(--font-body)", fontSize: small ? "12px" : "13px", fontWeight: 500, letterSpacing: "0.2px", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.6 : 1, display: "inline-flex", alignItems: "center", gap: "8px", transition: "all 160ms cubic-bezier(.4,0,.2,1)", lineHeight: 1, ...extraStyle }}>
       {children}
     </button>
   );
@@ -174,11 +175,51 @@ interface LeadClientProps {
   appointments: AppointmentRow[];
 }
 
+const STAGE_OPTIONS: { value: LeadStage; label: string }[] = [
+  { value: "novo",               label: "Novo" },
+  { value: "qualificacao",       label: "Em qualificação" },
+  { value: "avaliacao_agendada", label: "Avaliação agendada" },
+  { value: "no_show",            label: "No-show" },
+  { value: "negociacao",         label: "Em negociação" },
+  { value: "convertido",         label: "Convertido" },
+  { value: "perdido",            label: "Perdido" },
+];
+
 export default function LeadClient({ lead, activities, appointments }: LeadClientProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("timeline");
   const [note, setNote] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
+  const [stageOpen, setStageOpen] = useState(false);
+  const [stageLoading, setStageLoading] = useState(false);
+  const [stageError, setStageError] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  const handleMoveStage = async (newStage: LeadStage) => {
+    if (newStage === lead.estagio) { setStageOpen(false); return; }
+    setStageLoading(true);
+    setStageError(null);
+    const result = await updateLeadStage({ id: lead.id, estagio: newStage });
+    setStageLoading(false);
+    setStageOpen(false);
+    if (result.success) {
+      router.refresh();
+    } else {
+      setStageError(result.error);
+    }
+  };
+
+  const handleArchive = async () => {
+    setMoreOpen(false);
+    if (!confirm(`Arquivar ${lead.nome}? O lead será removido do funil.`)) return;
+    const result = await archiveLead(lead.id);
+    if (result.success) {
+      router.push("/funil");
+    }
+  };
 
   const handleSaveNote = async () => {
     if (!note.trim()) return;
@@ -271,11 +312,55 @@ export default function LeadClient({ lead, activities, appointments }: LeadClien
                 </div>
               </div>
               <div className="flex flex-wrap items-center" style={{ gap: "8px", marginTop: "22px", paddingTop: "20px", borderTop: "0.6px solid var(--color-cinza)" }}>
-                <Btn primary><MessageCircle className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />Enviar mensagem</Btn>
-                <Btn><CalendarDays className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />Agendar avaliação</Btn>
-                <Btn><Filter className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />Mover no funil</Btn>
-                <Btn iconOnly><MoreHorizontal className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} /></Btn>
+                <Btn primary onClick={() => router.push("/inbox")}>
+                  <MessageCircle className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />Enviar mensagem
+                </Btn>
+                <Btn onClick={() => router.push("/agenda")}>
+                  <CalendarDays className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />Agendar avaliação
+                </Btn>
+                {/* Mover no funil dropdown */}
+                <div ref={stageRef} style={{ position: "relative" }}>
+                  <Btn onClick={() => setStageOpen((v) => !v)} disabled={stageLoading}>
+                    <Filter className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />
+                    {stageLoading ? "Movendo..." : "Mover no funil"}
+                  </Btn>
+                  {stageOpen && (
+                    <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--bg-card)", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", boxShadow: "var(--shadow-md)", minWidth: 200, overflow: "hidden" }}
+                      onMouseLeave={() => setStageOpen(false)}>
+                      {STAGE_OPTIONS.map(({ value, label }) => (
+                        <button key={value} type="button" onClick={() => handleMoveStage(value)}
+                          style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "10px 14px", background: value === lead.estagio ? "var(--color-bege-claro)" : "none", color: value === lead.estagio ? "var(--color-alaranjado)" : "var(--color-texto-escuro)", fontFamily: "var(--font-body)", fontSize: "13px", fontWeight: value === lead.estagio ? 500 : 400, border: 0, cursor: "pointer", textAlign: "left" }}
+                          onMouseEnter={(e) => { if (value !== lead.estagio) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bege-claro)"; }}
+                          onMouseLeave={(e) => { if (value !== lead.estagio) (e.currentTarget as HTMLButtonElement).style.background = "none"; }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "var(--radius-pill)", background: STAGE_STYLE[value].dot, flexShrink: 0 }} />
+                          {label}
+                          {value === lead.estagio && <span style={{ marginLeft: "auto", fontSize: "10px", color: "var(--color-texto-medio)" }}>atual</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* More options dropdown */}
+                <div ref={moreRef} style={{ position: "relative" }}>
+                  <Btn iconOnly onClick={() => setMoreOpen((v) => !v)}>
+                    <MoreHorizontal className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />
+                  </Btn>
+                  {moreOpen && (
+                    <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 50, background: "var(--bg-card)", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", boxShadow: "var(--shadow-md)", minWidth: 160, overflow: "hidden" }}
+                      onMouseLeave={() => setMoreOpen(false)}>
+                      <button type="button" onClick={handleArchive}
+                        style={{ display: "block", width: "100%", padding: "10px 14px", background: "none", color: "var(--color-ui-error)", fontFamily: "var(--font-body)", fontSize: "13px", border: 0, cursor: "pointer", textAlign: "left" }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(209,76,68,0.07)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}>
+                        Arquivar lead
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
+              {stageError && (
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-ui-error)", marginTop: "8px" }}>{stageError}</p>
+              )}
             </header>
 
             {/* Tabs */}
