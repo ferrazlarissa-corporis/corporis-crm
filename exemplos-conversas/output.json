@@ -1,0 +1,827 @@
+[
+  {
+    "titulo": "Pilates Gestante — Andressa Ferreira",
+    "dialogo": [
+      {
+        "autor": "lead",
+        "texto": "Bom dia"
+      },
+      {
+        "autor": "lead",
+        "texto": "Gostaria de saber como funciona os planos ☺️"
+      },
+      {
+        "autor": "lead",
+        "texto": "Estou gestante 14 semanas"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oiii Andressa! Bom dia, tudo bem?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Aqui é a Larissa responsável pela Corporis. Prazer em falar com você!"
+      },
+      {
+        "autor": "clara",
+        "texto": "E seja muito bem vindo a Corporis, amamos acompanhar as gestantes por aqui. E temos um plano específico para você. ☺️"
+      },
+      {
+        "autor": "clara",
+        "texto": "Você tem alguma dor ou busca somente para praticar uma atividade física nesse momento, Andressa?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Estou bem ☺️"
+      },
+      {
+        "autor": "lead",
+        "texto": "Então eu tenho dores lombares , e virilha acredito que por conta dos ligamentos e afins"
+      },
+      {
+        "autor": "clara",
+        "texto": "Entendi. Deve ser sim, porque por mais que esteja no comecinho, o nosso corpo ja começa mudar por completo desde que descobrimos a gestação."
+      },
+      {
+        "autor": "clara",
+        "texto": "Você está fazendo alguma outra atividade física atualmente ou fazia?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Eu fazia caminhadas somente , aí pausei os 3 primeiros meses"
+      },
+      {
+        "autor": "lead",
+        "texto": "Agora estou querendo retornar as atividades aos poucos"
+      },
+      {
+        "autor": "lead",
+        "texto": "Como atendo 2x na semana os demais dias eu fico mais parada e em casa"
+      },
+      {
+        "autor": "lead",
+        "texto": "E acredito que isso afete mais o corpo parado"
+      },
+      {
+        "autor": "clara",
+        "texto": "Andressa, perdão a demora em responder!!!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Com certeza, o pilates vai te ajudar muito nessa questão de dores e se preparar o seu corpo para ter um gestação saudável até o final né, você conseguir seguir fazendo as suas coisas com menos desconforto possivel."
+      },
+      {
+        "autor": "clara",
+        "texto": "Então, a gente tem um plano específico para vocês aqui, vocês, que eu quero dizer, vocês gestantes, né? Ele não tem mensalidade, não fica sobrando plano depois que tu ganhar bebê, e ele pode ser acompanhado até o parto. Ele é separado por fase da gestação que corresponde ao trimestre que você tá. Cada fase, ela tem um objetivo, né? Respeita o tempo, mudanças do teu corpo, e a gente vai fazendo adaptações durante as fases correspondendo às tuas necessidades, né? Tu entra na fase correspondente à semana gestacional que tu tá. Como tu tá no inicinho, né, com 14 semanas, você consegue fazer todas as fases, né? Que, no seu caso, seria a fase 1, que vai do início, né, da semana inicial, da onde você tá, até as 20 semanas. E depois tem a fase 2, que é a fase que a gente trabalha bastante fortalecimento, exercícios de mobilidade, que vão ter que lidar muito, né, na questão do fortalecimento para evitar dores. E daí a fase 3 é mais a preparação para o parto, né? Independente da via que você tiver bebê, é importante preparar o teu corpo para esse momento, né? Para te ter uma recuperação no pós-parto melhor."
+      },
+      {
+        "autor": "clara",
+        "texto": "Eu quero até fazer um convite, que é vir fazer uma aula experimental com a gente, né, a gente tem uma aula experimental avaliativa, nessa aula a gente te passa exercícios, né, de acordo com a tua necessidade, avalia a questão ali dos teus movimentos, se você tem dor, avalia essa questão das tuas dores, né, e daí te explica certinho como que funciona, te passa certinho os valores, o que que você acha, qual é a sua disponibilidade, tu consegue fazer essa aula durante o dia ou fica melhor após as 18."
+      },
+      {
+        "autor": "lead",
+        "texto": "Oi, boa tarde, tudo bem? Desculpa responder só agora, porque sexta-feira não deu tempo, mas sim, a gente pode marcar, sim, uma aula experimental e ver se eu vou gostar, enfim, e daí você me apresenta os planos ali."
+      },
+      {
+        "autor": "clara",
+        "texto": "Oi, André. Boa tarde, tudo bem? Capaz. Acontece, faz parte. Às vezes a gente também acaba demorando um pouquinho para responder. Então, me conta, qual é a sua disponibilidade? Você consegue durante o dia ou fica melhor para você após os 18? Que daí eu já olho essa semana como que tá a agenda e já posso te dar um retorno."
+      },
+      {
+        "autor": "lead",
+        "texto": "Pode ser durante o dia mesmo, tá? Só eu faço alguns atendimentos e vou ter que passar bem certinho os dias que eu não posso, que daí, assim, tu consegue agendar ali."
+      },
+      {
+        "autor": "clara",
+        "texto": "Combinado! Me avisa o dia que fica mas tranquilo pra você q eu te passo a disponibilidade da agenda"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oiii Andressa, tudo bem? Lari aqui!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Conseguiu dar uma olhadinha na sua agenda para agendarmos a sua aula experimental aqui conosco? 😊"
+      },
+      {
+        "autor": "lead",
+        "texto": "Tenho segunda o dia todo livre , terça e quarta de manhã"
+      },
+      {
+        "autor": "lead",
+        "texto": "Oie tudo bem e vc ?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Desculpa a demora"
+      },
+      {
+        "autor": "clara",
+        "texto": "Tenho disponibilidade na próxima segunda, às 09h ou 10h ou a tarde às 15h ou 17h. Qual fica melhor para você?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Oii segunda as 15h"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oii Andressa! Boa tardeeee"
+      },
+      {
+        "autor": "clara",
+        "texto": "Perfeito! Vou agendar para você! 😊"
+      },
+      {
+        "autor": "clara",
+        "texto": "Sabe onde fica a Corporis?"
+      },
+      {
+        "autor": "lead",
+        "texto": "No centro medico!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Isso, no nono andar, na sala 903"
+      },
+      {
+        "autor": "clara",
+        "texto": "Vamos estar te esperando na segunda às 15h"
+      },
+      {
+        "autor": "lead",
+        "texto": "Ok obrigado ☺️"
+      },
+      {
+        "autor": "clara",
+        "texto": "Olá Andressa! Bom dia 😊\nPassando para confirmar sua *aula experimental avaliativa de Pilates hoje, às 15h*. Sua vaga já está reservada e estaremos te esperando para essa experiência conosco 🧡\nSerá um momento para você conhecer nosso espaço, entender nossa forma de trabalho e *sentir no corpo se o pilates faz sentido para você neste momento.*\nCaso não consiga comparecer, por favor nos avise para que possamos *remarcar para um dia melhor.*\nAté mais tarde! ✨  🧡"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oiii!! Aqui é a Larissa Ferraz, responsável pela Corporis. Como posso te ajudar?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Boa tarde , consegue me passar qual o horário que eu tenho sexta que não anotei e preciso me organizar"
+      }
+    ]
+  },
+  {
+    "titulo": "Fisioterapia Pélvica — Claudimara Arsego",
+    "dialogo": [
+      {
+        "autor": "lead",
+        "texto": "Bom dia tudo"
+      },
+      {
+        "autor": "clara",
+        "texto": "Bom dia Cláudia, tudo bem?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Em que posso te ajudar?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Vcs fazem fisioterapia pélvica? Como funciona os valores?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Trabalhamos sim. Antes de te passar mais informações. Por qual motivo seria a busca pela fisioterapia pélvica?"
+      },
+      {
+        "autor": "lead",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "Entendi Cláudia! Sim, existem várias técnicas para trabalhar essa \"abertura\". Vou te explicar como funciona o nosso acompanhamento aqui 😊"
+      },
+      {
+        "autor": "clara",
+        "texto": "Nós fizemos uma consulta inicial, nesse primeiro momento conversamos para entender da seu histórico de saúde e também um avaliação física da sua região pélvica, avaliamos como está a tensão dessa musculatura, que pelo seu relato é o que aparenta, e também avaliamos a força, resistencia e alongamento dessa musculatura. A partir disso teremos um diganóstico fisioterapeutico e conseguimos traçar um plano de tratamento para você."
+      },
+      {
+        "autor": "clara",
+        "texto": "O que acha de agendarmos essa consulta inicial para você? Como é a sua disponibilidade, Claudia? Você consegue durante o dia ou após às 18h, se encaixa melhor na sua rotina?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Me passa valores,"
+      },
+      {
+        "autor": "clara",
+        "texto": "A Consulta inicial, tem duração aproximadamente de 1h-1h20min, e é _R$350,00_ se você fechar o acompanhamento conosco ela tem desconto de mais de *70%* e fica R$ 100,00."
+      },
+      {
+        "autor": "lead",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "A consulta inicial para avaliação, é _R$ 100,00_"
+      },
+      {
+        "autor": "lead",
+        "texto": "E por sessão quanto fica?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Pra mim ter uma ideia"
+      },
+      {
+        "autor": "clara",
+        "texto": "Bom dia Claudia!  Tudo bem?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Não consegui terminar de te responder ontem! Fui para atendimentos e parei tarde."
+      },
+      {
+        "autor": "clara",
+        "texto": "Entao, não trabalhamos com valor por atendimento avulso de sessões, e sim com plano de atendimento, ao final da consulta inicial a gente consegue te repassar quanto ficará bem certinho o _plano de tratamento_ para você com o número de atendimentos que você precisa! E esse valor  pode parcelar no cartão de crédito!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oiii Cláudia! Bom dia, tudo bem?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Não vi sua ligação, posso te ajudar?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Preciso fazer essas fisioterapia, preciso saber valores"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "lead",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "lead",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "lead",
+        "texto": "As fisioterapia serão uma vez por semana?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Onde vcs atendem?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Seria possível agendar pra sexta agora as 13:00hs?"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "lead",
+        "texto": "Tá vou conversar com meu marido e te chamo. Obrigada ☺️"
+      },
+      {
+        "autor": "clara",
+        "texto": "Tenho horário disponível amanhã às 9h30 ou na quinta às 13h30, consegue nos dar o retorno até às 19h de hoje?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Então nesses horários não consigo hehehe"
+      },
+      {
+        "autor": "lead",
+        "texto": "Meus horários são complicados hehehe"
+      },
+      {
+        "autor": "lead",
+        "texto": "Vou ver com meu marido e depois tentamos encaixar um horário"
+      },
+      {
+        "autor": "lead",
+        "texto": "Uma pergunta, vcs utilizam aparelho que ajuda a relaxar a musculatura pra facilitar uso dos dilatadores"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      }
+    ]
+  },
+  {
+    "titulo": "Fisioterapia Pélvica — Isadora Fachin",
+    "dialogo": [
+      {
+        "autor": "lead",
+        "texto": "Oii, boa tarde"
+      },
+      {
+        "autor": "lead",
+        "texto": "Tudo bem?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Gostaria de saber os valores da fisioterapia pélvica"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oiii Isadora! Boa tarde. Tudo bem sim e você?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Perdão a demora para te responder!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Aqui é a Larissa responsável pela Corporis, prazer em falar com você!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Claro! Vou te explicar como funciona."
+      },
+      {
+        "autor": "clara",
+        "texto": "Você busca a fisio hoje, por algum motivo específico?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Oii Larissa"
+      },
+      {
+        "autor": "lead",
+        "texto": "Tudo bem também"
+      },
+      {
+        "autor": "lead",
+        "texto": "Simm"
+      },
+      {
+        "autor": "lead",
+        "texto": "A Doutora Graziela me indicou vocês"
+      },
+      {
+        "autor": "clara",
+        "texto": "Entendi! Já tivemos alguns casos de vaginismo, e após os primeiros atendimentos recebemos feedbacks positivos com relação ao tratamento."
+      },
+      {
+        "autor": "clara",
+        "texto": "Você já teve alguma vez perda urinária ou seria mais dor mesmo?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Não, nunca tive"
+      },
+      {
+        "autor": "lead",
+        "texto": "Seria por causa da dor mesmo"
+      },
+      {
+        "autor": "clara",
+        "texto": "Entendi Isa!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Então, nós fizemos uma consulta inicial no primeiro momento para entender como está a sua saúde íntima e sua saúde de modo geral e também uma avaliação da sua região  pélvica, assim teremos um diagnóstico fisioterapêutico e traçar um plano de tratamento para você!"
+      },
+      {
+        "autor": "clara",
+        "texto": "O que acha de agendarmos essa _primeira consulta_. Como é a sua disponibilidade, Isa?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Bom dia Larissa, tudo bem?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Entendii"
+      },
+      {
+        "autor": "lead",
+        "texto": "Eu tenho só as quintas feiras livres no momento"
+      },
+      {
+        "autor": "lead",
+        "texto": "Depois das 17:30"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oiii Isa! Tudo certinho sim e você?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Isa, após às 17h30. Consigo somente na segundas e quartas."
+      },
+      {
+        "autor": "clara",
+        "texto": "Durante o dia, consigo fazer um comprovante de comparecimento para você apresentar no trabalho. Você conseguiria talvez?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Tudo bemm"
+      },
+      {
+        "autor": "lead",
+        "texto": "Se você puder, quarta que vem estou livre"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oiii Isadora! Bom dia. Tudo bem?\nPerdão a demora em responder. Estava na viajando o dia todo ontem e não consegui pegar o celular direito.\nVou ter na *quarta dia 25/03 às 19h*. Você consegue?\nEssa semana não consigo!"
+      },
+      {
+        "autor": "lead",
+        "texto": "Oii, bom dia"
+      },
+      {
+        "autor": "lead",
+        "texto": "Tudo bem e você??"
+      },
+      {
+        "autor": "lead",
+        "texto": "No dia 25 não consigo, vou ter aula e não posso faltar nessa matéria"
+      },
+      {
+        "autor": "clara",
+        "texto": "Tudo bem também! 😊"
+      },
+      {
+        "autor": "lead",
+        "texto": "No dia 01/04 você consegue?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Entendi!!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Vou dar uma olhadinha. Só um momento!"
+      },
+      {
+        "autor": "lead",
+        "texto": "Qualquer coisa, assim que terminar meus estágios eu te chamo novamente"
+      },
+      {
+        "autor": "lead",
+        "texto": "Ai fica mais tranquilo e vou ter as tardes livres"
+      },
+      {
+        "autor": "clara",
+        "texto": "Quarta, do dia 01/04 consigo 😊"
+      },
+      {
+        "autor": "lead",
+        "texto": "Que bommm"
+      }
+    ]
+  },
+  {
+    "titulo": "Pilates — Michelle Garbozza Zucchi",
+    "dialogo": [
+      {
+        "autor": "clara",
+        "texto": "Oiii!! Aqui é a Larissa Ferraz, responsável pela Corporis. Como posso te ajudar?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Olá! Tenho interesse e queria agendar um horário, por favor."
+      },
+      {
+        "autor": "clara",
+        "texto": "Oii Michelle! Bom dia, tudo bem?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Aqui é a Larissa, responsável pela Corporis. Prazer em falar com você!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Claro. Vamos agendar sim. Para você fica melhor durante o dia ou após às 18h?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Bom dia após as 18:00"
+      },
+      {
+        "autor": "lead",
+        "texto": "Tudo bem e vc?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Tudo bem também! 🥰"
+      },
+      {
+        "autor": "clara",
+        "texto": "Eu vou ter horário essa semana ainda na _sexta às 20h_. Você consegue?"
+      },
+      {
+        "autor": "lead",
+        "texto": "Sim consigo"
+      },
+      {
+        "autor": "lead",
+        "texto": "Tem custo?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Ótimo! Vou agendar para você. Sabe onde fica a Corporis?"
+      },
+      {
+        "autor": "clara",
+        "texto": "A aula experimental não. 😊"
+      },
+      {
+        "autor": "lead",
+        "texto": "Nao"
+      },
+      {
+        "autor": "lead",
+        "texto": "Posso levar minha menina pra olhar"
+      },
+      {
+        "autor": "lead",
+        "texto": "Se ela gostar vou colocar ela comigo"
+      },
+      {
+        "autor": "lead",
+        "texto": "Só se não tiver problema"
+      },
+      {
+        "autor": "lead",
+        "texto": "Senão bem tranquilo"
+      },
+      {
+        "autor": "clara",
+        "texto": "Bem fácil de achar! Fica no centro medico Xanxere, no prédio novo em frente a emergência do hospital São Paulo, no nono andar, na sala *903*. 😊"
+      },
+      {
+        "autor": "clara",
+        "texto": "Qual a idade dela Michelle?"
+      },
+      {
+        "autor": "lead",
+        "texto": "12"
+      },
+      {
+        "autor": "lead",
+        "texto": "Ela é bem magrinha"
+      },
+      {
+        "autor": "clara",
+        "texto": "Ah perfeito! Pode levar sim, a gente atende a partir dessa idade. 😊"
+      },
+      {
+        "autor": "lead",
+        "texto": "E está ficando corcunda😊"
+      },
+      {
+        "autor": "lead",
+        "texto": "Percebi pela escápula"
+      },
+      {
+        "autor": "clara",
+        "texto": "Sim!! Já atendemos adolescentes com essa mesma queixa."
+      },
+      {
+        "autor": "clara",
+        "texto": "Quer marcar uma pra ela fazer com você?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Tenho vaga disponível Z"
+      },
+      {
+        "autor": "lead",
+        "texto": "Se puder"
+      },
+      {
+        "autor": "lead",
+        "texto": "Agradeço"
+      },
+      {
+        "autor": "clara",
+        "texto": "Ai se ela gostar. Vocês já começam! 😊"
+      },
+      {
+        "autor": "clara",
+        "texto": "Claro! Me passa o nome completo de vocês para eu colocar certinho na agenda."
+      },
+      {
+        "autor": "lead",
+        "texto": "Michelle Garbozza Zucchi"
+      },
+      {
+        "autor": "lead",
+        "texto": "Isabelle Garbozza Zucchi"
+      },
+      {
+        "autor": "clara",
+        "texto": "Ótimo! Vou marcar 😊"
+      },
+      {
+        "autor": "lead",
+        "texto": "Se você conseguir me dá um oi no dia pra mim"
+      },
+      {
+        "autor": "lead",
+        "texto": "Não esquecer"
+      },
+      {
+        "autor": "lead",
+        "texto": "😉"
+      },
+      {
+        "autor": "clara",
+        "texto": "Sim! Mandamos msg sim para lembrar."
+      },
+      {
+        "autor": "lead",
+        "texto": "Gratidão"
+      }
+    ]
+  },
+  {
+    "titulo": "Fisioterapia Pélvica Gestante — Simone Casagrande",
+    "dialogo": [
+      {
+        "autor": "lead",
+        "texto": "Boa tarde. Tudo bem ?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Oii! Boa tarde Simone! Tudo bem sim e você?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Aqui é a Larissa, responsável pela Corporis. Prazer em falar com você! 😊"
+      },
+      {
+        "autor": "lead",
+        "texto": "Oii Lari, que bom falar contigo!"
+      },
+      {
+        "autor": "lead",
+        "texto": "Estou gravidinha hehe\nPretendo fazer parto se tudo ir bem.\nQuero ver se podemos fazer algo para me preparar ainda mais essa possibilidade ☺️"
+      },
+      {
+        "autor": "clara",
+        "texto": "Quanto tempo Simo! Hehehe"
+      },
+      {
+        "autor": "clara",
+        "texto": "Aii que legal! Parabéns 🥰"
+      },
+      {
+        "autor": "lead",
+        "texto": "Simm, vi que vc estava por xanxere esses dias mas não consegui ir pessoalmente"
+      },
+      {
+        "autor": "clara",
+        "texto": "E seja muito bem vinda à Corporis. Amamos acompanhar as gravidinhas por aqui e temos acompanhados especializados para vocês! 🥰"
+      },
+      {
+        "autor": "clara",
+        "texto": "Você está com quantas semanas?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Simmmm!! Ficamos uma semana aí, matando a saudade heheh"
+      },
+      {
+        "autor": "lead",
+        "texto": "Quase 24  já"
+      },
+      {
+        "autor": "lead",
+        "texto": "Que legal"
+      },
+      {
+        "autor": "lead",
+        "texto": "Eu tô fazendo musculação, mas queria fazer algo específico para ajudar no parto e pós tbm"
+      },
+      {
+        "autor": "clara",
+        "texto": "Ahhhh já está no segundo tri e passamos da metade hehehe"
+      },
+      {
+        "autor": "clara",
+        "texto": "Quem é a sua médica?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Perfeito! É super importante nesse momento procurar algum mais específico para a gestação."
+      },
+      {
+        "autor": "clara",
+        "texto": "Aqui nós temos, o *mamãe ativa*, que é um programa com aulas de pilates e atendimentos de fisioterapia pélvica. E também o acompanhamento somente com fisioterapia pélvica."
+      },
+      {
+        "autor": "clara",
+        "texto": "Você está fazendo musculação quantas vezes na semana?"
+      },
+      {
+        "autor": "lead",
+        "texto": "3 vezes"
+      },
+      {
+        "autor": "lead",
+        "texto": "Quando da faço mais, mas digamos que é uma média"
+      },
+      {
+        "autor": "lead",
+        "texto": "Simm"
+      },
+      {
+        "autor": "lead",
+        "texto": "Edenilson Zorzo"
+      },
+      {
+        "autor": "clara",
+        "texto": "Ótimo Simo!!"
+      },
+      {
+        "autor": "clara",
+        "texto": "Vou te enviar um áudio breve pra te explicar como funciona os acompanhamentos."
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "lead",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "lead",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "clara",
+        "texto": "áudio ocultado"
+      },
+      {
+        "autor": "lead",
+        "texto": "Perfeito"
+      },
+      {
+        "autor": "clara",
+        "texto": "Simo, _segunda às 09h_ da manhã você consegue?"
+      },
+      {
+        "autor": "lead",
+        "texto": "A tarde teria ?"
+      },
+      {
+        "autor": "clara",
+        "texto": "Tenho as 16h na segunda"
+      },
+      {
+        "autor": "clara",
+        "texto": "Pode ser?"
+      },
+      {
+        "autor": "lead",
+        "texto": "A consulta demora em torno de 1 hora ?"
+      }
+    ]
+  }
+]

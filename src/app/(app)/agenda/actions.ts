@@ -132,6 +132,16 @@ export async function updateAppointmentStatus(
     revalidatePath(`/leads/${appointment.lead_id}`);
   }
 
+  if (parsed.data.status === "confirmado" && appointment?.lead_id) {
+    await db.from("activities").insert({
+      lead_id: appointment.lead_id,
+      tipo: "agendamento",
+      descricao: "Lead confirmou presença na avaliação",
+      meta: { appointment_id: parsed.data.id, status: "confirmado" },
+    });
+    revalidatePath(`/leads/${appointment.lead_id}`);
+  }
+
   revalidatePath("/agenda");
   revalidatePath("/dashboard");
   return { success: true };

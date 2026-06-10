@@ -270,6 +270,13 @@ export async function POST(request: NextRequest) {
   }
 
   // 7. Insert message
+  // Primeiro contato = nenhuma mensagem ainda nesta conversa (antes deste insert).
+  const { count: priorMessages } = await db
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("conversation_id", conv.id);
+  const isFirstContact = (priorMessages ?? 0) === 0;
+
   if (fromMe) {
     const recentThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
@@ -337,19 +344,50 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // 7. Log activity
-  await db.from("activities").insert({
-    lead_id:  lead.id,
-    tipo:     "mensagem",
-    descricao: fromMe
-      ? (isAudio ? "Áudio enviado manualmente pelo WhatsApp" : "Mensagem enviada manualmente pelo WhatsApp")
-      : (isAudio ? "Áudio recebido no WhatsApp (transcrição automática)" : "Mensagem recebida no WhatsApp"),
-    meta:     {
-      evolution_message_id: evolutionMessageId,
-      preview: effectiveContent.slice(0, 120),
-      from_me: fromMe,
-    },
-  });
+  // 7. Log activity — só o primeiro contato vira marco; trocas seguintes vivem na tabela messages.
+  if (isFirstContact) {
+    await db.from("activities").insert({
+      lead_id:  lead.id,
+      tipo:     "mensagem",
+      descricao: "Primeiro contato no WhatsApp",
+      meta:     {
+        evolution_message_id: evolutionMessageId,
+        preview: effectiveContent.slice(0, 120),
+        from_me: fromMe,
+      },
+    });
+  } else if (!fromMe) {
+    // Resposta de lead a uma campanha de reativação — registra uma única vez.
+    const { data: lastCampaign } = await db
+      .from("activities")
+      .select("id, created_at, meta")
+      .eq("lead_id", lead.id)
+      .eq("tipo", "campanha")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const isCampaignTarget =
+      lastCampaign && !(lastCampaign.meta as { campanha_resposta?: boolean } | null)?.campanha_resposta;
+
+    if (isCampaignTarget) {
+      const { count: respondedAfter } = await db
+        .from("activities")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_id", lead.id)
+        .eq("tipo", "campanha")
+        .gt("created_at", lastCampaign.created_at);
+
+      if ((respondedAfter ?? 0) === 0) {
+        await db.from("activities").insert({
+          lead_id:  lead.id,
+          tipo:     "campanha",
+          descricao: "Respondeu à campanha de reativação",
+          meta:     { campanha_resposta: true },
+        });
+      }
+    }
+  }
 
   // 8. Trigger AI if mode = 'ia'
   if (!fromMe && conv.modo === "ia") {
