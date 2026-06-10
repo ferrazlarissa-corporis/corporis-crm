@@ -147,6 +147,19 @@ export async function updateAppointmentStatus(
   return { success: true };
 }
 
+export type LeadSelectOption = { id: string; nome: string; interesse: string };
+
+export async function getLeadsForSelect(): Promise<LeadSelectOption[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .schema("crm")
+    .from("leads")
+    .select("id, nome, interesse")
+    .is("archived_at", null)
+    .order("nome");
+  return (data ?? []) as LeadSelectOption[];
+}
+
 export async function getAgendaAppointments(startIso: string, endIso: string) {
   const start = new Date(startIso);
   const end = new Date(endIso);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useTransition } from "react";
 import { ChevronLeft, ChevronRight, Plus, Check, RotateCcw, X, CalendarDays } from "lucide-react";
 import {
   addDays,
@@ -27,7 +27,8 @@ import {
 } from "@/lib/clinic-config";
 import type { AppointmentType, AppointmentStatus } from "@/types/database";
 import Link from "next/link";
-import { getAgendaAppointments } from "./actions";
+import { getAgendaAppointments, createAppointment, getLeadsForSelect, type LeadSelectOption } from "./actions";
+import { validateAppointmentWithinClinicHours } from "@/lib/clinic-config";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -280,9 +281,9 @@ function WnBtn({ children, onClick, label }: { children: React.ReactNode; onClic
   );
 }
 
-function PrimaryBtn({ children }: { children: React.ReactNode }) {
+function PrimaryBtn({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
   return (
-    <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "var(--color-alaranjado)", color: "#fff", border: 0, borderRadius: "var(--radius-pill)", fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+    <button type="button" onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "var(--color-alaranjado)", color: "#fff", border: 0, borderRadius: "var(--radius-pill)", fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
       {children}
     </button>
   );
@@ -300,6 +301,168 @@ interface AgendaClientProps {
   initialRangeEnd: string;
 }
 
+// ─── New Appointment Modal ────────────────────────────────────────────────────
+
+const APPT_DURATION_MINUTES = 50;
+const APPT_HOUR_OPTIONS = Array.from({ length: 15 }, (_, i) => String(i + 6).padStart(2, "0"));
+const APPT_MINUTE_OPTIONS = ["00", "30"];
+const APPT_TYPE_BY_INTEREST: Record<string, AppointmentType> = {
+  pilates:          "avaliacao_pilates",
+  pilates_gestante: "avaliacao_gestante",
+  fisio_pelvica:    "avaliacao_fisio_pelvica",
+  indefinido:       "avaliacao_pilates",
+};
+const APPT_TYPE_LABEL: Record<AppointmentType, string> = {
+  avaliacao_pilates:        "Avaliação Pilates",
+  avaliacao_gestante:       "Avaliação Gestante",
+  avaliacao_fisio_pelvica:  "Avaliação Fisio Pélvica",
+};
+
+function nextApptStartParts() {
+  const d = new Date();
+  d.setHours(d.getHours() + 1, 0, 0, 0);
+  if (d.getHours() < 6)  d.setHours(6, 0, 0, 0);
+  if (d.getHours() > 20) { d.setDate(d.getDate() + 1); d.setHours(6, 0, 0, 0); }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, hour: pad(d.getHours()), minute: "00" };
+}
+
+function NewApptModal({ clinicHours, onClose, onScheduled }: {
+  clinicHours: ClinicHoursRow[];
+  onClose: () => void;
+  onScheduled: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [leads, setLeads] = useState<LeadSelectOption[]>([]);
+  const [selectedLeadId, setSelectedLeadId] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<"lead" | "inicio" | "observacoes" | null>(null);
+  const defaultStart = nextApptStartParts();
+
+  useEffect(() => {
+    getLeadsForSelect().then(setLeads).catch(() => {});
+  }, []);
+
+  const selectedLead = leads.find((l) => l.id === selectedLeadId);
+  const appointmentType = selectedLead ? APPT_TYPE_BY_INTEREST[selectedLead.interesse] : "avaliacao_pilates";
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const fd = new FormData(event.currentTarget);
+    const dateVal = String(fd.get("data") ?? "");
+    const hourVal = String(fd.get("hora") ?? "");
+    const minVal  = String(fd.get("minuto") ?? "");
+    const obs     = String(fd.get("observacoes") ?? "").trim();
+
+    if (!selectedLeadId) {
+      setError("Selecione uma lead."); setErrorField("lead"); return;
+    }
+    const startStr = dateVal && hourVal && minVal ? `${dateVal}T${hourVal}:${minVal}:00` : "";
+    const start = new Date(startStr);
+    if (!startStr || Number.isNaN(start.getTime())) {
+      setError("Informe a data e hora."); setErrorField("inicio"); return;
+    }
+    const end = new Date(start.getTime() + APPT_DURATION_MINUTES * 60_000);
+    const validation = validateAppointmentWithinClinicHours(clinicHours, start, end);
+    if (!validation.ok) { setError(validation.message); setErrorField("inicio"); return; }
+    if (!obs) { setError("Registre uma observação antes de confirmar o agendamento."); setErrorField("observacoes"); return; }
+
+    startTransition(async () => {
+      setError(null); setErrorField(null);
+      const result = await createAppointment({
+        lead_id: selectedLeadId,
+        inicio: start.toISOString(),
+        fim: end.toISOString(),
+        tipo: appointmentType,
+        observacoes: obs,
+      });
+      if (result.success) { onScheduled(); onClose(); }
+      else { setError(result.error); }
+    });
+  };
+
+  const isLeadError  = errorField === "lead";
+  const isStartError = errorField === "inicio";
+  const isObsError   = errorField === "observacoes";
+  const inputStyle = (err: boolean) => ({
+    width: "100%", border: err ? "0.8px solid var(--color-ui-error)" : "0.6px solid var(--color-cinza)",
+    borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px",
+    color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box" as const,
+    boxShadow: err ? "0 0 0 3px rgba(205,61,54,0.10)" : "none",
+  });
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(42,31,26,0.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: "var(--bg-card)", borderRadius: "var(--radius-lg)", border: "0.6px solid var(--color-cinza)", padding: "28px 28px 24px", width: 480, boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, color: "var(--color-texto-escuro)", margin: 0 }}>
+            Agendar avaliação
+          </h2>
+          <button type="button" onClick={onClose} style={{ background: "none", border: 0, cursor: "pointer", color: "var(--color-texto-medio)", padding: 4 }}>
+            <X className="h-4 w-4" style={{ strokeWidth: 1.6 }} />
+          </button>
+        </div>
+
+        <form noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: 6 }}>
+              Lead
+            </label>
+            <select value={selectedLeadId} onChange={(e) => { setSelectedLeadId(e.target.value); if (isLeadError) { setError(null); setErrorField(null); } }} style={inputStyle(isLeadError)}>
+              <option value="">Selecione uma lead...</option>
+              {leads.map((l) => (
+                <option key={l.id} value={l.id}>{l.nome}</option>
+              ))}
+            </select>
+            {selectedLead && (
+              <span style={{ display: "block", marginTop: 6, fontFamily: "var(--font-body)", fontSize: 11, color: "var(--color-texto-medio)" }}>
+                {APPT_TYPE_LABEL[appointmentType]}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <label style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: 6 }}>
+              Data e hora
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 88px 88px", gap: 10 }}>
+              <input name="data" type="date" required defaultValue={defaultStart.date} onChange={() => isStartError && (setError(null), setErrorField(null))} style={inputStyle(isStartError)} />
+              <select name="hora" defaultValue={defaultStart.hour} aria-label="Hora" onChange={() => isStartError && (setError(null), setErrorField(null))} style={inputStyle(isStartError)}>
+                {APPT_HOUR_OPTIONS.map((h) => <option key={h} value={h}>{h}h</option>)}
+              </select>
+              <select name="minuto" defaultValue={defaultStart.minute} aria-label="Minutos" onChange={() => isStartError && (setError(null), setErrorField(null))} style={inputStyle(isStartError)}>
+                {APPT_MINUTE_OPTIONS.map((m) => <option key={m} value={m}>{m} min</option>)}
+              </select>
+            </div>
+            <span style={{ display: "block", marginTop: 6, fontFamily: "var(--font-body)", fontSize: 11, color: "var(--color-texto-medio)" }}>
+              Duração padrão: {APPT_DURATION_MINUTES} minutos.
+            </span>
+          </div>
+
+          <div>
+            <label style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+              <span>Observações</span>
+              <span style={{ color: "var(--color-ui-error)", letterSpacing: "1.1px" }}>Obrigatório</span>
+            </label>
+            <textarea name="observacoes" rows={4} required placeholder="Ex.: preferência de horário, contexto da conversa ou cuidado importante." onChange={() => isObsError && (setError(null), setErrorField(null))} style={{ ...inputStyle(isObsError), resize: "vertical", lineHeight: 1.45 }} />
+          </div>
+
+          {error && <p style={{ fontFamily: "var(--font-body)", fontSize: 13, color: "var(--color-ui-error)", margin: 0 }}>{error}</p>}
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, paddingTop: 8, borderTop: "0.6px solid var(--color-cinza)" }}>
+            <button type="button" onClick={onClose} style={{ appearance: "none", border: "0.6px solid var(--color-cinza)", background: "var(--bg-card)", color: "var(--color-texto-escuro)", borderRadius: "var(--radius-pill)", padding: "9px 18px", fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={pending} style={{ appearance: "none", border: 0, background: pending ? "var(--color-tangerina)" : "var(--color-alaranjado)", color: "#fff", borderRadius: "var(--radius-pill)", padding: "9px 18px", fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, cursor: pending ? "wait" : "pointer" }}>
+              {pending ? "Agendando..." : "Confirmar agendamento"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function AgendaClient({ initialEvents, nowIso, nowH, nowM, clinicHours, initialRangeStart, initialRangeEnd }: AgendaClientProps) {
   const todayDate = new Date(nowIso);
   const [viewMode, setViewMode] = useState<AgendaViewMode>("week");
@@ -309,6 +472,7 @@ export default function AgendaClient({ initialEvents, nowIso, nowH, nowM, clinic
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [popoverPos, setPopoverPos] = useState<PopoverPos | null>(null);
+  const [newApptOpen, setNewApptOpen] = useState(false);
   const gridScrollRef = useRef<HTMLDivElement>(null);
 
   const { start: periodStart, end: periodEnd } = getPeriodBounds(viewMode, periodAnchor);
@@ -494,7 +658,7 @@ export default function AgendaClient({ initialEvents, nowIso, nowH, nowM, clinic
             ) : null}
           </div>
         </div>
-        <PrimaryBtn><Plus size={14} strokeWidth={1.8} />Novo horário</PrimaryBtn>
+        <PrimaryBtn onClick={() => setNewApptOpen(true)}><Plus size={14} strokeWidth={1.8} />Novo horário</PrimaryBtn>
       </header>
 
       {/* ── Agenda wrap ── */}
@@ -788,6 +952,21 @@ export default function AgendaClient({ initialEvents, nowIso, nowH, nowM, clinic
       {/* Popover */}
       {selectedEvt && popoverPos && (
         <EventPopover evt={selectedEvt} pos={popoverPos} onClose={closePopover} />
+      )}
+
+      {/* New appointment modal */}
+      {newApptOpen && (
+        <NewApptModal
+          clinicHours={clinicHours}
+          onClose={() => setNewApptOpen(false)}
+          onScheduled={() => {
+            // Reload appointments for the current period
+            setLoadingAppointments(true);
+            getAgendaAppointments(periodStartIso, periodEndIso)
+              .then((res) => { if (res.success) setAppointments(res.appointments); })
+              .finally(() => setLoadingAppointments(false));
+          }}
+        />
       )}
     </div>
   );
