@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { sendTextMessage } from "@/lib/evolution/client";
+import { sendTextMessage, sendPresence } from "@/lib/evolution/client";
 import { AGENT_TOOLS, HANDOFF_RULE_AGENDAMENTO, executeTool, type ToolInput } from "@/lib/ai/tools";
 import { resolveModel } from "@/lib/ai/model";
 import type { Json } from "@/types/database";
@@ -127,15 +127,42 @@ function splitIntoBursts(text: string): string[] {
     .slice(0, MAX_BURSTS);
 }
 
-/** Random int between min and max (inclusive), in ms. */
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 function randomDelay(minMs: number, maxMs: number): number {
   return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 }
 
-/** Typing delay proportional to message length (simulates reading + writing time). */
-function typingDelay(text: string): number {
-  // ~50 chars/s typing speed, min 1.5s, max 6s for inter-burst gaps
-  return Math.min(6000, Math.max(1500, text.length * 40));
+/**
+ * Human-like delay before sending a burst.
+ * First burst = reading + thinking + composing (longer).
+ * Subsequent = proportional to message length.
+ * 30% chance of an extra "distraction" pause on top.
+ */
+function humanDelay(text: string, isFirst: boolean): number {
+  const base = isFirst
+    ? randomDelay(8000, 20000)
+    : Math.min(9000, Math.max(2500, text.length * 55));
+  const extra = Math.random() < 0.3 ? randomDelay(2000, 6000) : 0;
+  return base + extra;
+}
+
+/**
+ * Sleep `totalMs` ms while continuously re-sending the "composing" presence
+ * every 4.5s so WhatsApp keeps showing the typing indicator throughout.
+ */
+async function sleepWithPresence(phone: string, totalMs: number): Promise<void> {
+  const TICK = 4500;
+  const end = Date.now() + totalMs;
+  await sendPresence(phone, "composing").catch(() => {});
+  let remaining = end - Date.now();
+  while (remaining > 0) {
+    await sleep(Math.min(TICK, remaining));
+    remaining = end - Date.now();
+    if (remaining > 0) {
+      await sendPresence(phone, "composing").catch(() => {});
+    }
+  }
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -197,6 +224,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "outside_hours" });
     }
   }
+
+  // Show "typing..." immediately while the LLM generates the reply
+  sendPresence(lead.telefone, "composing").catch(() => {});
 
   // Load last 20 messages
   const { data: msgRows } = await db
@@ -352,13 +382,10 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < bursts.length; i++) {
       const chunk = bursts[i];
 
-      // Primeira mensagem: delay aleatório (2–9s) simula Clara "pensando/digitando".
-      // Demais bursts: delay proporcional ao tamanho da mensagem.
-      const delay = i === 0
-        ? randomDelay(2000, 9000)
-        : typingDelay(chunk);
+      // Sleep mantendo "digitando" visível; delay proporcional + variância aleatória.
+      await sleepWithPresence(lead.telefone, humanDelay(chunk, i === 0));
 
-      await sendTextMessage({ phone: lead.telefone, text: chunk }, delay);
+      await sendTextMessage({ phone: lead.telefone, text: chunk });
 
       await db.from("messages").insert({
         conversation_id,

@@ -170,6 +170,26 @@ export async function fetchMediaBase64(
   }
 }
 
+// ─── Presence / typing indicator ─────────────────────────────────────────────
+
+/**
+ * Sends a WhatsApp presence update ("composing" = typing indicator).
+ * Best-effort — fails silently so it never blocks the reply flow.
+ */
+export async function sendPresence(
+  phone: string,
+  presence: "composing" | "recording" | "paused" | "available",
+): Promise<void> {
+  try {
+    await evoFetch("/chat/sendPresence/{instance}", {
+      number: e164ToEvolution(phone),
+      options: { presence },
+    });
+  } catch {
+    // non-critical
+  }
+}
+
 // ─── Contact check ────────────────────────────────────────────────────────────
 
 /**
