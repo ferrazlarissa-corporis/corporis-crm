@@ -108,6 +108,11 @@ function buildSystemPrompt(
 - Use no máximo ${MAX_BURSTS} mensagens por resposta. Frases curtas, tom de conversa.
 - Evite emojis em excesso (no máximo um, e só quando soar natural).
 
+## Qualificação proativa (obrigatório)
+- Assim que identificar o interesse da aluna (pilates, gestante, fisio pélvica), use IMEDIATAMENTE a tool **atualizar_interesse** — mesmo que ela não tenha pedido para agendar ainda.
+- Após 2 ou mais trocas de mensagens, use a tool **registrar_score** com uma nota de 0–100 e uma justificativa breve. Critérios: clareza do interesse (0–30), urgência/motivação (0–30), disponibilidade de agenda (0–20), perfil de aluna (0–20). Atualize o score se a conversa trouxer informação relevante nova.
+- Essas ações são silenciosas: execute-as sempre que houver informação suficiente, sem mencionar ao lead.
+
 ## Guardrails obrigatórios
 - NUNCA prometa cura, resultado em prazo ou faça diagnóstico.
 - NUNCA use "paciente" ou "patologia". Use "aluna" e "incômodo".
@@ -141,9 +146,9 @@ function randomDelay(minMs: number, maxMs: number): number {
  */
 function humanDelay(text: string, isFirst: boolean): number {
   const base = isFirst
-    ? randomDelay(8000, 20000)
-    : Math.min(9000, Math.max(2500, text.length * 55));
-  const extra = Math.random() < 0.3 ? randomDelay(2000, 6000) : 0;
+    ? randomDelay(8000, 18000)
+    : Math.min(9000, Math.max(2000, text.length * 55));
+  const extra = Math.random() < 0.3 ? randomDelay(1500, 5000) : 0;
   return base + extra;
 }
 
