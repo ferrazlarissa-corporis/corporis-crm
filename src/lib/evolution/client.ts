@@ -179,11 +179,14 @@ export async function fetchMediaBase64(
 export async function sendPresence(
   phone: string,
   presence: "composing" | "recording" | "paused" | "available",
+  delayMs = 5000,
 ): Promise<void> {
   try {
+    // Evolution API v2: presence/delay são top-level, não dentro de `options`.
     await evoFetch("/chat/sendPresence/{instance}", {
       number: e164ToEvolution(phone),
-      options: { presence },
+      delay: delayMs,
+      presence,
     });
   } catch {
     // non-critical
