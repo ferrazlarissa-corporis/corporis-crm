@@ -9,7 +9,8 @@ import {
   type FunilLeadQueryRow,
 } from "@/lib/queries/leads";
 import { createClient } from "@/lib/supabase/server";
-import { gerarContextoFromMessages, type ContextoAvaliacao } from "@/lib/ai/contexto";
+import { gerarContextoFromMessages } from "@/lib/ai/contexto-server";
+import type { ContextoAvaliacao } from "@/lib/ai/contexto";
 import type { LeadStage, LeadInterest, LeadOrigin, Json } from "@/types/database";
 
 const LEAD_STAGE_VALUES = ["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"] as const;
