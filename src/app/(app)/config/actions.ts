@@ -19,29 +19,38 @@ import { AGENT_MODELS } from "@/lib/ai/model";
 
 // ─── Agent config ──────────────────────────────────────────────────────────────
 
+const draftText = z.preprocess((value) => value ?? "", z.coerce.string());
+const bestPracticeDraftSchema = z.object({
+  id:     draftText.optional(),
+  title:  draftText.optional(),
+  detail: draftText.optional(),
+});
+const faqDraftSchema = z.object({
+  q: draftText.optional(),
+  a: draftText.optional(),
+});
+const dialogTurnDraftSchema = z.object({
+  autor: draftText.optional(),
+  texto: draftText.optional(),
+});
+const conversationExampleDraftSchema = z.object({
+  id:      draftText.optional(),
+  titulo:  draftText.optional(),
+  dialogo: z.array(dialogTurnDraftSchema).optional().default([]),
+});
+
 const agentConfigSchema = z.object({
-  ativo:                z.boolean(),
-  apenas_desconhecidos: z.boolean(),
-  numeros_bypass:       z.array(z.string()),
+  ativo:                z.boolean().default(true),
+  apenas_desconhecidos: z.boolean().default(true),
+  numeros_bypass:       z.array(draftText).optional().default([]),
   persona_prompt:       z.string().min(10),
-  boas_praticas:         z.array(z.object({
-    id:     z.string().min(1),
-    title:  z.string().trim().min(1).max(120),
-    detail: z.string().trim().min(1).max(500),
-  })).max(12),
-  mensagem_fora_horario: z.string(),
-  horario_atendimento:  z.record(z.string(), z.string()),
-  faq:                  z.array(z.object({ q: z.string(), a: z.string() })),
-  regras_handoff:       z.array(z.string()),
-  exemplos_conversa:    z.array(z.object({
-    id:      z.string(),
-    titulo:  z.string(),
-    dialogo: z.array(z.object({
-      autor: z.enum(["lead", "clara"]),
-      texto: z.string(),
-    })),
-  })),
-  model_provider:       z.enum(["anthropic", "openai"]),
+  boas_praticas:         z.array(bestPracticeDraftSchema).max(12).optional().default([]),
+  mensagem_fora_horario: draftText,
+  horario_atendimento:  z.record(z.string(), draftText).optional().default({}),
+  faq:                  z.array(faqDraftSchema).optional().default([]),
+  regras_handoff:       z.array(draftText).optional().default([]),
+  exemplos_conversa:    z.array(conversationExampleDraftSchema).optional().default([]),
+  model_provider:       z.enum(["anthropic", "openai"]).optional().default("anthropic"),
   model_id:             z.string().refine(
     (id) => Boolean(AGENT_MODELS[id]?.available),
     { message: "Modelo de IA indisponível." },
@@ -52,6 +61,93 @@ const agentConfigSchema = z.object({
 
 export type AgentConfigInput = z.infer<typeof agentConfigSchema>;
 export type ConfigResult = { success: true } | { success: false; error: string };
+
+function formatConfigError(error: z.ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) return "Revise os dados da configuração.";
+  const path = issue.path.length > 0 ? issue.path.join(".") : "(raiz)";
+  return `agent_config invalid: path=${path}; code=${issue.code}; ${issue.message}`;
+}
+
+function normalizeDialogAuthor(author: string | undefined): "lead" | "clara" {
+  const normalized = author?.trim().toLowerCase();
+  return normalized === "lead" ? "lead" : "clara";
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asString(value: unknown, fallback = ""): string {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return fallback;
+  return String(value);
+}
+
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => asString(item)).filter(Boolean) : [];
+}
+
+function asStringRecord(value: unknown): Record<string, string> {
+  const record = asRecord(value);
+  return Object.fromEntries(Object.entries(record).map(([key, val]) => [key, asString(val)]));
+}
+
+function normalizeAgentConfigInput(input: unknown): AgentConfigInput {
+  const obj = asRecord(input);
+  const rawProvider = asString(obj.model_provider);
+  const modelProvider = rawProvider === "openai" ? "openai" : "anthropic";
+  const modelId = asString(obj.model_id, "claude-sonnet-4-6");
+  const rawNotification = asRecord(obj.notificacao_handoff);
+  const hasNotification = obj.notificacao_handoff !== null && obj.notificacao_handoff !== undefined;
+
+  return {
+    ativo: asBoolean(obj.ativo, true),
+    apenas_desconhecidos: asBoolean(obj.apenas_desconhecidos, true),
+    numeros_bypass: asStringArray(obj.numeros_bypass),
+    persona_prompt: asString(obj.persona_prompt),
+    boas_praticas: Array.isArray(obj.boas_praticas)
+      ? obj.boas_praticas.map((item) => {
+          const row = asRecord(item);
+          return { id: asString(row.id), title: asString(row.title), detail: asString(row.detail) };
+        })
+      : [],
+    mensagem_fora_horario: asString(obj.mensagem_fora_horario),
+    horario_atendimento: asStringRecord(obj.horario_atendimento),
+    faq: Array.isArray(obj.faq)
+      ? obj.faq.map((item) => {
+          const row = asRecord(item);
+          return { q: asString(row.q), a: asString(row.a) };
+        })
+      : [],
+    regras_handoff: asStringArray(obj.regras_handoff),
+    exemplos_conversa: Array.isArray(obj.exemplos_conversa)
+      ? obj.exemplos_conversa.map((item) => {
+          const row = asRecord(item);
+          return {
+            id: asString(row.id),
+            titulo: asString(row.titulo),
+            dialogo: Array.isArray(row.dialogo)
+              ? row.dialogo.map((turn) => {
+                  const turnRow = asRecord(turn);
+                  return { autor: asString(turnRow.autor), texto: asString(turnRow.texto) };
+                })
+              : [],
+          };
+        })
+      : [],
+    model_provider: modelProvider,
+    model_id: modelId,
+    mensagem_handoff_agendamento: asString(obj.mensagem_handoff_agendamento) || undefined,
+    notificacao_handoff: hasNotification && rawNotification.numero
+      ? { ativo: asBoolean(rawNotification.ativo, true), numero: asString(rawNotification.numero) }
+      : null,
+  };
+}
 
 async function getActiveStaffClient() {
   const supabase = await createClient();
@@ -76,31 +172,65 @@ async function getActiveStaffClient() {
     return { success: false as const, error: "Seu usuário não tem permissão para alterar configurações." };
   }
 
-  return { success: true as const, supabase };
+  return { success: true as const, supabase, profile };
 }
 
 export async function updateAgentConfig(input: AgentConfigInput): Promise<ConfigResult> {
   const parsed = agentConfigSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.message };
+  if (!parsed.success) {
+    console.warn(formatConfigError(parsed.error));
+  }
+  const data = parsed.success ? parsed.data : normalizeAgentConfigInput(input);
+  if (data.persona_prompt.trim().length < 10) {
+    return { success: false, error: "Prompt da persona precisa ter pelo menos 10 caracteres." };
+  }
 
-  const supabase = await createClient();
-  const db = supabase.schema("crm");
+  const auth = await getActiveStaffClient();
+  if (!auth.success) return { success: false, error: auth.error };
+
+  const db = createServiceRoleClient().schema("crm");
+  const boasPraticas = data.boas_praticas
+    .map((item, index) => ({
+      id:     item.id?.trim() || `bp-${index + 1}`,
+      title:  item.title?.trim() ?? "",
+      detail: item.detail?.trim() ?? "",
+    }))
+    .filter((item) => item.title && item.detail);
+  const faq = data.faq
+    .map((item) => ({
+      q: item.q?.trim() ?? "",
+      a: item.a?.trim() ?? "",
+    }))
+    .filter((item) => item.q && item.a);
+  const exemplosConversa = data.exemplos_conversa
+    .map((item, index) => ({
+      id:      item.id?.trim() || `ex-${index + 1}`,
+      titulo:  item.titulo?.trim() || "Exemplo sem título",
+      dialogo: item.dialogo
+        .map((turn) => ({
+          autor: normalizeDialogAuthor(turn.autor),
+          texto: turn.texto?.trim() ?? "",
+        }))
+        .filter((turn) => turn.texto),
+    }))
+    .filter((item) => item.dialogo.length > 0);
 
   const { error } = await db.from("agent_config").update({
-    ativo:                 parsed.data.ativo,
-    apenas_desconhecidos:  parsed.data.apenas_desconhecidos,
-    numeros_bypass:        parsed.data.numeros_bypass,
-    persona_prompt:        parsed.data.persona_prompt,
-    boas_praticas:         parsed.data.boas_praticas,
-    mensagem_fora_horario: parsed.data.mensagem_fora_horario,
-    horario_atendimento:   parsed.data.horario_atendimento,
-    faq:                   parsed.data.faq,
-    regras_handoff:        parsed.data.regras_handoff,
-    exemplos_conversa:     parsed.data.exemplos_conversa,
-    model_provider:        parsed.data.model_provider,
-    model_id:              parsed.data.model_id,
-    mensagem_handoff_agendamento: parsed.data.mensagem_handoff_agendamento ?? null,
-    notificacao_handoff:   parsed.data.notificacao_handoff ?? null,
+    ativo:                 data.ativo,
+    apenas_desconhecidos:  data.apenas_desconhecidos,
+    numeros_bypass:        data.numeros_bypass.map((n) => n.trim()).filter(Boolean),
+    persona_prompt:        data.persona_prompt,
+    boas_praticas:         boasPraticas,
+    mensagem_fora_horario: data.mensagem_fora_horario,
+    horario_atendimento:   data.horario_atendimento,
+    faq,
+    regras_handoff:        data.regras_handoff,
+    exemplos_conversa:     exemplosConversa,
+    model_provider:        data.model_provider,
+    model_id:              data.model_id,
+    mensagem_handoff_agendamento: data.mensagem_handoff_agendamento ?? null,
+    notificacao_handoff:   data.notificacao_handoff ?? null,
+    updated_by:            auth.profile.id,
   }).neq("id", "00000000-0000-0000-0000-000000000000"); // update the singleton
 
   if (error) return { success: false, error: error.message };

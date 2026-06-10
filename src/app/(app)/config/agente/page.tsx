@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useTransition } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchWhatsAppStatus, updateAgentConfig, type WhatsAppStatus } from '../actions';
 import { AGENT_MODELS } from '@/lib/ai/model';
@@ -157,6 +157,38 @@ const TOC_ITEMS = [
   { label: 'Regras de handoff' },
   { label: 'Horário de atendimento' },
 ];
+
+function formatRelativeEdit(value: string | Date | null): string {
+  if (!value) return 'Ainda não salvo';
+  const date = value instanceof Date ? value : new Date(value);
+  const diffMs = Date.now() - date.getTime();
+  if (Number.isNaN(diffMs)) return 'Última edição salva';
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (minutes < 1) return 'Última edição agora';
+  if (minutes < 60) return `Última edição há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Última edição há ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `Última edição há ${days} dia${days === 1 ? '' : 's'}`;
+}
+
+function buildPersonaPreview(persona: string, practices: BestPracticeItem[]): string[] {
+  const source = `${persona}\n${practices.map(item => `${item.title} ${item.detail}`).join('\n')}`.toLowerCase();
+  const personWord = source.includes('aluna') ? 'aluna' : 'pessoa';
+  const asksFirst = source.includes('acolh') || source.includes('escuta');
+  const noCurePromise = source.includes('cura') || source.includes('diagnostic');
+  const hasAssessment = source.includes('avalia');
+
+  return [
+    'Oi, queria saber sobre pilates. Estou com dor nas costas.',
+    asksFirst
+      ? `Oi! Entendo, dor nas costas atrapalha bastante a rotina. Me conta: esse incômodo aparece mais em algum horário ou movimento?`
+      : `Oi! Posso te ajudar. Me conta um pouco mais sobre essa dor nas costas?`,
+    hasAssessment
+      ? `A gente costuma começar com uma avaliação inicial para entender melhor o corpo da ${personWord} e orientar o caminho com calma${noCurePromise ? ', sem prometer nada antes da fisio avaliar.' : '.'}`
+      : `Com essas informações eu consigo te orientar melhor e, se fizer sentido, encaminhar para a equipe.`
+  ];
+}
 
 // ─── small components ─────────────────────────────────────────────────────────
 
@@ -506,6 +538,10 @@ export default function AgentePage() {
   const [activeToc, setActiveToc] = useState(0);
   const [savePending, startSave] = useTransition();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastEditedAt, setLastEditedAt] = useState<string | null>(null);
+  const [lastEditedBy, setLastEditedBy] = useState<string | null>(null);
+  const [currentProfileName, setCurrentProfileName] = useState<string | null>(null);
   const [whatsAppStatus, setWhatsAppStatus] = useState<WhatsAppStatus | null>(null);
   const [whatsAppStatusLoading, setWhatsAppStatusLoading] = useState(true);
   const [whatsAppStatusCheckedAt, setWhatsAppStatusCheckedAt] = useState<Date | null>(null);
@@ -515,6 +551,7 @@ export default function AgentePage() {
     const supabase = createClient();
     supabase.schema('crm').from('agent_config').select('*').single().then(({ data }) => {
       if (!data) return;
+      setLastEditedAt(data.updated_at ?? null);
       setAgentActive(data.ativo);
       setApenasDesconhecidos(data.apenas_desconhecidos ?? true);
       if (Array.isArray(data.numeros_bypass) && (data.numeros_bypass as unknown[]).length > 0) {
@@ -562,6 +599,26 @@ export default function AgentePage() {
         setNotificacaoHandoffAtivo(notif.ativo ?? false);
         setNotificacaoHandoffNumero(notif.numero ?? '');
       }
+      if (data.updated_by) {
+        supabase
+          .schema('crm')
+          .from('profiles')
+          .select('nome')
+          .eq('id', data.updated_by)
+          .maybeSingle()
+          .then(({ data: profile }) => setLastEditedBy(profile?.nome ?? null));
+      }
+    });
+    supabase.auth.getUser().then(({ data }) => {
+      const userId = data.user?.id;
+      if (!userId) return;
+      supabase
+        .schema('crm')
+        .from('profiles')
+        .select('nome')
+        .eq('id', userId)
+        .maybeSingle()
+        .then(({ data: profile }) => setCurrentProfileName(profile?.nome ?? null));
     });
   }, []);
 
@@ -598,6 +655,7 @@ export default function AgentePage() {
     };
 
     startSave(async () => {
+      setSaveError(null);
       const result = await updateAgentConfig({
         ativo:                agentActive,
         apenas_desconhecidos: apenasDesconhecidos,
@@ -619,6 +677,11 @@ export default function AgentePage() {
           : null,
       });
       setSaveStatus(result.success ? 'saved' : 'error');
+      setSaveError(result.success ? null : result.error);
+      if (result.success) {
+        setLastEditedAt(new Date().toISOString());
+        setLastEditedBy(currentProfileName);
+      }
       setTimeout(() => setSaveStatus('idle'), 3000);
     });
   }
@@ -869,6 +932,11 @@ export default function AgentePage() {
   const whatsAppCheckedLabel = whatsAppStatusCheckedAt
     ? `Atualizado às ${whatsAppStatusCheckedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
     : 'Ainda não verificado';
+  const personaPreviewMessages = useMemo(
+    () => buildPersonaPreview(personaText, bestPractices),
+    [personaText, bestPractices],
+  );
+  const lastEditedText = `${formatRelativeEdit(lastEditedAt)}${lastEditedBy ? ` · por ${lastEditedBy}` : ''}`;
 
   return (
     <div style={{ display: 'grid', gridTemplateRows: '64px 1fr', height: '100dvh', overflow: 'hidden' }}>
@@ -1028,40 +1096,6 @@ export default function AgentePage() {
           }}
         >
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
-
-            {/* Page intro */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, marginBottom: 24 }}>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--color-texto-medio)', lineHeight: 1.55, maxWidth: 520 }}>
-                O <strong style={{ color: 'var(--color-texto-escuro)', fontWeight: 500 }}>agente cuida do primeiro contato no WhatsApp</strong> — apresenta a clínica, responde dúvidas comuns e marca a avaliação inicial. Aqui você define o tom, o que ele sabe e quando ele deve te chamar.
-              </p>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 10,
-                background: '#fff',
-                border: '0.6px solid var(--color-cinza)',
-                borderRadius: 'var(--radius-pill)',
-                padding: '6px 14px 6px 6px',
-                fontFamily: 'var(--font-body)',
-                fontSize: 12,
-                color: 'var(--color-texto-escuro)',
-                flexShrink: 0,
-              }}>
-                <span style={{
-                  width: 26, height: 26,
-                  borderRadius: 'var(--radius-pill)',
-                  background: 'var(--color-alaranjado)',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 10,
-                }}>cl</span>
-                <span style={{ color: 'var(--color-texto-medio)' }}>agente</span>
-                &nbsp;<strong style={{ fontWeight: 500 }}>Clara</strong>
-              </span>
-            </div>
 
             {/* ─── Section 1: Status ─────────────────────────────────────── */}
             <section
@@ -1322,29 +1356,7 @@ export default function AgentePage() {
 
               <div style={secBody}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(320px, 360px)', gap: 28, alignItems: 'stretch' }}>
-                  <div>
-                    {/* persona tags */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                      {['Cuidadosa', 'Técnica', 'Acolhedora'].map(tag => (
-                        <span key={tag} style={{
-                          fontFamily: 'var(--font-body)',
-                          fontSize: 10.5,
-                          fontWeight: 500,
-                          letterSpacing: '1.2px',
-                          textTransform: 'uppercase',
-                          background: 'var(--bg-2)',
-                          color: 'var(--color-texto-medio)',
-                          padding: '4px 10px',
-                          borderRadius: 'var(--radius-pill)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6,
-                        }}>
-                          <span style={{ width: 5, height: 5, borderRadius: 'var(--radius-pill)', background: 'var(--color-bege)' }} />
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                     <div style={fieldLabel}>
                       <span>Prompt da persona</span>
                       <span style={{ fontFamily: 'var(--font-body)', fontSize: 10.5, color: 'var(--color-texto-medio)', letterSpacing: '0.3px', textTransform: 'none', fontWeight: 400, fontFeatureSettings: '"tnum"' }}>
@@ -1353,7 +1365,7 @@ export default function AgentePage() {
                     </div>
                     <textarea
                       className="crm-config-ta"
-                      style={{ minHeight: 320 }}
+                      style={{ flex: 1, minHeight: 520 }}
                       value={personaText}
                       onChange={e => setPersonaText(e.target.value)}
                       maxLength={2000}
@@ -1420,22 +1432,35 @@ export default function AgentePage() {
                       Prévia do tom
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 760 }}>
-                      <div style={{ alignSelf: 'flex-start', maxWidth: 460, background: '#fff', border: '0.6px solid var(--color-cinza)', borderRadius: 'var(--radius-md)', padding: '10px 13px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-escuro)', lineHeight: 1.55 }}>
-                        Oi, queria saber sobre pilates. Estou com dor nas costas.
-                      </div>
-                      <div style={{ alignSelf: 'flex-end', maxWidth: 560, background: 'var(--color-bege-claro)', border: '0.6px solid rgba(210, 176, 110, 0.45)', borderRadius: 'var(--radius-md)', padding: '10px 13px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-escuro)', lineHeight: 1.55 }}>
-                        Oi! Claro, posso te ajudar. Me conta um pouquinho: essa dor aparece mais em algum momento do dia ou em algum movimento específico?
-                      </div>
-                      <div style={{ alignSelf: 'flex-end', maxWidth: 560, background: 'var(--color-bege-claro)', border: '0.6px solid rgba(210, 176, 110, 0.45)', borderRadius: 'var(--radius-md)', padding: '10px 13px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-escuro)', lineHeight: 1.55 }}>
-                        A gente começa pela avaliação inicial gratuita, para a fisioterapeuta entender seu incômodo com calma e orientar o melhor caminho.
-                      </div>
+                      {personaPreviewMessages.map((message, index) => {
+                        const isLead = index === 0;
+                        return (
+                          <div
+                            key={`${index}-${message}`}
+                            style={{
+                              alignSelf: isLead ? 'flex-start' : 'flex-end',
+                              maxWidth: isLead ? 460 : 560,
+                              background: isLead ? '#fff' : 'var(--color-bege-claro)',
+                              border: isLead ? '0.6px solid var(--color-cinza)' : '0.6px solid rgba(210, 176, 110, 0.45)',
+                              borderRadius: 'var(--radius-md)',
+                              padding: '10px 13px',
+                              fontFamily: 'var(--font-body)',
+                              fontSize: 13,
+                              color: 'var(--color-texto-escuro)',
+                              lineHeight: 1.55,
+                            }}
+                          >
+                            {message}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
               </div>
 
               <div style={secFoot}>
-                <SavedNote text="Última edição há 2 dias · por Larissa" />
+                <SavedNote text={lastEditedText} />
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <Btn ghost onClick={() => setPersonaPreviewOpen(open => !open)}>
                     <MessageSquare size={13} strokeWidth={1.8} />
@@ -1443,7 +1468,7 @@ export default function AgentePage() {
                   </Btn>
                   <Btn primary onClick={handleSaveAll}>{savePending ? 'Salvando…' : 'Salvar configuração'}</Btn>
                   {saveStatus === 'saved' && <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-verde)' }}>✓ Salvo</span>}
-                  {saveStatus === 'error' && <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-ui-error)' }}>Erro ao salvar</span>}
+                  {saveStatus === 'error' && <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-ui-error)', maxWidth: 360, lineHeight: 1.35 }}>{saveError ?? 'Erro ao salvar'}</span>}
                 </div>
               </div>
             </section>
@@ -1673,27 +1698,6 @@ export default function AgentePage() {
                       />
                     </div>
                   ))}
-                </div>
-
-                <div style={{ marginTop: 18, padding: '14px 16px', background: 'var(--bg-2)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 500, letterSpacing: '1.6px', textTransform: 'uppercase', color: 'var(--color-bege)' }}>
-                    Encaminhar para
-                  </span>
-                  {[
-                    { initials: 'LF', bg: 'var(--color-bege-claro)', color: '#6B5526', name: 'Larissa Ferraz' },
-                    { initials: 'TF', bg: 'rgba(240, 131, 83, 0.18)', color: '#B85A2E', name: 'Tainara Fracasso' },
-                  ].map(p => (
-                    <span key={p.name} style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-texto-escuro)', display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', border: '0.6px solid var(--color-cinza)', padding: '5px 11px 5px 5px', borderRadius: 'var(--radius-pill)' }}>
-                      <span style={{ width: 22, height: 22, borderRadius: 'var(--radius-pill)', background: p.bg, color: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 9 }}>
-                        {p.initials}
-                      </span>
-                      {p.name}
-                    </span>
-                  ))}
-                  <Btn sm ghost>
-                    <Plus size={12} strokeWidth={2} />
-                    Adicionar pessoa
-                  </Btn>
                 </div>
 
                 {/* ── Mensagem ao lead após handoff de agendamento ── */}

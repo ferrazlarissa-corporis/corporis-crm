@@ -99,8 +99,9 @@ export async function getDashboardStats() {
       .gte("created_at", twoWeeksAgo.toISOString())
       .lt("created_at", weekAgo.toISOString()),
     db.from("conversations")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "aberta"),
+      .select("*, leads!inner(archived_at)", { count: "exact", head: true })
+      .eq("status", "aberta")
+      .is("leads.archived_at", null),
     db.from("appointments")
       .select("*", { count: "exact", head: true })
       .in("status", ["agendado", "confirmado"] as AppointmentStatus[]),

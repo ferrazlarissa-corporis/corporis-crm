@@ -305,6 +305,7 @@ export interface Database {
           boas_praticas: Json;
           mensagem_handoff_agendamento: string | null;
           notificacao_handoff: Json;
+          updated_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -324,6 +325,7 @@ export interface Database {
           boas_praticas?: Json;
           mensagem_handoff_agendamento?: string | null;
           notificacao_handoff?: Json;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };

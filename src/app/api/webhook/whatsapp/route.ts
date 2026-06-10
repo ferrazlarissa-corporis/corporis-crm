@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { jidToE164, extractMessageText, isContactSaved, fetchMediaBase64 } from "@/lib/evolution/client";
+import { jidToE164, extractMessageText, isContactSaved, getContactSavedStatus, fetchMediaBase64 } from "@/lib/evolution/client";
 import { transcribeAudio } from "@/lib/ai/whisper";
 
 // ─── Payload schema ───────────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ const webhookSchema = z.object({
     messageTimestamp: z.number().optional(),
   }),
 });
+
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -78,9 +79,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, skipped: "non-text" });
   }
 
+  if (!remoteJid.endsWith("@s.whatsapp.net")) {
+    return NextResponse.json({ ok: true, skipped: "non_individual_chat" });
+  }
+
   const supabase = createServiceRoleClient();
   const db       = supabase.schema("crm");
   const now      = new Date().toISOString();
+  const resetSecret = process.env.AGENT_RESET_SECRET;
+  const isResetCommand = Boolean(resetSecret && !fromMe && effectiveContent.trim() === resetSecret);
 
   // 3. Deduplicate
   const { data: existing } = await db
@@ -93,16 +100,46 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
-  // 4. Find or create lead
-  const { data: existingLead, error: existingLeadErr } = await db
-    .from("leads")
-    .select("id, nome, estagio")
-    .eq("telefone", telefone)
-    .maybeSingle();
+  // 4. Find lead and agent config in parallel
+  const [existingLeadResult, agentConfResult] = await Promise.all([
+    db.from("leads")
+      .select("id, nome, estagio")
+      .eq("telefone", telefone)
+      .maybeSingle(),
+    db.from("agent_config")
+      .select("ativo, apenas_desconhecidos, numeros_bypass")
+      .single(),
+  ]);
+
+  const { data: existingLead, error: existingLeadErr } = existingLeadResult;
+  const agentConf = agentConfResult.data;
 
   if (existingLeadErr) {
     console.error("[webhook] lead lookup error:", existingLeadErr);
     return NextResponse.json({ error: "lead_lookup_failed" }, { status: 500 });
+  }
+
+  const bypass = Array.isArray(agentConf?.numeros_bypass)
+    ? (agentConf.numeros_bypass as string[])
+    : [];
+  const isBypassed = bypass.includes(telefone);
+  // Bypass numbers re-enter the funnel (as a fresh lead) whenever they send the reset command
+  const shouldRecreateLeadOnReset = isResetCommand && isBypassed;
+
+  if (!existingLead) {
+    if (fromMe) {
+      return NextResponse.json({ ok: true, skipped: "outbound_without_existing_lead" });
+    }
+
+    if (!shouldRecreateLeadOnReset) {
+      const contactSaved = await getContactSavedStatus(remoteJid);
+      if (contactSaved !== false) {
+        return NextResponse.json({
+          ok: true,
+          skipped: contactSaved === true ? "known_contact_without_lead" : "contact_status_unavailable",
+        });
+      }
+    }
   }
 
   const { data: lead, error: leadErr } = existingLead
@@ -137,7 +174,6 @@ export async function POST(request: NextRequest) {
         evolution_chat_id:  remoteJid,
         janela_24h_expira_at: window24h,
         nao_lida:           !fromMe,
-        ...(fromMe ? { modo: "humano" as const } : {}),
       },
       { onConflict: "evolution_chat_id", ignoreDuplicates: false }
     )
@@ -150,8 +186,68 @@ export async function POST(request: NextRequest) {
   }
 
   // 6. Reset command — intercept before storing message
-  const resetSecret = process.env.AGENT_RESET_SECRET;
-  if (resetSecret && !fromMe && effectiveContent.trim() === resetSecret) {
+  if (isResetCommand) {
+    if (shouldRecreateLeadOnReset) {
+      await db.from("leads").delete().eq("id", lead.id);
+
+      const { data: freshLead, error: freshLeadErr } = await db
+        .from("leads")
+        .insert({
+          nome: data.pushName?.trim() || lead.nome || telefone,
+          telefone,
+          estagio: "novo",
+          interesse: "indefinido",
+          score_qualificacao: null,
+          ultima_interacao_at: now,
+        })
+        .select("id")
+        .single();
+
+      if (freshLeadErr || !freshLead) {
+        console.error("[webhook] reset recreate lead error:", freshLeadErr);
+        return NextResponse.json({ error: "reset_recreate_lead_failed" }, { status: 500 });
+      }
+
+      const { data: freshConv, error: freshConvErr } = await db
+        .from("conversations")
+        .insert({
+          lead_id: freshLead.id,
+          evolution_chat_id: remoteJid,
+          modo: "ia",
+          status: "aberta",
+          nao_lida: false,
+          janela_24h_expira_at: window24h,
+        })
+        .select("id")
+        .single();
+
+      if (freshConvErr || !freshConv) {
+        console.error("[webhook] reset recreate conversation error:", freshConvErr);
+        return NextResponse.json({ error: "reset_recreate_conversation_failed" }, { status: 500 });
+      }
+
+      await db.from("activities").insert({
+        lead_id: freshLead.id,
+        tipo: "sistema",
+        descricao: "Lead de teste recriada do zero via comando secreto",
+        meta: {
+          comando: "reset",
+          telefone,
+          previous_lead_id: lead.id,
+          previous_conversation_id: conv.id,
+          conversation_id: freshConv.id,
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        reset: true,
+        recreated: true,
+        lead_id: freshLead.id,
+        conversation_id: freshConv.id,
+      });
+    }
+
     await db.from("messages").delete().eq("conversation_id", conv.id);
 
     await db.from("leads").update({
@@ -176,6 +272,30 @@ export async function POST(request: NextRequest) {
   // 7. Insert message
   if (fromMe) {
     const recentThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+    // Check for Clara's outbound message echoed back by Evolution API
+    const { data: recentAiMessage } = await db
+      .from("messages")
+      .select("id")
+      .eq("conversation_id", conv.id)
+      .eq("direcao", "saida")
+      .eq("autor", "ia")
+      .eq("conteudo", effectiveContent)
+      .is("evolution_message_id", null)
+      .gte("created_at", recentThreshold)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentAiMessage) {
+      // Echo of Clara's message — just attach the evolution ID, don't flip mode
+      await db
+        .from("messages")
+        .update({ evolution_message_id: evolutionMessageId })
+        .eq("id", recentAiMessage.id);
+      return NextResponse.json({ ok: true, synced_ai_message: true, conversation_id: conv.id });
+    }
+
     const { data: recentManualMessage } = await db
       .from("messages")
       .select("id")
@@ -195,6 +315,7 @@ export async function POST(request: NextRequest) {
         .update({ evolution_message_id: evolutionMessageId })
         .eq("id", recentManualMessage.id);
     } else {
+      // Genuine human reply from WhatsApp — insert and flip to human mode
       await db.from("messages").insert({
         conversation_id:      conv.id,
         direcao:              "saida",
@@ -203,6 +324,7 @@ export async function POST(request: NextRequest) {
         tipo:                 isAudio ? "audio" : "texto",
         evolution_message_id: evolutionMessageId,
       });
+      await db.from("conversations").update({ modo: "humano" }).eq("id", conv.id);
     }
   } else {
     await db.from("messages").insert({
@@ -231,16 +353,6 @@ export async function POST(request: NextRequest) {
 
   // 8. Trigger AI if mode = 'ia'
   if (!fromMe && conv.modo === "ia") {
-    const { data: agentConf } = await db
-      .from("agent_config")
-      .select("ativo, apenas_desconhecidos, numeros_bypass")
-      .single();
-
-    const bypass = Array.isArray(agentConf?.numeros_bypass)
-      ? (agentConf.numeros_bypass as string[])
-      : [];
-    const isBypassed = bypass.includes(telefone);
-
     if (!isBypassed) {
       // Skip known contacts when filter is active
       if (agentConf?.apenas_desconhecidos) {

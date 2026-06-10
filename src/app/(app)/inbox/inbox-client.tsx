@@ -169,9 +169,7 @@ function HandoffControl({ compact = false, modo, onToggle }: { compact?: boolean
 
 export default function InboxClient({ initialConversations }: { initialConversations: ConversationRow[] }) {
   const [isContactPanelOpen, setContactPanelOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialConversations[0]?.id ?? null
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [convs, setConvs] = useState(initialConversations);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);

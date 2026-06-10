@@ -184,7 +184,8 @@ export async function isContactSaved(jid: string): Promise<boolean> {
 
 export async function getContactSavedStatus(jid: string): Promise<boolean | null> {
   try {
-    const result = await evoFetch("/chat/findContacts/{instance}", { where: { id: jid } });
+    // Evolution API v2: contacts use UUID as `id`; the JID lives in `remoteJid`
+    const result = await evoFetch("/chat/findContacts/{instance}", { where: { remoteJid: jid } });
     const list = Array.isArray(result) ? result : [];
     return list.length > 0;
   } catch {
