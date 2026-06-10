@@ -103,6 +103,7 @@ export interface Database {
           responsavel_id: string | null;
           ultima_interacao_at: string | null;
           archived_at: string | null;
+          contexto_avaliacao: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -119,6 +120,7 @@ export interface Database {
           responsavel_id?: string | null;
           ultima_interacao_at?: string | null;
           archived_at?: string | null;
+          contexto_avaliacao?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -111,6 +111,7 @@ function buildSystemPrompt(
 ## Qualificação proativa (obrigatório)
 - Assim que identificar o interesse da aluna (pilates, gestante, fisio pélvica), use IMEDIATAMENTE a tool **atualizar_interesse** — mesmo que ela não tenha pedido para agendar ainda.
 - Após 2 ou mais trocas de mensagens, use a tool **registrar_score** com uma nota de 0–100 e uma justificativa breve. Critérios: clareza do interesse (0–30), urgência/motivação (0–30), disponibilidade de agenda (0–20), perfil de aluna (0–20). Atualize o score se a conversa trouxer informação relevante nova.
+- Sempre que descobrir algo sobre a queixa/incômodo, objetivo, histórico, restrições/pontos de atenção, disponibilidade ou motivação da aluna, use a tool **registrar_contexto_avaliacao** para registrar — envie só os campos que descobriu. Isso prepara a fisioterapeuta para a avaliação. Atualize conforme a conversa evolui.
 - Essas ações são silenciosas: execute-as sempre que houver informação suficiente, sem mencionar ao lead.
 
 ## Guardrails obrigatórios
@@ -414,13 +415,7 @@ export async function POST(request: NextRequest) {
         tipo:     "texto",
       });
     }
-
-    await db.from("activities").insert({
-      lead_id:  lead.id,
-      tipo:     "mensagem",
-      descricao: "Mensagem enviada pelo agente IA",
-      meta:     { preview: bursts.join(" ").slice(0, 120), bursts: bursts.length },
-    });
+    // Respostas da IA não viram marco na timeline — vivem na tabela messages (aba Conversa).
   }
 
   return NextResponse.json({ ok: true, model: modelId, bursts: bursts.length });

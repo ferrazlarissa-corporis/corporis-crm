@@ -9,7 +9,8 @@ import {
   type FunilLeadQueryRow,
 } from "@/lib/queries/leads";
 import { createClient } from "@/lib/supabase/server";
-import type { LeadStage, LeadInterest, LeadOrigin } from "@/types/database";
+import { gerarContextoFromMessages, type ContextoAvaliacao } from "@/lib/ai/contexto";
+import type { LeadStage, LeadInterest, LeadOrigin, Json } from "@/types/database";
 
 const LEAD_STAGE_VALUES = ["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"] as const;
 const APPOINTMENT_REQUIRED_STAGES = new Set<LeadStage>(["avaliacao_agendada", "no_show", "negociacao", "convertido"]);
@@ -26,6 +27,16 @@ const LEAD_STAGE_ORDER: Record<LeadStage, number> = {
 function stageRequiresAppointment(stage: LeadStage) {
   return APPOINTMENT_REQUIRED_STAGES.has(stage);
 }
+
+const STAGE_LABEL: Record<LeadStage, string> = {
+  novo: "Novo",
+  qualificacao: "Em qualificação",
+  avaliacao_agendada: "Avaliação agendada",
+  no_show: "No-show",
+  negociacao: "Em negociação",
+  convertido: "Convertido",
+  perdido: "Perdido",
+};
 
 const createLeadSchema = z.object({
   nome:      z.string().min(2),
@@ -126,11 +137,18 @@ export async function updateLeadStage(input: z.infer<typeof updateStageSchema>):
   const { error } = await db.from("leads").update(updatePayload).eq("id", parsed.data.id);
   if (error) return { success: false, error: error.message };
 
+  const stageDescricao =
+    nextStage === "convertido"
+      ? "Convertida em aluna"
+      : nextStage === "perdido"
+        ? (parsed.data.motivoPerda ? `Lead perdida — ${parsed.data.motivoPerda}` : "Lead perdida")
+        : `Movida de ${STAGE_LABEL[currentStage]} para ${STAGE_LABEL[nextStage]}`;
+
   await db.from("activities").insert({
     lead_id:  parsed.data.id,
     tipo:     "mudanca_estagio",
-    descricao: `Movida de ${currentStage} para ${nextStage}`,
-    meta:     { de: currentStage, para: nextStage },
+    descricao: stageDescricao,
+    meta:     { de: currentStage, para: nextStage, milestone: nextStage === "convertido" || nextStage === "perdido" },
   });
 
   revalidatePath("/funil");
@@ -212,4 +230,62 @@ export async function archiveLead(leadId: string): Promise<UpdateStageResult> {
   revalidatePath("/funil");
   revalidatePath("/dashboard");
   return { success: true };
+}
+
+export type GerarResumoResult =
+  | { success: true; contexto: ContextoAvaliacao }
+  | { success: false; error: string };
+
+export async function gerarResumoContexto(leadId: string): Promise<GerarResumoResult> {
+  const parsed = z.string().uuid().safeParse(leadId);
+  if (!parsed.success) return { success: false, error: "ID inválido" };
+
+  const supabase = await createClient();
+  const db = supabase.schema("crm");
+
+  // Conversa mais recente do lead
+  const { data: conv } = await db
+    .from("conversations")
+    .select("id")
+    .eq("lead_id", parsed.data)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!conv) return { success: false, error: "Ainda não há conversa para resumir." };
+
+  const { data: msgs } = await db
+    .from("messages")
+    .select("direcao, conteudo")
+    .eq("conversation_id", conv.id)
+    .order("created_at", { ascending: true })
+    .limit(100);
+
+  if (!msgs || msgs.length === 0) {
+    return { success: false, error: "Ainda não há conversa para resumir." };
+  }
+
+  let contexto: ContextoAvaliacao;
+  try {
+    contexto = await gerarContextoFromMessages(msgs);
+  } catch {
+    return { success: false, error: "Não foi possível gerar o resumo agora. Tente novamente." };
+  }
+
+  const { error } = await db
+    .from("leads")
+    .update({ contexto_avaliacao: contexto as unknown as Json })
+    .eq("id", parsed.data);
+
+  if (error) return { success: false, error: error.message };
+
+  await db.from("activities").insert({
+    lead_id: parsed.data,
+    tipo: "sistema",
+    descricao: "Resumo de avaliação gerado pela IA",
+    meta: { fonte: "resumo_ia" },
+  });
+
+  revalidatePath(`/leads/${parsed.data}`);
+  return { success: true, contexto };
 }

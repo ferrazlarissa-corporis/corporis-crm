@@ -7,7 +7,14 @@ import {
 } from "@/lib/clinic-config";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendTextMessage } from "@/lib/evolution/client";
-import type { AppointmentType, LeadInterest } from "@/types/database";
+import {
+  CONTEXTO_TOOL_NAME,
+  CONTEXTO_TOOL_SCHEMA,
+  mergeContexto,
+  parseContexto,
+  type ContextoAvaliacao,
+} from "@/lib/ai/contexto";
+import type { AppointmentType, LeadInterest, Json } from "@/types/database";
 
 /** Título da regra de handoff para agendamento — deve coincidir com o salvo no DB. */
 export const HANDOFF_RULE_AGENDAMENTO =
@@ -71,6 +78,11 @@ export const AGENT_TOOLS: Tool[] = [
       },
       required: ["score", "justificativa"],
     },
+  },
+  {
+    name: CONTEXTO_TOOL_NAME,
+    description: "Registra/atualiza silenciosamente o contexto da aluna para a fisioterapeuta usar na avaliação. Chame sempre que aprender algo novo sobre queixa, objetivo, histórico, restrições, disponibilidade ou motivação. Envie apenas os campos que você descobriu — os demais são preservados. Nunca mencione esta ação ao lead.",
+    input_schema: CONTEXTO_TOOL_SCHEMA,
   },
   {
     name: "solicitar_handoff",
@@ -245,6 +257,20 @@ export async function executeTool(
           });
         }
         return JSON.stringify({ success: true, score });
+      }
+
+      case CONTEXTO_TOOL_NAME: {
+        const lead_id = ctx.leadId;
+        const { data: current } = await db
+          .from("leads")
+          .select("contexto_avaliacao")
+          .eq("id", lead_id)
+          .single();
+        const existing = parseContexto(current?.contexto_avaliacao);
+        const merged = mergeContexto(existing, input as Partial<ContextoAvaliacao>, "agente");
+        // Update silencioso (roda a cada mensagem) — sem activity para não poluir a timeline.
+        await db.from("leads").update({ contexto_avaliacao: merged as unknown as Json }).eq("id", lead_id);
+        return JSON.stringify({ success: true });
       }
 
       case "solicitar_handoff": {

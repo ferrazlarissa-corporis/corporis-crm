@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { LeadStage, LeadInterest, LeadOrigin } from "@/types/database";
+import { parseContexto, type ContextoAvaliacao } from "@/lib/ai/contexto";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -44,6 +45,7 @@ export type LeadDetail = {
   ultima_interacao_at: string | null;
   created_at: string;
   responsavel: { id: string; nome: string } | null;
+  contexto_avaliacao: ContextoAvaliacao | null;
 };
 
 export function mapLeadRowForFunil(row: FunilLeadQueryRow, now = new Date()): FunilLead {
@@ -116,5 +118,6 @@ export async function getLeadById(id: string): Promise<LeadDetail | null> {
     ultima_interacao_at: data.ultima_interacao_at,
     created_at: data.created_at,
     responsavel: responsavel ? { id: responsavel.id, nome: responsavel.nome } : null,
+    contexto_avaliacao: parseContexto((data as { contexto_avaliacao?: unknown }).contexto_avaliacao),
   };
 }

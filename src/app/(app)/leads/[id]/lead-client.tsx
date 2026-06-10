@@ -21,13 +21,14 @@ import {
   Sun,
   UserCheck,
 } from "lucide-react";
-import { format, isToday, isYesterday } from "date-fns";
+import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { LeadDetail } from "@/lib/queries/leads";
 import type { ActivityRow } from "@/lib/queries/activities";
 import type { AppointmentRow } from "@/lib/queries/appointments";
 import type { ActivityType, LeadInterest, LeadOrigin, LeadStage, AppointmentType } from "@/types/database";
-import { addNote, updateLeadStage, archiveLead } from "../actions";
+import { CONTEXTO_FIELDS, hasContexto, type ContextoAvaliacao } from "@/lib/ai/contexto";
+import { addNote, updateLeadStage, archiveLead, gerarResumoContexto } from "../actions";
 
 // ─── Label maps ──────────────────────────────────────────────────────────────
 
@@ -106,6 +107,17 @@ function dayLabel(dateStr: string) {
   return format(d, "d MMM · EEE", { locale: ptBR });
 }
 
+// Mantém só o primeiro contato entre as activities de mensagem (a mais antiga);
+// trocas seguintes vivem na aba Conversa. Cobre leads antigos com timeline inchada.
+function collapseMessages(activities: ActivityRow[]): ActivityRow[] {
+  const messageActs = activities.filter((a) => a.tipo === "mensagem");
+  if (messageActs.length <= 1) return activities;
+  const firstContactId = messageActs.reduce((oldest, a) =>
+    new Date(a.created_at) < new Date(oldest.created_at) ? a : oldest
+  ).id;
+  return activities.filter((a) => a.tipo !== "mensagem" || a.id === firstContactId);
+}
+
 function buildTimeline(activities: ActivityRow[]) {
   const byDay = new Map<string, ActivityRow[]>();
   for (const act of activities) {
@@ -155,6 +167,85 @@ function Btn({ children, primary, small, iconOnly, disabled, onClick, style: ext
     <button type="button" disabled={disabled} onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ appearance: "none", border: primary ? `0.6px solid ${hovered ? "var(--color-tangerina)" : "var(--color-alaranjado)"}` : `0.6px solid ${hovered ? "var(--color-tangerina)" : "var(--color-cinza)"}`, background: primary ? (hovered ? "var(--color-tangerina)" : "var(--color-alaranjado)") : (hovered ? "var(--color-bege-claro)" : "var(--bg-card)"), color: primary ? "#fff" : "var(--color-texto-escuro)", borderRadius: "var(--radius-pill)", padding: small ? (iconOnly ? "7px 9px" : "7px 12px") : (iconOnly ? "9px 11px" : "9px 16px"), fontFamily: "var(--font-body)", fontSize: small ? "12px" : "13px", fontWeight: 500, letterSpacing: "0.2px", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.6 : 1, display: "inline-flex", alignItems: "center", gap: "8px", transition: "all 160ms cubic-bezier(.4,0,.2,1)", lineHeight: 1, ...extraStyle }}>
       {children}
     </button>
+  );
+}
+
+function ContextoCard({ lead }: { lead: LeadDetail }) {
+  const [contexto, setContexto] = useState<ContextoAvaliacao | null>(lead.contexto_avaliacao);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError(null);
+    const result = await gerarResumoContexto(lead.id);
+    setLoading(false);
+    if (result.success) setContexto(result.contexto);
+    else setError(result.error);
+  };
+
+  const filled = hasContexto(contexto);
+  const updatedLabel = contexto?.atualizado_em
+    ? formatDistanceToNow(new Date(contexto.atualizado_em), { locale: ptBR, addSuffix: true })
+    : null;
+  const fonteLabel =
+    contexto?.fonte === "agente" ? "atualizado pela Clara"
+    : contexto?.fonte === "resumo_ia" ? "resumo da IA"
+    : null;
+
+  return (
+    <section style={{ background: "var(--bg-card)", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-lg)", padding: "22px 22px 20px", boxShadow: "var(--shadow-sm)" }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: "16px" }}>
+        <h3 style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.8px", textTransform: "uppercase", color: "var(--color-bege)", margin: 0 }}>
+          Contexto para avaliação
+        </h3>
+        <span className="inline-flex items-center" style={{ gap: "5px", fontSize: "9.5px", fontWeight: 500, letterSpacing: "1.2px", textTransform: "uppercase", color: "#7A5E1F" }}>
+          <Sun className="h-[11px] w-[11px]" style={{ strokeWidth: 1.7 }} />
+          IA
+        </span>
+      </div>
+
+      {filled ? (
+        <>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {CONTEXTO_FIELDS.map(({ key, label }) => {
+              const value = contexto?.[key] as string | null | undefined;
+              return (
+                <div key={key} className="min-w-0">
+                  <div style={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", marginBottom: "4px" }}>{label}</div>
+                  <div style={{ fontFamily: "var(--font-body)", fontSize: "13px", color: value ? "var(--color-texto-escuro)" : "var(--color-cinza)", lineHeight: 1.5, wordBreak: "break-word" }}>
+                    {value || "—"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between" style={{ gap: "8px", paddingTop: "14px", marginTop: "16px", borderTop: "0.6px solid var(--color-cinza)" }}>
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "11px", color: "var(--color-texto-medio)" }}>
+              {updatedLabel ? `Atualizado ${updatedLabel}${fonteLabel ? ` · ${fonteLabel}` : ""}` : fonteLabel}
+            </span>
+            <Btn small onClick={handleGenerate} disabled={loading}>
+              <RefreshCw className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />
+              {loading ? "Gerando..." : "Atualizar"}
+            </Btn>
+          </div>
+        </>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "13px", color: "var(--color-texto-medio)", lineHeight: 1.5, margin: 0 }}>
+            Gere um resumo da conversa com a queixa, objetivo e pontos de atenção da aluna para preparar a avaliação.
+          </p>
+          <Btn primary small onClick={handleGenerate} disabled={loading}>
+            <RefreshCw className="h-3.5 w-3.5" style={{ strokeWidth: 1.7 }} />
+            {loading ? "Gerando resumo..." : "Gerar resumo com IA"}
+          </Btn>
+        </div>
+      )}
+
+      {error && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-ui-error)", marginTop: "10px" }}>{error}</p>
+      )}
+    </section>
   );
 }
 
@@ -240,7 +331,8 @@ export default function LeadClient({ lead, activities, appointments }: LeadClien
   const score = lead.score_qualificacao ?? 0;
   const scorePct = Math.min(100, Math.max(0, score));
 
-  const timeline = buildTimeline(activities);
+  const timelineActivities = collapseMessages(activities);
+  const timeline = buildTimeline(timelineActivities);
 
   const nextAppt = appointments.find((a) =>
     ["agendado", "confirmado"].includes(a.status) && new Date(a.inicio) > new Date()
@@ -373,7 +465,7 @@ export default function LeadClient({ lead, activities, appointments }: LeadClien
                     <Icon className="h-3.5 w-3.5" style={{ strokeWidth: 1.6 }} />
                     {label}
                     <span style={{ fontFamily: "var(--font-body)", fontSize: "10px", color: "var(--color-texto-medio)", background: "var(--bg-2)", padding: "2px 6px", borderRadius: "var(--radius-pill)", lineHeight: 1.4 }}>
-                      {id === "timeline" ? activities.length : id === "agendamentos" ? appointments.length : 0}
+                      {id === "timeline" ? timelineActivities.length : id === "agendamentos" ? appointments.length : 0}
                     </span>
                   </button>
                 ))}
@@ -461,6 +553,9 @@ export default function LeadClient({ lead, activities, appointments }: LeadClien
 
           {/* ── Right sidebar ── */}
           <aside style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Contexto para avaliação */}
+            <ContextoCard lead={lead} />
+
             {/* Score */}
             <section style={{ background: "var(--bg-card)", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-lg)", padding: "22px 22px 20px", boxShadow: "var(--shadow-sm)" }}>
               <h3 style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.8px", textTransform: "uppercase", color: "var(--color-bege)", margin: "0 0 16px" }}>
