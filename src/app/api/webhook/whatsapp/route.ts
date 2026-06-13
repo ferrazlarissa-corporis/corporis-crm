@@ -276,6 +276,7 @@ export async function POST(request: NextRequest) {
     .select("id", { count: "exact", head: true })
     .eq("conversation_id", conv.id);
   const isFirstContact = (priorMessages ?? 0) === 0;
+  let triggerMessageId: string | null = null;
 
   if (fromMe) {
     const recentThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -334,14 +335,21 @@ export async function POST(request: NextRequest) {
       await db.from("conversations").update({ modo: "humano" }).eq("id", conv.id);
     }
   } else {
-    await db.from("messages").insert({
+    const { data: insertedMessage, error: insertMessageErr } = await db.from("messages").insert({
       conversation_id:      conv.id,
       direcao:              "entrada",
       autor:                "lead",
       conteudo:             effectiveContent,
       tipo:                 isAudio ? "audio" : "texto",
       evolution_message_id: evolutionMessageId,
-    });
+    }).select("id").single();
+
+    if (insertMessageErr || !insertedMessage) {
+      console.error("[webhook] message insert error:", insertMessageErr);
+      return NextResponse.json({ error: "message_insert_failed" }, { status: 500 });
+    }
+
+    triggerMessageId = insertedMessage.id;
   }
 
   // 7. Log activity — só o primeiro contato vira marco; trocas seguintes vivem na tabela messages.
@@ -416,7 +424,10 @@ export async function POST(request: NextRequest) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
         },
-        body: JSON.stringify({ conversation_id: conv.id }),
+        body: JSON.stringify({
+          conversation_id: conv.id,
+          ...(triggerMessageId ? { trigger_message_id: triggerMessageId } : {}),
+        }),
       });
       if (!res.ok) {
         console.error("[webhook] ai/reply non-ok:", res.status, await res.text().catch(() => ""));

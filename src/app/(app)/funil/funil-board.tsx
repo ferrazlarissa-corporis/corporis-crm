@@ -31,6 +31,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { FunilLead } from "@/lib/queries/leads";
 import { validateAppointmentWithinClinicHours } from "@/lib/clinic-config";
 import type { ClinicHoursRow } from "@/lib/clinic-config";
+import { formatBrazilPhoneInput } from "@/lib/phone";
 import { updateLeadStage, createLead } from "../leads/actions";
 import { createAppointment } from "../agenda/actions";
 import type { AppointmentType, LeadStage } from "@/types/database";
@@ -749,17 +750,27 @@ function NewLeadModal({
           <input type="hidden" name="estagio" value={STAGE_TO_DB[creationStage]} />
           {[
             { name: "nome", label: "Nome", type: "text", placeholder: "Nome completo", required: true },
-            { name: "telefone", label: "Telefone (WhatsApp)", type: "tel", placeholder: "+55 49 9 9999-9999", required: true },
+            { name: "telefone", label: "Telefone (WhatsApp)", type: "tel", placeholder: "(49) 99929-2140", required: true, hint: "Aceita com parênteses, hífen ou espaços. Salvamos como +55DDDNÚMERO." },
             { name: "email", label: "E-mail (opcional)", type: "email", placeholder: "email@exemplo.com", required: false },
-          ].map(({ name, label, type, placeholder, required }) => (
+          ].map(({ name, label, type, placeholder, required, hint }) => (
             <div key={name}>
               <label style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: "6px" }}>
                 {label}
               </label>
               <input
                 name={name} type={type} placeholder={placeholder} required={required}
+                inputMode={name === "telefone" ? "tel" : undefined}
+                autoComplete={name === "telefone" ? "tel" : undefined}
+                onBlur={name === "telefone" ? (event) => {
+                  event.currentTarget.value = formatBrazilPhoneInput(event.currentTarget.value);
+                } : undefined}
                 style={{ width: "100%", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box" }}
               />
+              {hint && (
+                <p style={{ margin: "6px 0 0", fontFamily: "var(--font-body)", fontSize: "11px", color: "var(--color-texto-medio)" }}>
+                  {hint}
+                </p>
+              )}
             </div>
           ))}
 

@@ -8,6 +8,7 @@ import {
   type FunilLead,
   type FunilLeadQueryRow,
 } from "@/lib/queries/leads";
+import { normalizeBrazilPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { gerarContextoFromMessages } from "@/lib/ai/contexto-server";
 import type { ContextoAvaliacao } from "@/lib/ai/contexto";
@@ -41,7 +42,7 @@ const STAGE_LABEL: Record<LeadStage, string> = {
 
 const createLeadSchema = z.object({
   nome:         z.string().min(2),
-  telefone:     z.string().min(10),
+  telefone:     z.string().regex(/^\+55\d{10,11}$/),
   email:        z.string().email().optional().or(z.literal("")),
   estagio:      z.enum(LEAD_STAGE_VALUES).default("novo"),
   origem:       z.enum(["whatsapp","instagram","indicacao","google","outro"]).default("whatsapp"),
@@ -51,10 +52,23 @@ const createLeadSchema = z.object({
 
 export type CreateLeadResult = { success: true; lead: FunilLead } | { success: false; error: string };
 
+const STAGE_DUPLICATE_LABEL: Record<LeadStage, string> = {
+  novo: "Novo",
+  qualificacao: "Em qualificação",
+  avaliacao_agendada: "Avaliação agendada",
+  no_show: "No-show",
+  negociacao: "Em negociação",
+  convertido: "Convertido",
+  perdido: "Perdido",
+};
+
 export async function createLead(formData: FormData): Promise<CreateLeadResult> {
+  const telefone = normalizeBrazilPhone(formData.get("telefone"));
+  if (!telefone.ok) return { success: false, error: telefone.error };
+
   const raw = {
     nome:         formData.get("nome"),
-    telefone:     formData.get("telefone"),
+    telefone:     telefone.e164,
     email:        formData.get("email") ?? "",
     estagio:      formData.get("estagio") ?? "novo",
     origem:       formData.get("origem") ?? "whatsapp",
@@ -82,6 +96,24 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
   const supabase = await createClient();
   const db = supabase.schema("crm");
 
+  const { data: duplicatedLead, error: duplicatedLeadError } = await db
+    .from("leads")
+    .select("id, nome, estagio")
+    .eq("telefone", parsed.data.telefone)
+    .maybeSingle();
+
+  if (duplicatedLeadError) {
+    return { success: false, error: duplicatedLeadError.message };
+  }
+
+  if (duplicatedLead) {
+    const stageLabel = STAGE_DUPLICATE_LABEL[duplicatedLead.estagio as LeadStage] ?? duplicatedLead.estagio;
+    return {
+      success: false,
+      error: `Já existe um lead com esse telefone (${parsed.data.telefone}): ${duplicatedLead.nome}, etapa ${stageLabel}. Use a busca para abrir o cadastro existente.`,
+    };
+  }
+
   const { data, error } = await db.from("leads").insert({
     nome:      parsed.data.nome,
     telefone:  parsed.data.telefone,
@@ -92,7 +124,12 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
     ...(entradaAt ? { created_at: entradaAt, ultima_interacao_at: entradaAt } : {}),
   }).select(FUNIL_LEAD_SELECT).single();
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    if (error.code === "23505" && error.message.includes("leads_telefone_key")) {
+      return { success: false, error: `Já existe um lead com esse telefone (${parsed.data.telefone}). Use a busca para abrir o cadastro existente.` };
+    }
+    return { success: false, error: error.message };
+  }
 
   // Log activity with the same historical timestamp when applicable
   await db.from("activities").insert({
