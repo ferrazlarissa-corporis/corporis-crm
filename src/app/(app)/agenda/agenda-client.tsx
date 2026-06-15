@@ -1,973 +1,470 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useTransition } from "react";
-import { ChevronLeft, ChevronRight, Plus, Check, RotateCcw, X, CalendarDays } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, useTransition } from "react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import {
-  addDays,
-  addMonths,
-  addWeeks,
-  differenceInMinutes,
-  eachDayOfInterval,
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  format,
-  isSameDay,
-  isSameMonth,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
+  addDays, addWeeks, differenceInMinutes, endOfWeek, format, isSameDay,
+  startOfDay, endOfDay, startOfWeek,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { AppointmentRow } from "@/lib/queries/appointments";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Dialog } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { buildClinicSchedule, type ClinicHoursRow } from "@/lib/clinic-config";
+import { COR_VAR, PILAR_LABEL, type CorToken } from "@/lib/cadastros-labels";
+import type { AgendaEvent, AgendaOptions } from "@/lib/queries/agenda";
+import type { AppointmentStatus, AppointmentType, Pilar } from "@/types/database";
 import {
-  buildClinicSchedule,
-  type ClinicHoursRow,
-  type ClinicScheduleDay,
-} from "@/lib/clinic-config";
-import type { AppointmentType, AppointmentStatus } from "@/types/database";
-import Link from "next/link";
-import { getAgendaAppointments, createAppointment, getLeadsForSelect, type LeadSelectOption } from "./actions";
-import { validateAppointmentWithinClinicHours } from "@/lib/clinic-config";
+  criarAgendamento, getAgendaCompletaData, updateAppointmentStatus,
+} from "./actions";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+const HOUR_PX = 56;
+const HOUR_COL_W = 52;
+type ViewMode = "day" | "week";
 
-const HOUR_PX    = 60;
-const HOUR_COL_W = 56;
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type EventType   = "pilates" | "gestante" | "pelvica";
-type EventStatus = "confirmed" | "pending" | "no-show" | "cancelled";
-type AgendaViewMode = "day" | "week" | "month";
-
-interface CalEvent {
-  id: string;
-  dateKey: string;
-  startDate: Date;
-  s: string;         // "HH:MM" start
-  dur: number;       // minutes
-  type: EventType;
-  name: string;
-  leadId: string;
-  profissional: string;
-  status: EventStatus;
-  observations?: string;
-}
-
-interface PopoverPos { left: number; top: number; }
-
-interface ClosedSegment {
-  startMinutes: number;
-  endMinutes: number;
-}
-
-const VIEW_OPTIONS: { id: AgendaViewMode; label: string }[] = [
-  { id: "day", label: "Hoje" },
-  { id: "week", label: "Semana" },
-  { id: "month", label: "Mês" },
-];
-
-// ─── Token maps ───────────────────────────────────────────────────────────────
-
-const TK: Record<EventType, { color: string; bg: string; fg: string; label: string }> = {
-  pilates:  { color: "var(--color-alaranjado)", bg: "rgba(240, 131, 83, 0.14)", fg: "#8C4A1A", label: "Avaliação Pilates"   },
-  gestante: { color: "var(--color-verde)",      bg: "rgba(172, 192, 149, 0.30)", fg: "#4F6A3A", label: "Avaliação Gestante" },
-  pelvica:  { color: "var(--color-bege)",       bg: "rgba(210, 176, 110, 0.28)", fg: "#6E5417", label: "Fisio Pélvica"     },
+const FALLBACK_COR: Record<AppointmentType, CorToken> = {
+  avaliacao_pilates: "alaranjado",
+  avaliacao_gestante: "bege",
+  avaliacao_fisio_pelvica: "verde",
 };
 
-const TYPE_MAP: Record<AppointmentType, EventType> = {
-  avaliacao_pilates:       "pilates",
-  avaliacao_gestante:      "gestante",
-  avaliacao_fisio_pelvica: "pelvica",
+function colorVar(e: AgendaEvent): string {
+  const token = (e.corToken as CorToken) ?? FALLBACK_COR[e.tipo] ?? "alaranjado";
+  return COR_VAR[token] ?? "var(--color-alaranjado)";
+}
+function bgFor(varStr: string): string {
+  return `color-mix(in srgb, ${varStr} 16%, transparent)`;
+}
+function dateKey(d: Date) { return format(d, "yyyy-MM-dd"); }
+function clinicDayIndex(d: Date) { const j = d.getDay(); return j === 0 ? 6 : j - 1; }
+
+const STATUS_LABEL: Record<AppointmentStatus, string> = {
+  agendado: "A confirmar", confirmado: "Confirmado", compareceu: "Compareceu",
+  faltou: "Faltou", cancelado: "Cancelado",
+};
+const STATUS_DOT: Record<AppointmentStatus, string> = {
+  agendado: "var(--color-bege)", confirmado: "var(--color-verde)", compareceu: "var(--color-verde)",
+  faltou: "var(--color-ui-error)", cancelado: "var(--color-cinza)",
 };
 
-const STATUS_MAP: Record<AppointmentStatus, EventStatus> = {
-  confirmado: "confirmed",
-  agendado:   "pending",
-  faltou:     "no-show",
-  cancelado:  "cancelled",
-  compareceu: "confirmed",
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function topForMinutes(minutes: number, timelineStartMinutes: number): number {
-  return ((minutes - timelineStartMinutes) / 60) * HOUR_PX;
-}
-
-function topFor(h: number, m: number, timelineStartMinutes: number): number {
-  return topForMinutes(h * 60 + m, timelineStartMinutes);
-}
-
-function parseTime(s: string): [number, number] {
-  const [h, m] = s.split(":").map(Number);
-  return [h, m];
-}
-
-function dateKey(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
-
-function clinicDayIndexForDate(date: Date): number {
-  const jsDay = date.getDay();
-  return jsDay === 0 ? 6 : jsDay - 1;
-}
-
-function getPeriodBounds(viewMode: AgendaViewMode, anchor: Date) {
-  if (viewMode === "day") {
-    return { start: startOfDay(anchor), end: endOfDay(anchor) };
-  }
-
-  if (viewMode === "month") {
-    return { start: startOfMonth(anchor), end: endOfMonth(anchor) };
-  }
-
-  return {
-    start: startOfWeek(anchor, { weekStartsOn: 1 }),
-    end: endOfWeek(anchor, { weekStartsOn: 1 }),
-  };
-}
-
-function formatPeriodLabel(viewMode: AgendaViewMode, start: Date, end: Date) {
-  if (viewMode === "day") {
-    return format(start, "d MMM · yyyy", { locale: ptBR });
-  }
-
-  if (viewMode === "month") {
-    return format(start, "MMMM · yyyy", { locale: ptBR });
-  }
-
-  return `${format(start, "d", { locale: ptBR })}–${format(end, "d MMM · yyyy", { locale: ptBR })}`;
-}
-
-function endTime(s: string, dur: number): string {
-  const [h, m] = parseTime(s);
-  const totalMin = h * 60 + m + dur;
-  return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
-}
-
-function getClosedSegments(day: ClinicScheduleDay, timelineStartMinutes: number, timelineEndMinutes: number): ClosedSegment[] {
-  if (day.intervals.length === 0) {
-    return [{ startMinutes: timelineStartMinutes, endMinutes: timelineEndMinutes }];
-  }
-
-  const segments: ClosedSegment[] = [];
-  let cursor = timelineStartMinutes;
-
-  day.intervals
-    .map((interval) => ({
-      startMinutes: Math.max(interval.startMinutes, timelineStartMinutes),
-      endMinutes: Math.min(interval.endMinutes, timelineEndMinutes),
-    }))
-    .filter((interval) => interval.endMinutes > interval.startMinutes)
-    .sort((a, b) => a.startMinutes - b.startMinutes)
-    .forEach((interval) => {
-      if (interval.startMinutes > cursor) {
-        segments.push({ startMinutes: cursor, endMinutes: interval.startMinutes });
-      }
-
-      cursor = Math.max(cursor, interval.endMinutes);
-    });
-
-  if (cursor < timelineEndMinutes) {
-    segments.push({ startMinutes: cursor, endMinutes: timelineEndMinutes });
-  }
-
-  return segments.filter((segment) => segment.endMinutes - segment.startMinutes >= 15);
-}
-
-function mapAppointments(appts: AppointmentRow[]): CalEvent[] {
-  return appts.flatMap((appt) => {
-    const inicio = new Date(appt.inicio);
-    const fim    = new Date(appt.fim);
-
-    const s = format(inicio, "HH:mm");
-    const dur = differenceInMinutes(fim, inicio);
-
-    return [{
-      id:           appt.id,
-      dateKey:      dateKey(inicio),
-      startDate:    inicio,
-      s,
-      dur,
-      type:         TYPE_MAP[appt.tipo],
-      name:         appt.lead.nome,
-      leadId:       appt.lead.id,
-      profissional: appt.profissional?.nome ?? "—",
-      status:       STATUS_MAP[appt.status],
-      observations: appt.observacoes ?? undefined,
-    }];
-  });
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function PopBtn({ children, primary, danger }: { children: React.ReactNode; primary?: boolean; danger?: boolean }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ appearance: "none", border: `0.6px solid ${primary ? "var(--color-alaranjado)" : hov && danger ? "rgba(192,80,74,0.5)" : "var(--color-cinza)"}`, background: primary ? (hov ? "var(--color-tangerina)" : "var(--color-alaranjado)") : (hov && danger ? "rgba(192,80,74,0.06)" : hov ? "var(--color-bege-claro)" : "#fff"), color: primary ? "#fff" : (hov && danger ? "var(--color-ui-error)" : "var(--color-texto-escuro)"), borderRadius: "var(--radius-pill)", padding: "7px 12px", fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 500, letterSpacing: "0.2px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, transition: "all 160ms" }}>
-      {children}
-    </button>
-  );
-}
-
-function EventPopover({ evt, pos, onClose }: { evt: CalEvent; pos: PopoverPos; onClose: () => void }) {
-  const tk = TK[evt.type];
-  const [h, m] = parseTime(evt.s);
-  const startStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  const profInitials = evt.profissional !== "—" ? evt.profissional.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase() : "—";
-  return (
-    <div style={{ position: "fixed", left: pos.left, top: pos.top, width: 308, background: "#fff", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-lg)", boxShadow: "0 18px 50px rgba(58,53,48,0.14),0 4px 12px rgba(58,53,48,0.06)", zIndex: 50, overflow: "hidden", fontFamily: "var(--font-body)" }}>
-      <button onClick={onClose} aria-label="Fechar" style={{ position: "absolute", top: 12, right: 12, width: 24, height: 24, border: 0, background: "transparent", color: "var(--color-texto-medio)", cursor: "pointer", borderRadius: "var(--radius-pill)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
-        <X size={13} strokeWidth={1.7} />
-      </button>
-      <div style={{ padding: "16px 18px 14px", borderBottom: "0.6px solid var(--color-cinza)" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", padding: "3px 9px", borderRadius: "var(--radius-pill)", background: tk.bg, color: tk.fg, lineHeight: 1 }}>
-          <span style={{ width: 5, height: 5, borderRadius: "var(--radius-pill)", background: tk.color }} />
-          {tk.label}
-        </span>
-        <div style={{ fontFamily: "var(--font-display)", fontWeight: 400, fontSize: 22, lineHeight: 1.15, color: "var(--color-texto-escuro)", margin: "10px 0 2px", letterSpacing: "-0.005em" }}>
-          {evt.name}
-        </div>
-        <div style={{ fontSize: 12.5, color: "var(--color-texto-medio)", display: "inline-flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-          <CalendarDays size={12} strokeWidth={1.7} style={{ color: "var(--color-bege)" }} />
-          {startStr} — {endTime(evt.s, evt.dur)}
-          <span style={{ width: 2, height: 2, borderRadius: "var(--radius-pill)", background: "var(--color-cinza)" }} />
-          {evt.dur} min
-        </div>
-        <div style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, letterSpacing: "0.2px", color: "var(--color-texto-medio)", padding: "4px 10px", background: "var(--bg-2)", borderRadius: "var(--radius-pill)" }}>
-          <span style={{ width: 6, height: 6, borderRadius: "var(--radius-pill)", background: evt.status === "confirmed" ? "var(--color-verde)" : evt.status === "no-show" ? "var(--color-ui-error)" : "var(--color-bege)" }} />
-          {evt.status === "confirmed" ? "Confirmada" : evt.status === "no-show" ? "Faltou" : evt.status === "cancelled" ? "Cancelada" : "A confirmar"}
-        </div>
-      </div>
-      <div style={{ padding: "16px 18px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <span style={{ width: 78, flexShrink: 0, fontSize: 10, fontWeight: 500, letterSpacing: "1.6px", textTransform: "uppercase", color: "var(--color-texto-medio)", paddingTop: 3 }}>Lead</span>
-          <span style={{ fontSize: 13, color: "var(--color-texto-escuro)", lineHeight: 1.4, display: "inline-flex", alignItems: "center", gap: 8 }}>
-            {evt.name}
-            <Link href={`/leads/${evt.leadId}`} style={{ color: "var(--color-alaranjado)", textDecoration: "none", fontWeight: 500, fontSize: 12 }}>abrir ficha →</Link>
-          </span>
-        </div>
-        {evt.profissional !== "—" && (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-            <span style={{ width: 78, flexShrink: 0, fontSize: 10, fontWeight: 500, letterSpacing: "1.6px", textTransform: "uppercase", color: "var(--color-texto-medio)", paddingTop: 3 }}>Profissional</span>
-            <span style={{ fontSize: 13, color: "var(--color-texto-escuro)", lineHeight: 1.4, display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 22, height: 22, borderRadius: "var(--radius-pill)", background: "rgba(240,131,83,0.18)", color: "#B85A2E", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: 9, flexShrink: 0 }}>{profInitials}</span>
-              {evt.profissional}
-            </span>
-          </div>
-        )}
-        {evt.observations && (
-          <div style={{ background: "var(--bg-2)", borderLeft: "2px solid var(--color-bege)", borderRadius: "0 var(--radius-md) var(--radius-md) 0", padding: "10px 12px", fontSize: 12, color: "var(--color-texto-escuro)", lineHeight: 1.5 }}>
-            {evt.observations}
-          </div>
-        )}
-      </div>
-      <div style={{ padding: "14px 18px 16px", borderTop: "0.6px solid var(--color-cinza)", background: "var(--bg-1)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        <PopBtn primary><Check size={12} strokeWidth={1.8} />Confirmar</PopBtn>
-        <PopBtn><RotateCcw size={12} strokeWidth={1.8} />Remarcar</PopBtn>
-        <PopBtn danger><X size={12} strokeWidth={1.8} />Cancelar</PopBtn>
-      </div>
-    </div>
-  );
-}
-
-function WnBtn({ children, onClick, label }: { children: React.ReactNode; onClick?: () => void; label?: string }) {
-  return (
-    <button onClick={onClick} aria-label={label} style={{ width: 28, height: 28, border: "0.6px solid var(--color-cinza)", background: "#fff", borderRadius: "var(--radius-pill)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--color-texto-medio)", flexShrink: 0, transition: "all 160ms" }}>
-      {children}
-    </button>
-  );
-}
-
-function PrimaryBtn({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
-  return (
-    <button type="button" onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "var(--color-alaranjado)", color: "#fff", border: 0, borderRadius: "var(--radius-pill)", fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-      {children}
-    </button>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-interface AgendaClientProps {
-  initialEvents: AppointmentRow[];
+interface Props {
+  initialEvents: AgendaEvent[];
+  options: AgendaOptions;
   nowIso: string;
-  nowH: number;
-  nowM: number;
   clinicHours: ClinicHoursRow[];
   initialRangeStart: string;
   initialRangeEnd: string;
 }
 
-// ─── New Appointment Modal ────────────────────────────────────────────────────
-
-const APPT_DURATION_MINUTES = 50;
-const APPT_HOUR_OPTIONS = Array.from({ length: 15 }, (_, i) => String(i + 6).padStart(2, "0"));
-const APPT_MINUTE_OPTIONS = ["00", "30"];
-const APPT_TYPE_BY_INTEREST: Record<string, AppointmentType> = {
-  pilates:          "avaliacao_pilates",
-  pilates_gestante: "avaliacao_gestante",
-  fisio_pelvica:    "avaliacao_fisio_pelvica",
-  indefinido:       "avaliacao_pilates",
-};
-const APPT_TYPE_LABEL: Record<AppointmentType, string> = {
-  avaliacao_pilates:        "Avaliação Pilates",
-  avaliacao_gestante:       "Avaliação Gestante",
-  avaliacao_fisio_pelvica:  "Avaliação Fisio Pélvica",
-};
-
-function nextApptStartParts() {
-  const d = new Date();
-  d.setHours(d.getHours() + 1, 0, 0, 0);
-  if (d.getHours() < 6)  d.setHours(6, 0, 0, 0);
-  if (d.getHours() > 20) { d.setDate(d.getDate() + 1); d.setHours(6, 0, 0, 0); }
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, hour: pad(d.getHours()), minute: "00" };
-}
-
-function NewApptModal({ clinicHours, onClose, onScheduled }: {
-  clinicHours: ClinicHoursRow[];
-  onClose: () => void;
-  onScheduled: () => void;
-}) {
+export default function AgendaClient({ initialEvents, options, nowIso, clinicHours, initialRangeStart, initialRangeEnd }: Props) {
+  const today = useMemo(() => new Date(nowIso), [nowIso]);
+  const [view, setView] = useState<ViewMode>("week");
+  const [anchor, setAnchor] = useState<Date>(today);
+  const [events, setEvents] = useState<AgendaEvent[]>(initialEvents);
+  const [loadedKey, setLoadedKey] = useState(`${initialRangeStart}|${initialRangeEnd}`);
+  const [loading, setLoading] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [selected, setSelected] = useState<AgendaEvent | null>(null);
   const [pending, startTransition] = useTransition();
-  const [leads, setLeads] = useState<LeadSelectOption[]>([]);
-  const [selectedLeadId, setSelectedLeadId] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
-  const [errorField, setErrorField] = useState<"lead" | "inicio" | "observacoes" | null>(null);
-  const defaultStart = nextApptStartParts();
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Filtros
+  const [busca, setBusca] = useState("");
+  const [pilar, setPilar] = useState<"" | Pilar>("");
+  const [salaId, setSalaId] = useState<"" | string>("");
+
+  const periodStart = view === "day" ? startOfDay(anchor) : startOfWeek(anchor, { weekStartsOn: 1 });
+  const periodEnd = view === "day" ? endOfDay(anchor) : endOfWeek(anchor, { weekStartsOn: 1 });
+  const rangeKey = `${periodStart.toISOString()}|${periodEnd.toISOString()}`;
 
   useEffect(() => {
-    getLeadsForSelect().then(setLeads).catch(() => {});
-  }, []);
+    if (rangeKey === loadedKey) return;
+    let active = true;
+    setLoading(true);
+    getAgendaCompletaData(periodStart.toISOString(), periodEnd.toISOString())
+      .then((r) => { if (active && r.success) { setEvents(r.events); setLoadedKey(rangeKey); } })
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [rangeKey, loadedKey, periodStart, periodEnd]);
 
-  const selectedLead = leads.find((l) => l.id === selectedLeadId);
-  const appointmentType = selectedLead ? APPT_TYPE_BY_INTEREST[selectedLead.interesse] : "avaliacao_pilates";
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    const dateVal = String(fd.get("data") ?? "");
-    const hourVal = String(fd.get("hora") ?? "");
-    const minVal  = String(fd.get("minuto") ?? "");
-    const obs     = String(fd.get("observacoes") ?? "").trim();
-
-    if (!selectedLeadId) {
-      setError("Selecione uma lead."); setErrorField("lead"); return;
-    }
-    const startStr = dateVal && hourVal && minVal ? `${dateVal}T${hourVal}:${minVal}:00` : "";
-    const start = new Date(startStr);
-    if (!startStr || Number.isNaN(start.getTime())) {
-      setError("Informe a data e hora."); setErrorField("inicio"); return;
-    }
-    const end = new Date(start.getTime() + APPT_DURATION_MINUTES * 60_000);
-    const validation = validateAppointmentWithinClinicHours(clinicHours, start, end);
-    if (!validation.ok) { setError(validation.message); setErrorField("inicio"); return; }
-    if (!obs) { setError("Registre uma observação antes de confirmar o agendamento."); setErrorField("observacoes"); return; }
-
+  function reload() {
     startTransition(async () => {
-      setError(null); setErrorField(null);
-      const result = await createAppointment({
-        lead_id: selectedLeadId,
-        inicio: start.toISOString(),
-        fim: end.toISOString(),
-        tipo: appointmentType,
-        observacoes: obs,
-      });
-      if (result.success) { onScheduled(); onClose(); }
-      else { setError(result.error); }
+      const r = await getAgendaCompletaData(periodStart.toISOString(), periodEnd.toISOString());
+      if (r.success) setEvents(r.events);
     });
-  };
+  }
 
-  const isLeadError  = errorField === "lead";
-  const isStartError = errorField === "inicio";
-  const isObsError   = errorField === "observacoes";
-  const inputStyle = (err: boolean) => ({
-    width: "100%", border: err ? "0.8px solid var(--color-ui-error)" : "0.6px solid var(--color-cinza)",
-    borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px",
-    color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box" as const,
-    boxShadow: err ? "0 0 0 3px rgba(205,61,54,0.10)" : "none",
+  const schedule = buildClinicSchedule(clinicHours);
+  const visibleDays = view === "day"
+    ? [schedule[clinicDayIndex(anchor)]].filter(Boolean)
+    : schedule.filter((d) => !d.off && d.intervals.length > 0);
+
+  const timelineDays = visibleDays.map((sd) => {
+    const date = view === "day" ? periodStart : addDays(periodStart, sd.index);
+    return { date, key: dateKey(date), sd };
   });
+  const dayCount = Math.max(timelineDays.length, 1);
+
+  const allIntervals = visibleDays.flatMap((d) => d.intervals);
+  const tStart = allIntervals.length ? Math.floor(Math.min(...allIntervals.map((i) => i.startMinutes)) / 60) * 60 : 6 * 60;
+  const tEnd = allIntervals.length ? Math.ceil(Math.max(...allIntervals.map((i) => i.endMinutes)) / 60) * 60 : 21 * 60;
+  const totalH = ((tEnd - tStart) / 60) * HOUR_PX;
+  const hours = Array.from({ length: (tEnd - tStart) / 60 }, (_, i) => tStart / 60 + i);
+
+  // Filtro aplicado
+  const filtered = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return events.filter((e) => {
+      if (e.status === "cancelado") return false;
+      if (pilar && e.pilar !== pilar) return false;
+      if (salaId && e.salaId !== salaId) return false;
+      if (q && !e.clienteNome.toLowerCase().includes(q) && !(e.servicoNome ?? "").toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [events, busca, pilar, salaId]);
+
+  // Ocupação por slot (inicio|servico|sala) → contagem
+  const slotCount = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of filtered) {
+      const k = `${e.inicio}|${e.servicoId ?? ""}|${e.salaId ?? ""}`;
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  }, [filtered]);
+
+  const dayKeys = timelineDays.map((d) => d.key);
+  const periodEvents = filtered.filter((e) => dayKeys.includes(dateKey(new Date(e.inicio))));
+
+  useEffect(() => {
+    if (gridRef.current) {
+      const nowMin = today.getHours() * 60 + today.getMinutes();
+      gridRef.current.scrollTop = Math.max(0, ((nowMin - tStart) / 60) * HOUR_PX - 200);
+    }
+  }, [tStart, today]);
+
+  function move(delta: number) {
+    setAnchor((c) => (view === "day" ? addDays(c, delta) : addWeeks(c, delta)));
+  }
+
+  const periodLabel = view === "day"
+    ? format(periodStart, "d 'de' MMMM yyyy", { locale: ptBR })
+    : `${format(periodStart, "d")}–${format(periodEnd, "d MMM yyyy", { locale: ptBR })}`;
+
+  const proximas = [...periodEvents]
+    .filter((e) => new Date(e.inicio) >= today)
+    .sort((a, b) => a.inicio.localeCompare(b.inicio))
+    .slice(0, 5);
+
+  const hojeEvents = events.filter((e) => isSameDay(new Date(e.inicio), today) && e.status !== "cancelado");
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(42,31,26,0.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: "var(--bg-card)", borderRadius: "var(--radius-lg)", border: "0.6px solid var(--color-cinza)", padding: "28px 28px 24px", width: 480, boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, color: "var(--color-texto-escuro)", margin: 0 }}>
-            Agendar avaliação
-          </h2>
-          <button type="button" onClick={onClose} style={{ background: "none", border: 0, cursor: "pointer", color: "var(--color-texto-medio)", padding: 4 }}>
-            <X className="h-4 w-4" style={{ strokeWidth: 1.6 }} />
-          </button>
+    <div className="grid h-dvh grid-rows-[auto_1fr] overflow-hidden">
+      {/* Topbar */}
+      <header className="border-b border-border px-8 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <h1 className="font-display text-[28px] leading-none text-text-primary">Agenda</h1>
+            <div className="flex items-center gap-1">
+              <button onClick={() => move(-1)} aria-label="Anterior" className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-pill)] border border-border text-text-secondary hover:bg-accent-soft"><ChevronLeft className="h-4 w-4" /></button>
+              <span className="min-w-[180px] px-2 text-center text-sm font-medium text-text-primary">{periodLabel}</span>
+              <button onClick={() => move(1)} aria-label="Próximo" className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-pill)] border border-border text-text-secondary hover:bg-accent-soft"><ChevronRight className="h-4 w-4" /></button>
+              <div className="ml-2 flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">
+                {(["day", "week"] as ViewMode[]).map((v) => (
+                  <button key={v} onClick={() => { setView(v); if (v === "day") setAnchor(today); }}
+                    className={cn("rounded-[var(--radius-pill)] px-3 py-1 text-xs font-medium transition-colors",
+                      view === v ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:text-text-primary")}>
+                    {v === "day" ? "Hoje" : "Semana"}
+                  </button>
+                ))}
+              </div>
+              {loading ? <span className="ml-2 text-xs text-text-secondary">Carregando…</span> : null}
+            </div>
+          </div>
+          <Button size="sm" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" strokeWidth={2} />Novo agendamento</Button>
         </div>
 
-        <form noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <label style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: 6 }}>
-              Lead
-            </label>
-            <select value={selectedLeadId} onChange={(e) => { setSelectedLeadId(e.target.value); if (isLeadError) { setError(null); setErrorField(null); } }} style={inputStyle(isLeadError)}>
-              <option value="">Selecione uma lead...</option>
-              {leads.map((l) => (
-                <option key={l.id} value={l.id}>{l.nome}</option>
+        {/* Filtros */}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente ou serviço" className="h-9 max-w-xs" />
+          <select value={pilar} onChange={(e) => setPilar(e.target.value as "" | Pilar)} className="h-9 rounded-[var(--radius-md)] border border-border bg-card px-3 text-sm text-text-primary">
+            <option value="">Todos os pilares</option>
+            <option value="pilates">Pilates</option>
+            <option value="pilates_gestante">Pilates gestante</option>
+            <option value="fisio_pelvica">Fisio pélvica</option>
+          </select>
+          <select value={salaId} onChange={(e) => setSalaId(e.target.value)} className="h-9 rounded-[var(--radius-md)] border border-border bg-card px-3 text-sm text-text-primary">
+            <option value="">Todas as salas</option>
+            {options.salas.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+          </select>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-[1fr_300px] overflow-hidden">
+        {/* Calendário */}
+        <div className="grid grid-rows-[auto_1fr] overflow-hidden border-r border-border">
+          {/* Header dos dias */}
+          <div className="grid border-b border-border" style={{ gridTemplateColumns: `${HOUR_COL_W}px repeat(${dayCount}, minmax(0,1fr))` }}>
+            <div />
+            {timelineDays.map(({ date, key }) => {
+              const isToday = isSameDay(date, today);
+              const count = periodEvents.filter((e) => dateKey(new Date(e.inicio)) === key).length;
+              return (
+                <div key={key} className="border-l border-border px-2 py-2 text-center">
+                  <div className={cn("crm-label text-[10px] tracking-[1.2px]", isToday ? "text-primary" : "text-text-secondary")}>
+                    {format(date, "EEE", { locale: ptBR })}
+                  </div>
+                  <div className={cn("font-display text-xl leading-tight", isToday ? "text-primary" : "text-text-primary")}>
+                    {format(date, "d")}
+                  </div>
+                  <div className="text-[10px] text-text-secondary">{count} {count === 1 ? "bloco" : "blocos"}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Grid */}
+          <div ref={gridRef} className="relative overflow-y-auto crm-scrollbar">
+            <div className="relative" style={{ height: totalH, display: "grid", gridTemplateColumns: `${HOUR_COL_W}px repeat(${dayCount}, minmax(0,1fr))` }}>
+              {/* Linhas de hora */}
+              {hours.map((h) => (
+                <div key={h} className="pointer-events-none absolute left-0 right-0 grid" style={{ top: ((h * 60 - tStart) / 60) * HOUR_PX, height: HOUR_PX, gridTemplateColumns: `${HOUR_COL_W}px repeat(${dayCount}, minmax(0,1fr))` }}>
+                  <div className="pr-2 pt-0.5 text-right text-[11px] tabular-nums text-text-secondary">{String(h).padStart(2, "0")}h</div>
+                  {Array.from({ length: dayCount }, (_, c) => <div key={c} className="border-l border-t border-border/60" />)}
+                </div>
               ))}
-            </select>
-            {selectedLead && (
-              <span style={{ display: "block", marginTop: 6, fontFamily: "var(--font-body)", fontSize: 11, color: "var(--color-texto-medio)" }}>
-                {APPT_TYPE_LABEL[appointmentType]}
-              </span>
-            )}
-          </div>
 
-          <div>
-            <label style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: 6 }}>
-              Data e hora
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 88px 88px", gap: 10 }}>
-              <input name="data" type="date" required defaultValue={defaultStart.date} onChange={() => isStartError && (setError(null), setErrorField(null))} style={inputStyle(isStartError)} />
-              <select name="hora" defaultValue={defaultStart.hour} aria-label="Hora" onChange={() => isStartError && (setError(null), setErrorField(null))} style={inputStyle(isStartError)}>
-                {APPT_HOUR_OPTIONS.map((h) => <option key={h} value={h}>{h}h</option>)}
-              </select>
-              <select name="minuto" defaultValue={defaultStart.minute} aria-label="Minutos" onChange={() => isStartError && (setError(null), setErrorField(null))} style={inputStyle(isStartError)}>
-                {APPT_MINUTE_OPTIONS.map((m) => <option key={m} value={m}>{m} min</option>)}
-              </select>
-            </div>
-            <span style={{ display: "block", marginTop: 6, fontFamily: "var(--font-body)", fontSize: 11, color: "var(--color-texto-medio)" }}>
-              Duração padrão: {APPT_DURATION_MINUTES} minutos.
-            </span>
-          </div>
-
-          <div>
-            <label style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
-              <span>Observações</span>
-              <span style={{ color: "var(--color-ui-error)", letterSpacing: "1.1px" }}>Obrigatório</span>
-            </label>
-            <textarea name="observacoes" rows={4} required placeholder="Ex.: preferência de horário, contexto da conversa ou cuidado importante." onChange={() => isObsError && (setError(null), setErrorField(null))} style={{ ...inputStyle(isObsError), resize: "vertical", lineHeight: 1.45 }} />
-          </div>
-
-          {error && <p style={{ fontFamily: "var(--font-body)", fontSize: 13, color: "var(--color-ui-error)", margin: 0 }}>{error}</p>}
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, paddingTop: 8, borderTop: "0.6px solid var(--color-cinza)" }}>
-            <button type="button" onClick={onClose} style={{ appearance: "none", border: "0.6px solid var(--color-cinza)", background: "var(--bg-card)", color: "var(--color-texto-escuro)", borderRadius: "var(--radius-pill)", padding: "9px 18px", fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={pending} style={{ appearance: "none", border: 0, background: pending ? "var(--color-tangerina)" : "var(--color-alaranjado)", color: "#fff", borderRadius: "var(--radius-pill)", padding: "9px 18px", fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, cursor: pending ? "wait" : "pointer" }}>
-              {pending ? "Agendando..." : "Confirmar agendamento"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-export default function AgendaClient({ initialEvents, nowIso, nowH, nowM, clinicHours, initialRangeStart, initialRangeEnd }: AgendaClientProps) {
-  const todayDate = new Date(nowIso);
-  const [viewMode, setViewMode] = useState<AgendaViewMode>("week");
-  const [periodAnchor, setPeriodAnchor] = useState<Date>(() => todayDate);
-  const [appointments, setAppointments] = useState<AppointmentRow[]>(initialEvents);
-  const [loadedRangeKey, setLoadedRangeKey] = useState(`${initialRangeStart}|${initialRangeEnd}`);
-  const [loadingAppointments, setLoadingAppointments] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [popoverPos, setPopoverPos] = useState<PopoverPos | null>(null);
-  const [newApptOpen, setNewApptOpen] = useState(false);
-  const gridScrollRef = useRef<HTMLDivElement>(null);
-
-  const { start: periodStart, end: periodEnd } = getPeriodBounds(viewMode, periodAnchor);
-  const periodStartIso = periodStart.toISOString();
-  const periodEndIso = periodEnd.toISOString();
-  const periodRangeKey = `${periodStartIso}|${periodEndIso}`;
-  const periodLabel = formatPeriodLabel(viewMode, periodStart, periodEnd);
-  const isMonthView = viewMode === "month";
-
-  const clinicSchedule = buildClinicSchedule(clinicHours);
-  const visibleScheduleDays = viewMode === "day"
-    ? [clinicSchedule[clinicDayIndexForDate(periodAnchor)]].filter(Boolean)
-    : clinicSchedule.filter((day) => !day.off && day.intervals.length > 0);
-  const timelineDays = visibleScheduleDays.map((scheduleDay) => {
-    const date = viewMode === "day" ? periodStart : addDays(periodStart, scheduleDay.index);
-
-    return {
-      date,
-      key: dateKey(date),
-      scheduleDay,
-    };
-  });
-  const visibleDayCount = Math.max(timelineDays.length, 1);
-  const dayGridColumns = `${HOUR_COL_W}px repeat(${visibleDayCount}, minmax(0, 1fr))`;
-
-  const allOpenIntervals = visibleScheduleDays.flatMap((day) => day.intervals);
-  const timelineStartMinutes = allOpenIntervals.length > 0
-    ? Math.floor(Math.min(...allOpenIntervals.map((interval) => interval.startMinutes)) / 60) * 60
-    : 6 * 60;
-  const timelineEndMinutes = allOpenIntervals.length > 0
-    ? Math.ceil(Math.max(...allOpenIntervals.map((interval) => interval.endMinutes)) / 60) * 60
-    : 21 * 60;
-
-  const WEEK_DAYS = timelineDays.map(({ date, key, scheduleDay }) => {
-    return {
-      key,
-      dow:  format(date, "EEE", { locale: ptBR }),
-      date: format(date, "d"),
-      mon:  format(date, "MMM", { locale: ptBR }),
-      isToday: isSameDay(date, todayDate),
-      scheduleDay,
-    };
-  });
-
-  const timelineDayKeys = timelineDays.map((day) => day.key);
-  const EVENTS = mapAppointments(appointments).filter((evt) => timelineDayKeys.includes(evt.dateKey));
-  const periodEvents = mapAppointments(appointments)
-    .filter((evt) => evt.startDate >= periodStart && evt.startDate <= periodEnd);
-  const nowMinutes = nowH * 60 + nowM;
-  const nowTop = topForMinutes(nowMinutes, timelineStartMinutes);
-  const todayColumnIndex = timelineDayKeys.indexOf(dateKey(todayDate));
-  const showNowIndicator = !isMonthView && todayColumnIndex >= 0 && nowMinutes >= timelineStartMinutes && nowMinutes <= timelineEndMinutes;
-
-  const selectedEvt = selectedId !== null ? (periodEvents.find((e) => e.id === selectedId) ?? null) : null;
-
-  useEffect(() => {
-    let active = true;
-
-    if (periodRangeKey === loadedRangeKey) return;
-
-    setLoadingAppointments(true);
-    getAgendaAppointments(periodStartIso, periodEndIso)
-      .then((res) => {
-        if (!active) return;
-
-        if (res.success) {
-          setAppointments(res.appointments);
-          setLoadedRangeKey(periodRangeKey);
-        }
-      })
-      .finally(() => {
-        if (active) setLoadingAppointments(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [loadedRangeKey, periodEndIso, periodRangeKey, periodStartIso]);
-
-  useEffect(() => {
-    setSelectedId(null);
-    setPopoverPos(null);
-  }, [periodRangeKey, viewMode]);
-
-  useEffect(() => {
-    if (!isMonthView && gridScrollRef.current) {
-      gridScrollRef.current.scrollTop = Math.max(0, nowTop - 220);
-    }
-  }, [isMonthView, nowTop]);
-
-  const handleEvtClick = useCallback((e: React.MouseEvent<HTMLElement>, evt: CalEvent) => {
-    e.stopPropagation();
-    if (selectedId === evt.id) { setSelectedId(null); setPopoverPos(null); return; }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pw = 308; const margin = 14;
-    const spaceRight = window.innerWidth - rect.right - margin;
-    const left = spaceRight >= pw ? rect.right + margin : Math.max(4, rect.left - margin - pw);
-    const top  = Math.min(Math.max(4, rect.top - 12), window.innerHeight - 480);
-    setSelectedId(evt.id);
-    setPopoverPos({ left, top });
-  }, [selectedId]);
-
-  const closePopover = useCallback(() => { setSelectedId(null); setPopoverPos(null); }, []);
-
-  function movePeriod(delta: number) {
-    setPeriodAnchor((current) => {
-      if (viewMode === "day") return addDays(current, delta);
-      if (viewMode === "month") return addMonths(current, delta);
-      return addWeeks(current, delta);
-    });
-  }
-
-  function selectViewMode(nextViewMode: AgendaViewMode) {
-    setViewMode(nextViewMode);
-    if (nextViewMode === "day") {
-      setPeriodAnchor(todayDate);
-    }
-  }
-
-  const timelineStartHour = timelineStartMinutes / 60;
-  const timelineEndHour = timelineEndMinutes / 60;
-  const hours = Array.from({ length: timelineEndHour - timelineStartHour }, (_, i) => timelineStartHour + i);
-  const totalH = ((timelineEndMinutes - timelineStartMinutes) / 60) * HOUR_PX;
-
-  const referenceNow = todayDate;
-  const statEvents = periodEvents;
-  const upcomingEvents = periodEvents
-    .filter((evt) => periodEnd < referenceNow ? true : evt.startDate >= referenceNow)
-    .slice(0, 4);
-  const statsTitle = viewMode === "day"
-    ? (isSameDay(periodAnchor, todayDate) ? "Hoje" : format(periodAnchor, "d MMM", { locale: ptBR }))
-    : viewMode === "month"
-      ? "Mês"
-      : "Semana";
-  const monthStart = startOfWeek(startOfMonth(periodAnchor), { weekStartsOn: 1 });
-  const monthEnd = endOfWeek(endOfMonth(periodAnchor), { weekStartsOn: 1 });
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
-    .filter((day) => visibleScheduleDays.some((scheduleDay) => scheduleDay.index === clinicDayIndexForDate(day)));
-  const monthGridColumns = `repeat(${visibleDayCount}, minmax(0, 1fr))`;
-
-  return (
-    <div style={{ display: "grid", gridTemplateRows: "64px 1fr", height: "100dvh", overflow: "hidden" }} onClick={popoverPos ? closePopover : undefined}>
-      {/* ── Topbar ── */}
-      <header style={{ background: "var(--bg-1)", borderBottom: "0.6px solid var(--color-cinza)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 22 }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 400, fontSize: 28, lineHeight: 1, color: "var(--color-texto-escuro)", letterSpacing: "-0.005em", margin: 0 }}>Agenda</h1>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <WnBtn label="Período anterior" onClick={() => movePeriod(-1)}><ChevronLeft size={14} strokeWidth={1.7} /></WnBtn>
-            <span style={{ fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, color: "var(--color-texto-escuro)", padding: "0 10px", minWidth: 200, textAlign: "center", textTransform: viewMode === "month" ? "capitalize" : "none" }}>
-              {periodLabel}
-            </span>
-            <WnBtn label="Próximo período" onClick={() => movePeriod(1)}><ChevronRight size={14} strokeWidth={1.7} /></WnBtn>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 3, marginLeft: 8, padding: 3, border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-pill)", background: "#fff" }}>
-              {VIEW_OPTIONS.map((option) => {
-                const active = viewMode === option.id;
-
+              {/* Eventos */}
+              {periodEvents.map((e) => {
+                const start = new Date(e.inicio);
+                const col = dayKeys.indexOf(dateKey(start));
+                if (col < 0) return null;
+                const mins = start.getHours() * 60 + start.getMinutes();
+                const dur = Math.max(20, differenceInMinutes(new Date(e.fim), start));
+                const top = ((mins - tStart) / 60) * HOUR_PX;
+                const height = Math.max(26, (dur / 60) * HOUR_PX - 3);
+                const c = colorVar(e);
+                const slotKey = `${e.inicio}|${e.servicoId ?? ""}|${e.salaId ?? ""}`;
+                const occ = slotCount.get(slotKey) ?? 1;
+                const cap = e.capacidadeSlot ?? 1;
                 return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => selectViewMode(option.id)}
+                  <button key={e.id} onClick={() => setSelected(e)}
+                    className="absolute overflow-hidden rounded-[var(--radius-md)] px-2 py-1 text-left"
                     style={{
-                      height: 26,
-                      border: 0,
-                      borderRadius: "var(--radius-pill)",
-                      background: active ? "var(--color-bege-claro)" : "transparent",
-                      color: active ? "var(--color-texto-escuro)" : "var(--color-texto-medio)",
-                      cursor: "pointer",
-                      fontFamily: "var(--font-body)",
-                      fontSize: 12,
-                      fontWeight: active ? 500 : 400,
-                      padding: "0 11px",
-                      transition: "all var(--duration-fast) var(--ease-soft)",
-                    }}
-                  >
-                    {option.label}
+                      top: top + 1, height,
+                      left: `calc(${HOUR_COL_W}px + (100% - ${HOUR_COL_W}px) * ${col} / ${dayCount} + 2px)`,
+                      width: `calc((100% - ${HOUR_COL_W}px) / ${dayCount} - 5px)`,
+                      background: bgFor(c), borderLeft: `3px solid ${c}`,
+                    }}>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="truncate text-[11px] font-medium text-text-primary">{format(start, "HH:mm")}</span>
+                      <span className="shrink-0 rounded-[var(--radius-pill)] bg-card/70 px-1 text-[9px] font-medium text-text-secondary">{occ}/{cap}</span>
+                    </div>
+                    <div className="truncate text-[11px] text-text-primary">{e.clienteNome}</div>
+                    {height > 42 && e.servicoNome ? <div className="truncate text-[10px] text-text-secondary">{e.servicoNome}</div> : null}
                   </button>
                 );
               })}
             </div>
-            {loadingAppointments ? (
-              <span style={{ fontFamily: "var(--font-body)", fontSize: 11, color: "var(--color-texto-medio)", marginLeft: 8 }}>Carregando...</span>
-            ) : null}
           </div>
         </div>
-        <PrimaryBtn onClick={() => setNewApptOpen(true)}><Plus size={14} strokeWidth={1.8} />Novo horário</PrimaryBtn>
-      </header>
 
-      {/* ── Agenda wrap ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 304px", minHeight: 0, overflow: "hidden" }}>
-        {/* ── Calendar ── */}
-        <div style={{ display: "grid", gridTemplateRows: "auto 1fr", minWidth: 0, borderRight: "0.6px solid var(--color-cinza)", background: "var(--bg-1)", overflow: "hidden" }}>
-          {isMonthView ? (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: monthGridColumns, borderBottom: "0.6px solid var(--color-cinza)", background: "var(--bg-1)" }}>
-                {visibleScheduleDays.map((day) => (
-                  <div key={day.day} style={{ padding: "12px 10px", borderLeft: "0.6px solid var(--color-cinza)", textAlign: "center", fontFamily: "var(--font-body)", fontSize: 10, fontWeight: 500, letterSpacing: "1.6px", textTransform: "uppercase", color: "var(--color-texto-medio)" }}>
-                    {day.day.slice(0, 3)}
-                  </div>
-                ))}
-              </div>
-
-              <div className="crm-scrollbar" style={{ overflowY: "auto", minHeight: 0 }}>
-                <div style={{ display: "grid", gridTemplateColumns: monthGridColumns, minHeight: "100%" }}>
-                  {monthDays.map((day) => {
-                    const key = dateKey(day);
-                    const dayEvents = periodEvents.filter((evt) => evt.dateKey === key);
-                    const muted = !isSameMonth(day, periodAnchor);
-                    const closed = clinicSchedule[clinicDayIndexForDate(day)]?.off ?? false;
-                    const today = isSameDay(day, todayDate);
-
-                    return (
-                      <div
-                        key={key}
-                        style={{
-                          minHeight: 112,
-                          padding: "10px 10px 9px",
-                          borderLeft: "0.6px solid var(--color-cinza)",
-                          borderBottom: "0.6px solid var(--color-cinza)",
-                          background: closed ? "rgba(250,248,244,0.72)" : "var(--bg-1)",
-                          opacity: muted ? 0.42 : 1,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                          <span style={{ width: 26, height: 26, borderRadius: "var(--radius-pill)", background: today ? "var(--color-alaranjado)" : "transparent", color: today ? "#fff" : "var(--color-texto-escuro)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1 }}>
-                            {format(day, "d")}
-                          </span>
-                          <span style={{ fontFamily: "var(--font-body)", fontSize: 10, color: "var(--color-texto-medio)", whiteSpace: "nowrap" }}>
-                            {dayEvents.length ? `${dayEvents.length} aval.` : closed ? "Fechado" : ""}
-                          </span>
-                        </div>
-
-                        <div style={{ display: "grid", gap: 5 }}>
-                          {dayEvents.slice(0, 3).map((evt) => {
-                            const tk = TK[evt.type];
-
-                            return (
-                              <button
-                                key={evt.id}
-                                type="button"
-                                onClick={(e) => handleEvtClick(e, evt)}
-                                style={{
-                                  minWidth: 0,
-                                  border: 0,
-                                  borderLeft: `3px solid ${tk.color}`,
-                                  borderRadius: "var(--radius-sm)",
-                                  background: tk.bg,
-                                  color: tk.fg,
-                                  cursor: "pointer",
-                                  fontFamily: "var(--font-body)",
-                                  fontSize: 10.5,
-                                  fontWeight: 500,
-                                  lineHeight: 1.25,
-                                  padding: "5px 7px",
-                                  textAlign: "left",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {evt.s} · {evt.name}
-                              </button>
-                            );
-                          })}
-                          {dayEvents.length > 3 ? (
-                            <span style={{ fontFamily: "var(--font-body)", fontSize: 10.5, color: "var(--color-texto-medio)" }}>
-                              +{dayEvents.length - 3} avaliações
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Days header */}
-              <div style={{ display: "grid", gridTemplateColumns: dayGridColumns, borderBottom: "0.6px solid var(--color-cinza)", background: "var(--bg-1)", position: "relative", zIndex: 2 }}>
-                <div />
-                {WEEK_DAYS.map((d) => {
-                  const dayCount = EVENTS.filter((e) => e.dateKey === d.key).length;
-                  return (
-                    <div key={d.key} style={{ padding: "10px 8px 10px", textAlign: "center", borderLeft: "0.6px solid var(--color-cinza)", minWidth: 0 }}>
-                      <div style={{ fontFamily: "var(--font-body)", fontSize: 10, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: d.isToday ? "var(--color-alaranjado)" : "var(--color-texto-medio)" }}>
-                        {d.dow}
-                      </div>
-                      <div style={{ fontFamily: "var(--font-display)", fontWeight: 400, fontSize: 24, lineHeight: 1.15, color: d.isToday ? "var(--color-alaranjado)" : "var(--color-texto-escuro)", margin: "2px 0 4px" }}>
-                        {d.date}
-                      </div>
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 500, color: "var(--color-texto-medio)" }}>
-                        <span style={{ fontWeight: 600, color: d.isToday ? "var(--color-alaranjado)" : "var(--color-texto-escuro)" }}>{dayCount}</span> aval.
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Grid scroll */}
-              <div ref={gridScrollRef} className="crm-scrollbar" style={{ overflowY: "auto", position: "relative" }}>
-                <div style={{ display: "grid", gridTemplateColumns: dayGridColumns, height: totalH, position: "relative" }}>
-                  {/* Hour labels + lines */}
-                  {hours.map((h) => (
-                    <div key={h} style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: dayGridColumns, position: "absolute", top: topFor(h, 0, timelineStartMinutes), left: 0, right: 0, height: HOUR_PX, pointerEvents: "none" }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "flex-end", paddingRight: 10, paddingTop: 3, fontFamily: "var(--font-body)", fontSize: 11, color: "var(--color-texto-medio)", fontVariantNumeric: "tabular-nums" }}>
-                        {`${String(h).padStart(2, "0")}h`}
-                      </div>
-                      {Array.from({ length: visibleDayCount }, (_, col) => (
-                        <div key={col} style={{ borderLeft: "0.6px solid var(--color-cinza)", borderTop: "0.6px solid rgba(211,210,205,0.5)" }} />
-                      ))}
-                    </div>
-                  ))}
-
-                  {/* Closed periods */}
-                  {visibleScheduleDays.flatMap((day, col) => (
-                    getClosedSegments(day, timelineStartMinutes, timelineEndMinutes).map((segment) => {
-                      const top = topForMinutes(segment.startMinutes, timelineStartMinutes);
-                      const height = ((segment.endMinutes - segment.startMinutes) / 60) * HOUR_PX;
-                      const showLabel = segment.endMinutes - segment.startMinutes >= 90;
-
-                      return (
-                        <div
-                          key={`${day.index}-${segment.startMinutes}-${segment.endMinutes}`}
-                          style={{
-                            position: "absolute",
-                            top,
-                            height,
-                            left: `calc(${HOUR_COL_W}px + (100% - ${HOUR_COL_W}px) * ${col} / ${visibleDayCount})`,
-                            width: `calc((100% - ${HOUR_COL_W}px) / ${visibleDayCount})`,
-                            background: "repeating-linear-gradient(135deg, rgba(211, 210, 205, 0.18), rgba(211, 210, 205, 0.18) 8px, rgba(250, 248, 244, 0.64) 8px, rgba(250, 248, 244, 0.64) 16px)",
-                            borderLeft: "0.6px solid var(--color-cinza)",
-                            borderTop: "0.6px solid rgba(211,210,205,0.45)",
-                            borderBottom: "0.6px solid rgba(211,210,205,0.45)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            pointerEvents: "none",
-                            zIndex: 0,
-                          }}
-                        >
-                          {showLabel ? (
-                            <span style={{ fontFamily: "var(--font-body)", fontSize: 10, fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", background: "rgba(255,255,255,0.72)", borderRadius: "var(--radius-pill)", padding: "3px 8px" }}>
-                              Intervalo
-                            </span>
-                          ) : null}
-                        </div>
-                      );
-                    })
-                  ))}
-
-                  {/* Today indicator */}
-                  {showNowIndicator && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: nowTop,
-                        left: `calc(${HOUR_COL_W}px + (100% - ${HOUR_COL_W}px) * ${todayColumnIndex} / ${visibleDayCount})`,
-                        width: `calc((100% - ${HOUR_COL_W}px) / ${visibleDayCount})`,
-                        height: 1.5,
-                        background: "var(--color-alaranjado)",
-                        opacity: 0.7,
-                        pointerEvents: "none",
-                        zIndex: 3,
-                      }}
-                    />
-                  )}
-
-                  {/* Events */}
-                  {EVENTS.map((evt) => {
-                    const [h, m] = parseTime(evt.s);
-                    const columnIndex = timelineDayKeys.indexOf(evt.dateKey);
-                    if (columnIndex < 0) return null;
-
-                    const top   = topFor(h, m, timelineStartMinutes);
-                    const height = Math.max(28, (evt.dur / 60) * HOUR_PX - 4);
-                    const tk    = TK[evt.type];
-                    const isSelected = evt.id === selectedId;
-                    return (
-                      <div
-                        key={evt.id}
-                        onClick={(e) => handleEvtClick(e, evt)}
-                        style={{
-                          position: "absolute",
-                          top: top + 2,
-                          height,
-                          left: `calc(${HOUR_COL_W}px + (100% - ${HOUR_COL_W}px) * ${columnIndex} / ${visibleDayCount} + 3px)`,
-                          width: `calc((100% - ${HOUR_COL_W}px) / ${visibleDayCount} - 6px)`,
-                          background: tk.bg,
-                          borderLeft: `3px solid ${tk.color}`,
-                          borderRadius: "var(--radius-md)",
-                          padding: "5px 8px",
-                          cursor: "pointer",
-                          zIndex: isSelected ? 4 : 1,
-                          boxShadow: isSelected ? `0 0 0 2px ${tk.color}` : "none",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div style={{ fontFamily: "var(--font-body)", fontSize: 11.5, fontWeight: 500, color: tk.fg, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{evt.name}</div>
-                        {height > 40 && (
-                          <div style={{ fontFamily: "var(--font-body)", fontSize: 10, color: tk.fg, opacity: 0.8, marginTop: 2 }}>
-                            {evt.s} · {evt.dur}min
-                            {evt.status === "no-show" && " · Faltou"}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ── Right panel ── */}
-        <aside className="crm-scrollbar" style={{ minWidth: 0, overflowY: "auto", overflowX: "hidden", background: "var(--bg-1)", padding: "22px 22px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
-          {/* Stats */}
-          <section>
-            <h3 style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.8px", textTransform: "uppercase", color: "var(--color-bege)", margin: "0 0 12px" }}>
-              {statsTitle}
-              <span style={{ color: "var(--color-texto-medio)", fontWeight: 400, letterSpacing: "0.3px", textTransform: "none", fontSize: 11, marginLeft: 8 }}>{statEvents.length} avaliações</span>
-            </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-              {[
-                { label: "Confirmadas", value: statEvents.filter((e) => e.status === "confirmed").length, color: "var(--color-verde)" },
-                { label: "A confirmar", value: statEvents.filter((e) => e.status === "pending").length,   color: "var(--color-tangerina)" },
-                { label: "Faltaram",    value: statEvents.filter((e) => e.status === "no-show").length,   color: "var(--color-ui-error)" },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ minWidth: 0, background: "var(--bg-card)", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 8px 8px", textAlign: "center" }}>
-                  <div style={{ fontFamily: "var(--font-display)", fontWeight: 400, fontSize: 24, lineHeight: 1, color, fontVariantNumeric: "tabular-nums" }}>{value}</div>
-                  <div style={{ fontFamily: "var(--font-body)", fontSize: 8.5, fontWeight: 500, letterSpacing: "0.45px", textTransform: "uppercase", color: "var(--color-texto-medio)", marginTop: 6, whiteSpace: "nowrap", lineHeight: 1 }}>{label}</div>
-                </div>
-              ))}
+        {/* Painel direito */}
+        <aside className="overflow-y-auto crm-scrollbar bg-background px-5 py-6">
+          <Section title="Hoje">
+            <div className="grid grid-cols-2 gap-2">
+              <MiniStat label="Atendimentos" value={hojeEvents.length} />
+              <MiniStat label="Confirmados" value={hojeEvents.filter((e) => e.status === "confirmado" || e.status === "compareceu").length} />
             </div>
-          </section>
+          </Section>
 
-          {/* Upcoming */}
-          <section>
-            <h3 style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.8px", textTransform: "uppercase", color: "var(--color-bege)", margin: "0 0 12px" }}>Próximas</h3>
-            {upcomingEvents.length === 0 ? (
-              <p style={{ fontFamily: "var(--font-body)", fontSize: 12, color: "var(--color-texto-medio)" }}>Nenhuma avaliação próxima.</p>
-            ) : (
-              upcomingEvents.map((evt) => {
-                const tk = TK[evt.type];
-                return (
-                  <div key={evt.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "0.6px solid var(--color-cinza)" }}>
-                    <span style={{ width: 28, height: 28, borderRadius: "var(--radius-pill)", background: tk.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "var(--radius-pill)", background: tk.color }} />
-                    </span>
-                    <div>
-                      <div style={{ fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 500, color: "var(--color-texto-escuro)", lineHeight: 1.3 }}>{evt.name}</div>
-                      <div style={{ fontFamily: "var(--font-body)", fontSize: 11, color: "var(--color-texto-medio)", marginTop: 2 }}>
-                        {viewMode === "day" ? evt.s : `${format(evt.startDate, "d MMM", { locale: ptBR })} · ${evt.s}`} · {tk.label}
-                      </div>
-                    </div>
-                    <span style={{ width: 8, height: 8, borderRadius: "var(--radius-pill)", background: evt.status === "confirmed" ? "var(--color-verde)" : "var(--color-bege)", flexShrink: 0 }} />
-                  </div>
-                );
-              })
-            )}
-          </section>
+          <Section title="Próximas">
+            {proximas.length === 0 ? (
+              <p className="text-xs text-text-secondary">Nenhum agendamento próximo.</p>
+            ) : proximas.map((e) => (
+              <button key={e.id} onClick={() => setSelected(e)} className="flex w-full items-center gap-3 border-b border-border py-2.5 text-left last:border-0">
+                <span className="h-2 w-2 shrink-0 rounded-[var(--radius-pill)]" style={{ background: colorVar(e) }} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-text-primary">{e.clienteNome}</span>
+                  <span className="block text-[11px] text-text-secondary">
+                    {format(new Date(e.inicio), view === "day" ? "HH:mm" : "EEE HH:mm", { locale: ptBR })}{e.servicoNome ? ` · ${e.servicoNome}` : ""}
+                  </span>
+                </span>
+                <span className="h-2 w-2 shrink-0 rounded-[var(--radius-pill)]" style={{ background: STATUS_DOT[e.status] }} />
+              </button>
+            ))}
+          </Section>
 
-          {/* Legend */}
-          <section>
-            <h3 style={{ fontFamily: "var(--font-body)", fontSize: 11, fontWeight: 500, letterSpacing: "1.8px", textTransform: "uppercase", color: "var(--color-bege)", margin: "0 0 12px" }}>Legenda</h3>
-            {(Object.entries(TK) as [EventType, typeof TK[EventType]][]).map(([key, tk]) => (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: tk.bg, border: `2px solid ${tk.color}`, flexShrink: 0 }} />
-                <span style={{ fontFamily: "var(--font-body)", fontSize: 12, color: "var(--color-texto-escuro)" }}>{tk.label}</span>
+          <Section title="Capacidade · serviços">
+            {options.servicos.length === 0 ? (
+              <p className="text-xs text-text-secondary">Cadastre serviços para definir capacidade.</p>
+            ) : options.servicos.map((s) => (
+              <div key={s.id} className="flex items-center gap-2 py-1.5">
+                <span className="h-2.5 w-2.5 rounded-[var(--radius-pill)]" style={{ background: COR_VAR[(s.cor_token as CorToken) ?? "alaranjado"] }} />
+                <span className="flex-1 truncate text-xs text-text-primary">{s.nome}</span>
+                <span className="text-[11px] text-text-secondary">{s.capacidade_slot}/slot</span>
               </div>
             ))}
-          </section>
+          </Section>
         </aside>
       </div>
 
-      {/* Popover */}
-      {selectedEvt && popoverPos && (
-        <EventPopover evt={selectedEvt} pos={popoverPos} onClose={closePopover} />
-      )}
+      {selected ? <EventPopover e={selected} onClose={() => setSelected(null)} onChanged={() => { setSelected(null); reload(); }} pending={pending} /> : null}
+      {newOpen ? <NovoAgendamentoModal options={options} onClose={() => setNewOpen(false)} onScheduled={() => { setNewOpen(false); reload(); }} /> : null}
+    </div>
+  );
+}
 
-      {/* New appointment modal */}
-      {newApptOpen && (
-        <NewApptModal
-          clinicHours={clinicHours}
-          onClose={() => setNewApptOpen(false)}
-          onScheduled={() => {
-            // Reload appointments for the current period
-            setLoadingAppointments(true);
-            getAgendaAppointments(periodStartIso, periodEndIso)
-              .then((res) => { if (res.success) setAppointments(res.appointments); })
-              .finally(() => setLoadingAppointments(false));
-          }}
-        />
-      )}
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-6">
+      <h3 className="crm-label mb-3 text-[10px] tracking-[1.8px] text-accent">{title}</h3>
+      {children}
+    </section>
+  );
+}
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-[var(--radius-md)] border border-border bg-card p-3 text-center">
+      <div className="font-display text-2xl leading-none text-text-primary">{value}</div>
+      <div className="crm-label mt-1.5 text-[8.5px] tracking-[0.5px] text-text-secondary">{label}</div>
+    </div>
+  );
+}
+
+// ─── Popover de detalhe ───────────────────────────────────────────────────────
+
+function EventPopover({ e, onClose, onChanged, pending }: { e: AgendaEvent; onClose: () => void; onChanged: () => void; pending: boolean }) {
+  const [busy, setBusy] = useState(false);
+  async function setStatus(status: AppointmentStatus) {
+    setBusy(true);
+    await updateAppointmentStatus({ id: e.id, status });
+    onChanged();
+  }
+  return (
+    <Dialog open onClose={onClose} eyebrow={e.servicoNome ?? "Agendamento"} title={e.clienteNome}
+      footer={
+        <>
+          <Button size="sm" variant="ghost" onClick={() => setStatus("cancelado")} disabled={busy || pending}>Cancelar agend.</Button>
+          <Button size="sm" variant="secondary" onClick={() => setStatus("faltou")} disabled={busy || pending}>Faltou</Button>
+          <Button size="sm" variant="secondary" onClick={() => setStatus("compareceu")} disabled={busy || pending}>Compareceu</Button>
+          <Button size="sm" onClick={() => setStatus("confirmado")} disabled={busy || pending}>Confirmar</Button>
+        </>
+      }>
+      <div className="flex flex-col gap-3 text-sm">
+        <Row label="Quando" value={`${format(new Date(e.inicio), "EEE, dd/MM 'às' HH:mm", { locale: ptBR })} — ${format(new Date(e.fim), "HH:mm")}`} />
+        {e.salaNome ? <Row label="Sala" value={e.salaNome} /> : null}
+        {e.profissionalNome ? <Row label="Profissional" value={e.profissionalNome} /> : null}
+        {e.pilar ? <Row label="Pilar" value={PILAR_LABEL[e.pilar]} /> : null}
+        <Row label="Status" value={STATUS_LABEL[e.status]} />
+        {e.observacoes ? (
+          <div className="rounded-[var(--radius-md)] border-l-2 border-accent bg-accent-soft/40 px-3 py-2 text-xs text-text-primary">{e.observacoes}</div>
+        ) : null}
+        {e.pessoaId ? (
+          <Link href={`/clientes/${e.pessoaId}`} className="text-xs font-medium text-primary hover:underline">Abrir ficha do cliente →</Link>
+        ) : e.leadId ? (
+          <Link href={`/leads/${e.leadId}`} className="text-xs font-medium text-primary hover:underline">Abrir ficha do lead →</Link>
+        ) : null}
+      </div>
+    </Dialog>
+  );
+}
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-3">
+      <span className="crm-label w-24 shrink-0 text-[10px] tracking-[1.2px] text-text-secondary">{label}</span>
+      <span className="text-text-primary">{value}</span>
+    </div>
+  );
+}
+
+// ─── Modal novo agendamento ───────────────────────────────────────────────────
+
+const HORAS = Array.from({ length: 15 }, (_, i) => String(i + 6).padStart(2, "0"));
+const MINS = ["00", "30"];
+
+function NovoAgendamentoModal({ options, onClose, onScheduled }: { options: AgendaOptions; onClose: () => void; onScheduled: () => void }) {
+  const [pending, startTransition] = useTransition();
+  const [pessoaId, setPessoaId] = useState("");
+  const [servicoId, setServicoId] = useState(options.servicos[0]?.id ?? "");
+  const [salaId, setSalaId] = useState("");
+  const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
+  const [hora, setHora] = useState("08");
+  const [min, setMin] = useState("00");
+  const [obs, setObs] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function salvar() {
+    setError(null);
+    if (!pessoaId) { setError("Selecione um cliente."); return; }
+    if (!servicoId) { setError("Selecione um serviço."); return; }
+    const inicio = new Date(`${data}T${hora}:${min}:00`);
+    if (Number.isNaN(inicio.getTime())) { setError("Data/hora inválida."); return; }
+    startTransition(async () => {
+      const r = await criarAgendamento({
+        pessoa_id: pessoaId, servico_id: servicoId,
+        sala_id: salaId || null, profissional_id: null,
+        inicio: inicio.toISOString(), categoria: "sessao", observacoes: obs,
+      });
+      if (!r.success) { setError(r.error); return; }
+      onScheduled();
+    });
+  }
+
+  return (
+    <Dialog open onClose={onClose} eyebrow="Agenda" title="Novo agendamento"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={pending}>Cancelar</Button>
+          <Button onClick={salvar} disabled={pending}>{pending ? "Salvando…" : "Salvar agendamento"}</Button>
+        </>
+      }>
+      <div className="flex flex-col gap-4">
+        {error ? <p className="rounded-[var(--radius-md)] bg-error/10 px-3 py-2 text-xs text-error">{error}</p> : null}
+        <Field label="Cliente">
+          <Select value={pessoaId} onChange={(e) => setPessoaId(e.target.value)}>
+            <option value="">Selecione…</option>
+            {options.pessoas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </Select>
+        </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Serviço">
+            <Select value={servicoId} onChange={(e) => setServicoId(e.target.value)}>
+              {options.servicos.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+            </Select>
+          </Field>
+          <Field label="Sala">
+            <Select value={salaId} onChange={(e) => setSalaId(e.target.value)}>
+              <option value="">Sem sala</option>
+              {options.salas.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+            </Select>
+          </Field>
+        </div>
+        <div className="grid grid-cols-[1fr_90px_90px] gap-3">
+          <Field label="Dia"><Input type="date" value={data} onChange={(e) => setData(e.target.value)} /></Field>
+          <Field label="Hora">
+            <Select value={hora} onChange={(e) => setHora(e.target.value)}>{HORAS.map((h) => <option key={h} value={h}>{h}h</option>)}</Select>
+          </Field>
+          <Field label="Min">
+            <Select value={min} onChange={(e) => setMin(e.target.value)}>{MINS.map((m) => <option key={m} value={m}>{m}</option>)}</Select>
+          </Field>
+        </div>
+        <Field label="Observação curta">
+          <Input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Opcional" />
+        </Field>
+        <p className="text-xs text-text-secondary">A duração vem do serviço; a capacidade do horário é validada ao salvar.</p>
+      </div>
+    </Dialog>
+  );
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="crm-label mb-1.5 text-[10px] tracking-[1.5px] text-text-secondary">{label}</p>
+      {children}
     </div>
   );
 }

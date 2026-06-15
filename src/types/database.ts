@@ -198,7 +198,7 @@ export interface Database {
       appointments: {
         Row: {
           id: string;
-          lead_id: string;
+          lead_id: string | null;
           inicio: string;
           fim: string;
           tipo: AppointmentType;
@@ -218,7 +218,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          lead_id: string;
+          lead_id?: string | null;
           inicio: string;
           fim: string;
           tipo: AppointmentType;
