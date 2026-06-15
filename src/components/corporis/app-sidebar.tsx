@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   Stethoscope,
   UserRoundCog,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -33,6 +34,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "Gestão",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/clientes",  label: "Clientes",  icon: Users },
       { href: "/agenda",    label: "Agenda",    icon: CalendarDays },
       { href: "/vendas",    label: "Vendas",    icon: ShoppingBag },
     ],
