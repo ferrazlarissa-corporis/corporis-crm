@@ -10,6 +10,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getDashboardStats } from "@/lib/queries/dashboard";
+import { getGestaoStats } from "@/lib/queries/dashboard-gestao";
+import { StatCard } from "@/components/corporis/stat-card";
+import { formatBRL } from "@/lib/vendas-labels";
+import { UserCheck, TrendingUp, Wallet, CircleDollarSign, AlertTriangle } from "lucide-react";
 import type { LeadOrigin, AppointmentType } from "@/types/database";
 
 function InstagramGlyph(props: React.SVGProps<SVGSVGElement>) {
@@ -72,7 +76,7 @@ function pctChange(cur: number, prev: number): { label: string; trend: "up" | "d
 }
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  const [stats, gestao] = await Promise.all([getDashboardStats(), getGestaoStats()]);
   const { kpis, funnelByStage, originBreakdown, todayAppointments, attentionLeads, todayLabel } = stats;
 
   const convRate = kpis.totalLeads > 0
@@ -120,6 +124,54 @@ export default async function DashboardPage() {
   return (
     <main className="h-dvh overflow-y-auto bg-background p-8">
       <div className="mx-auto grid max-w-[1440px] gap-8">
+        {/* Visão de gestão */}
+        <section aria-label="Visão de gestão">
+          <div className="mb-4">
+            <h2 className="font-display text-[22px] leading-tight text-text-primary">Visão de saúde da clínica</h2>
+            <p className="mt-1 text-[13px] text-text-secondary">Clientes ativos, receita recorrente e cobranças num relance.</p>
+          </div>
+          <div className="grid grid-cols-5 gap-4">
+            <StatCard label="Clientes ativos" value={gestao.clientesAtivos} icon={<UserCheck className="h-5 w-5" strokeWidth={1.5} />} />
+            <StatCard label="MRR" value={formatBRL(gestao.mrr)} icon={<TrendingUp className="h-5 w-5" strokeWidth={1.5} />} />
+            <StatCard label="Recebido no mês" value={formatBRL(gestao.recebidoMes)} icon={<Wallet className="h-5 w-5" strokeWidth={1.5} />} />
+            <StatCard label="Em aberto" value={formatBRL(gestao.emAberto)} icon={<CircleDollarSign className="h-5 w-5" strokeWidth={1.5} />} />
+            <StatCard label="Inadimplentes" value={gestao.inadimplentes} icon={<AlertTriangle className="h-5 w-5" strokeWidth={1.5} />} />
+          </div>
+
+          {gestao.pendencias.length > 0 ? (
+            <div className="mt-4 rounded-[var(--radius-lg)] border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
+              <div className="mb-4 flex items-end justify-between">
+                <div className="font-display text-lg text-text-primary">Pendências</div>
+                <span className="text-xs text-text-secondary">{gestao.pendencias.length} itens</span>
+              </div>
+              <div className="grid gap-1">
+                {gestao.pendencias.map((p) => {
+                  const inner = (
+                    <>
+                      <span className={p.tipo === "financeiro"
+                        ? "shrink-0 rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--color-ui-error)_10%,transparent)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1.2px] text-[var(--color-ui-error)]"
+                        : "shrink-0 rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1.2px] text-text-secondary"}>
+                        {p.tipo === "financeiro" ? "Financeiro" : "Contrato"}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-text-primary">{p.titulo}</span>
+                        <span className="block text-xs text-text-secondary">{p.detalhe}</span>
+                      </span>
+                    </>
+                  );
+                  return p.pessoaId ? (
+                    <Link key={p.id} href={`/clientes/${p.pessoaId}`} className="-mx-2 flex items-center gap-3 rounded-[var(--radius-md)] px-2 py-2.5 no-underline transition-colors hover:bg-accent-soft">
+                      {inner}
+                    </Link>
+                  ) : (
+                    <div key={p.id} className="flex items-center gap-3 px-0 py-2.5">{inner}</div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </section>
+
         {/* KPIs */}
         <section className="grid grid-cols-4 gap-6" aria-label="Indicadores de captação">
           {kpisData.map((kpi) => {

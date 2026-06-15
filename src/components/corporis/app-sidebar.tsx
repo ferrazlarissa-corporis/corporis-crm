@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import {
   Bot,
   CalendarDays,
+  ClipboardCheck,
   DoorOpen,
   Dumbbell,
   FileText,
@@ -35,6 +36,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/clientes",  label: "Clientes",  icon: Users },
+      { href: "/clientes/onboarding", label: "Onboarding", icon: ClipboardCheck },
       { href: "/agenda",    label: "Agenda",    icon: CalendarDays },
       { href: "/vendas",    label: "Vendas",    icon: ShoppingBag },
     ],
