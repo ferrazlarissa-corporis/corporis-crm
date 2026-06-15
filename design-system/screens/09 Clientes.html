@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis OS · Clientes</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Corporis OS — Clientes — tokens locais
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+
+    --surface-raised: var(--bg-card);
+    --row-hover:    #F7F1E5;
+    --content-max: 1240px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); overflow: hidden; }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh; width: 100vw;
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 0;
+  }
+  .sb-logo { padding: 22px 24px 14px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+
+  .sb-scroll {
+    overflow-y: auto;
+    padding: 4px 16px 12px;
+    min-height: 0;
+  }
+  .sb-scroll::-webkit-scrollbar { width: 8px; }
+  .sb-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+
+  .sb-group { margin-top: 14px; }
+  .sb-group:first-child { margin-top: 2px; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px; letter-spacing: 2.4px;
+    text-transform: uppercase; color: var(--color-bege);
+    font-weight: 500; padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 400;
+    text-decoration: none; cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+    position: relative;
+  }
+  .sb-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active {
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .sb-item.active::before {
+    content: ""; position: absolute; left: 0; top: 9px; bottom: 9px;
+    width: 2px; background: var(--color-alaranjado); border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado); color: #fff;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.4px;
+    padding: 1px 7px; border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+
+  .sb-footer {
+    border-top: 0.6px solid var(--color-cinza);
+    padding: 10px 16px 12px;
+  }
+  .sb-user {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px;
+    margin-top: 4px;
+    border-radius: var(--radius-md);
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); line-height: 1.2; }
+  .sb-user-role { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent; border: 0;
+    color: var(--color-texto-medio); padding: 6px;
+    border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ============================================================
+     MAIN
+     ============================================================ */
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) auto 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* ===== Topbar ===== */
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    gap: 24px;
+  }
+  .topbar-left { display: flex; align-items: baseline; gap: 16px; min-width: 0; }
+  .topbar-title {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 28px; line-height: 1;
+    color: var(--color-texto-escuro); letter-spacing: -0.005em;
+    white-space: nowrap;
+  }
+  .topbar-crumb {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+    display: inline-flex; align-items: center; gap: 8px;
+    letter-spacing: 0.2px; white-space: nowrap;
+  }
+  .topbar-crumb .sep { width: 3px; height: 3px; border-radius: var(--radius-pill); background: var(--color-cinza); }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+  .topbar-search {
+    position: relative;
+    width: 300px;
+  }
+  .topbar-search input {
+    width: 100%;
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    padding: 9px 14px 9px 38px;
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-escuro);
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .topbar-search input::placeholder { color: var(--color-texto-medio); }
+  .topbar-search input:focus {
+    outline: none;
+    border-color: var(--color-tangerina);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.08);
+  }
+  .topbar-search svg {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 15px; height: 15px; stroke-width: 1.6;
+    color: var(--color-texto-medio);
+  }
+  .topbar-search kbd {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-family: var(--font-body); font-size: 10px;
+    color: var(--color-texto-medio);
+    background: var(--bg-2);
+    border-radius: var(--radius-xs);
+    padding: 2px 6px;
+    letter-spacing: 0.4px;
+  }
+
+  /* ===== Buttons ===== */
+  .btn {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-escuro);
+    border-radius: var(--radius-pill);
+    padding: 9px 16px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: all var(--duration-fast) var(--ease-soft);
+    white-space: nowrap;
+  }
+  .btn svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  .btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); }
+  .btn.primary {
+    background: var(--color-alaranjado);
+    color: #fff;
+    border-color: var(--color-alaranjado);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); }
+  .btn.primary svg { stroke-width: 2.2; }
+  .btn.icon { padding: 9px; }
+  .btn.icon svg { width: 16px; height: 16px; }
+
+  /* ===== Filter bar ===== */
+  .filterbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    padding: 14px 32px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    appearance: none;
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    border-radius: var(--radius-pill);
+    padding: 6px 13px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .chip .c {
+    font-feature-settings: "tnum";
+    font-size: 11px;
+    color: var(--color-texto-medio);
+    background: var(--bg-2);
+    border-radius: var(--radius-pill);
+    padding: 0 6px;
+  }
+  .chip:hover { border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .chip.active {
+    background: var(--color-texto-escuro);
+    border-color: var(--color-texto-escuro);
+    color: var(--bg-1);
+  }
+  .chip.active .c { background: rgba(255,255,255,0.16); color: var(--bg-1); }
+  .chip .swatch {
+    width: 8px; height: 8px; border-radius: var(--radius-pill);
+  }
+  .chip .swatch.pilates  { background: var(--color-bege); }
+  .chip .swatch.gestante { background: var(--color-tangerina); }
+  .chip .swatch.pelvica  { background: var(--color-verde); }
+
+  .filter-spacer { flex: 1; }
+  .filter-meta {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .filter-meta strong { color: var(--color-texto-escuro); font-weight: 500; }
+  .sort-btn {
+    appearance: none; background: transparent;
+    border: 0.6px solid var(--color-cinza);
+    color: var(--color-texto-medio);
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .sort-btn svg { width: 13px; height: 13px; stroke-width: 1.7; }
+  .sort-btn:hover { border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+
+  /* ===== Scroll / content ===== */
+  .scroll {
+    overflow: auto;
+    background: var(--bg-1);
+    padding: 24px 32px 48px;
+  }
+  .scroll::-webkit-scrollbar { width: 10px; }
+  .scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .content { max-width: var(--content-max); margin: 0 auto; }
+
+  /* ===== Table card ===== */
+  .card {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .ctable {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+    color: var(--color-texto-escuro);
+  }
+  .ctable thead th {
+    text-align: left;
+    font-family: var(--font-body); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--color-bege);
+    padding: 15px 20px;
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    white-space: nowrap;
+  }
+  .ctable thead th.col-chevron { width: 44px; }
+  .ctable tbody td {
+    padding: 13px 20px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    font-size: 13.5px;
+    vertical-align: middle;
+  }
+  .ctable tbody tr {
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft);
+  }
+  .ctable tbody tr:last-child td { border-bottom: 0; }
+  .ctable tbody tr:hover { background: var(--row-hover); }
+  .ctable tbody tr:hover .chev { opacity: 1; transform: translateX(0); color: var(--color-alaranjado); }
+  .ctable tbody tr.inactive { background: rgba(244, 239, 230, 0.4); }
+  .ctable tbody tr.inactive:hover { background: var(--row-hover); }
+  .ctable tbody tr.inactive .client-name { color: var(--color-texto-medio); }
+
+  /* client cell */
+  .client {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .client .avatar { width: 38px; height: 38px; font-size: 13px; }
+  .avatar.t-pilates  { background: var(--color-bege-claro); color: #6B5526; }
+  .avatar.t-gestante { background: rgba(246, 169, 88, 0.26); color: #B85A2E; }
+  .avatar.t-pelvica  { background: rgba(172, 192, 149, 0.34); color: #5F7948; }
+  .avatar.t-mut      { background: var(--bg-2); color: var(--color-texto-medio); }
+  .client-meta { min-width: 0; }
+  .client-top { display: flex; align-items: center; gap: 8px; }
+  .client-name {
+    font-size: 13.5px; font-weight: 500;
+    color: var(--color-texto-escuro);
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .client-sub {
+    font-size: 11.5px; color: var(--color-texto-medio);
+    line-height: 1.3; margin-top: 2px;
+    font-feature-settings: "tnum";
+  }
+
+  /* tipo badge (aluna / paciente) */
+  .tipo {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.6px; text-transform: uppercase;
+    padding: 2px 8px 2px 6px;
+    border-radius: var(--radius-pill);
+  }
+  .tipo .dot { width: 6px; height: 6px; border-radius: var(--radius-pill); }
+  .tipo.pilates  { background: var(--color-bege-claro); color: #6B5526; }
+  .tipo.pilates .dot { background: var(--color-bege); }
+  .tipo.gestante { background: rgba(246, 169, 88, 0.20); color: #B85A2E; }
+  .tipo.gestante .dot { background: var(--color-tangerina); }
+  .tipo.pelvica  { background: rgba(172, 192, 149, 0.22); color: #5F7948; }
+  .tipo.pelvica .dot { background: var(--color-verde); }
+
+  /* plano */
+  .plano-name { font-size: 13px; color: var(--color-texto-escuro); line-height: 1.3; }
+  .plano-sub { font-size: 11.5px; color: var(--color-texto-medio); margin-top: 2px; }
+  .plano-none { font-size: 12.5px; color: var(--color-texto-medio); font-style: italic; }
+
+  /* profissional */
+  .prof {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--color-texto-escuro);
+    white-space: nowrap;
+  }
+  .prof .mini {
+    width: 24px; height: 24px; border-radius: var(--radius-pill);
+    background: var(--bg-2); color: var(--color-texto-medio);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 500;
+    flex-shrink: 0;
+  }
+  .prof-none { font-size: 12.5px; color: var(--color-texto-medio); }
+
+  /* status badge */
+  .status {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-body); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.3px;
+    padding: 3px 11px 3px 9px;
+    border-radius: var(--radius-pill);
+  }
+  .status .dot { width: 7px; height: 7px; border-radius: var(--radius-pill); }
+  .status.on { background: rgba(172, 192, 149, 0.20); color: #5F7948; }
+  .status.on .dot { background: var(--color-verde); box-shadow: 0 0 0 3px rgba(172, 192, 149, 0.22); }
+  .status.off { background: var(--bg-2); color: var(--color-texto-medio); }
+  .status.off .dot { background: var(--color-cinza); }
+
+  /* próximo agendamento */
+  .next { font-size: 13px; color: var(--color-texto-escuro); white-space: nowrap; }
+  .next strong { font-weight: 500; }
+  .next .rel { font-size: 11.5px; color: var(--color-texto-medio); display: block; margin-top: 2px; font-feature-settings: "tnum"; }
+  .next.today strong { color: var(--color-alaranjado); }
+  .next-none { font-size: 12.5px; color: var(--color-texto-medio); font-style: italic; }
+
+  /* financeiro */
+  .fin {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 400;
+    white-space: nowrap;
+  }
+  .fin svg { width: 14px; height: 14px; stroke-width: 1.8; }
+  .fin.ok { color: var(--color-texto-medio); }
+  .fin.ok svg { color: var(--color-verde); }
+  .fin.late {
+    color: var(--color-ui-error); font-weight: 500;
+    background: rgba(192, 80, 74, 0.08);
+    padding: 3px 10px 3px 8px;
+    border-radius: var(--radius-pill);
+  }
+  .fin.late svg { color: var(--color-ui-error); }
+
+  /* chevron */
+  .col-chevron { text-align: right; }
+  .chev {
+    width: 18px; height: 18px;
+    color: var(--color-texto-medio);
+    opacity: 0; transform: translateX(-3px);
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .chev svg { width: 18px; height: 18px; stroke-width: 1.7; }
+
+  /* card foot */
+  .card-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--bg-1);
+    border-top: 0.6px solid var(--color-cinza);
+  }
+  .card-foot .info {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+  }
+  .pager { display: flex; align-items: center; gap: 4px; }
+  .pager button {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    width: 30px; height: 30px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .pager button svg { width: 14px; height: 14px; stroke-width: 1.8; }
+  .pager button:hover { border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .pager button.active { background: var(--color-bege-claro); border-color: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .pager button:disabled { opacity: 0.4; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="09 Clientes">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <div class="sb-scroll">
+      <!-- GESTÃO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Gestão</div>
+        <nav class="sb-nav">
+          <a href="02 Dashboard.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="#" class="sb-item active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Clientes
+          </a>
+          <a href="06 Agenda.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Agenda
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Vendas
+          </a>
+        </nav>
+      </div>
+
+      <!-- RELACIONAMENTO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Relacionamento</div>
+        <nav class="sb-nav">
+          <a href="03 Inbox WhatsApp.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+              <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            </svg>
+            Inbox
+            <span class="sb-badge">7</span>
+          </a>
+          <a href="04 Funil.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Funil
+          </a>
+          <a href="07 Agente de IA.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/>
+              <circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/>
+              <path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/>
+            </svg>
+            Agente de IA
+          </a>
+        </nav>
+      </div>
+
+      <!-- FINANCEIRO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Financeiro</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Lançamentos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            DRE
+          </a>
+        </nav>
+      </div>
+
+      <!-- CADASTROS -->
+      <div class="sb-group">
+        <div class="sb-section-label">Cadastros</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Planos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Modelos de contrato
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+            Serviços
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            Profissionais
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+              <path d="M9 21v-4h6v4"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/>
+            </svg>
+            Salas
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="sb-footer">
+      <nav class="sb-nav">
+        <a href="08 Configurações.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </nav>
+      <div class="sb-user">
+        <div class="avatar">LF</div>
+        <div class="sb-user-meta">
+          <span class="sb-user-name">Larissa Ferraz</span>
+          <span class="sb-user-role">Gestão · Corporis</span>
+        </div>
+        <button class="sb-user-action" aria-label="Mais opções">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">Clientes</h1>
+        <span class="topbar-crumb">
+          <span>Gestão</span>
+          <span class="sep"></span>
+          <span>Corporis · Xanxerê</span>
+        </span>
+      </div>
+
+      <div class="topbar-right">
+        <label class="topbar-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" placeholder="Buscar cliente, telefone, plano…"/>
+          <kbd>/</kbd>
+        </label>
+        <button class="btn icon" aria-label="Importar / exportar" title="Importar / exportar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <button class="btn primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Novo cliente
+        </button>
+      </div>
+    </header>
+
+    <!-- Filter bar -->
+    <div class="filterbar">
+      <div class="chips">
+        <button class="chip active">Todos <span class="c">142</span></button>
+        <button class="chip">Ativos <span class="c">118</span></button>
+        <button class="chip">Inativos <span class="c">24</span></button>
+        <button class="chip"><span class="swatch pilates"></span>Pilates <span class="c">86</span></button>
+        <button class="chip"><span class="swatch gestante"></span>Gestante <span class="c">19</span></button>
+        <button class="chip"><span class="swatch pelvica"></span>Fisio pélvica <span class="c">37</span></button>
+      </div>
+      <div class="filter-spacer"></div>
+      <div class="filter-meta"><strong>142</strong> clientes · 118 ativos</div>
+      <button class="sort-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="M3 17l3 3 3-3"/><path d="M6 18V4"/>
+        </svg>
+        Nome A–Z
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="scroll">
+      <div class="content">
+        <div class="card">
+          <table class="ctable">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Plano ativo</th>
+                <th>Profissional</th>
+                <th>Status</th>
+                <th>Próximo agendamento</th>
+                <th>Financeiro</th>
+                <th class="col-chevron" aria-label=""></th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <!-- 1 -->
+              <tr>
+                <td>
+                  <div class="client">
+                    <div class="avatar t-pilates">AR</div>
+                    <div class="client-meta">
+                      <div class="client-top">
+                        <span class="client-name">Amanda Ribeiro</span>
+                        <span class="tipo pilates"><span class="dot"></span>Aluna</span>
+                      </div>
+                      <div class="client-sub">Pilates · desde mar/2023</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="plano-name">Pilates 2×/semana</div>
+                  <div class="plano-sub">Mensal · R$ 420</div>
+                </td>
+                <td>
+                  <span class="prof"><span class="mini">LF</span>Larissa Ferraz</span>
+                </td>
+                <td><span class="status on"><span class="dot"></span>Ativo</span></td>
+                <td>
+                  <div class="next today"><strong>Hoje · 14:00</strong><span class="rel">Pilates · Sala 2</span></div>
+                </td>
+                <td>
+                  <span class="fin ok">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Em dia
+                  </span>
+                </td>
+                <td class="col-chevron"><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></td>
+              </tr>
+
+              <!-- 2 -->
+              <tr>
+                <td>
+                  <div class="client">
+                    <div class="avatar t-pelvica">BN</div>
+                    <div class="client-meta">
+                      <div class="client-top">
+                        <span class="client-name">Beatriz Nunes</span>
+                        <span class="tipo pelvica"><span class="dot"></span>Paciente</span>
+                      </div>
+                      <div class="client-sub">Fisio pélvica · desde jan/2024</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="plano-name">Fisio pélvica · 10 sessões</div>
+                  <div class="plano-sub">Pacote · 6 de 10</div>
+                </td>
+                <td>
+                  <span class="prof"><span class="mini">TC</span>Tainara Cordeiro</span>
+                </td>
+                <td><span class="status on"><span class="dot"></span>Ativo</span></td>
+                <td>
+                  <div class="next"><strong>Amanhã · 09:30</strong><span class="rel">Pélvica · Sala 1</span></div>
+                </td>
+                <td>
+                  <span class="fin ok">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Em dia
+                  </span>
+                </td>
+                <td class="col-chevron"><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></td>
+              </tr>
+
+              <!-- 3 -->
+              <tr>
+                <td>
+                  <div class="client">
+                    <div class="avatar t-gestante">CM</div>
+                    <div class="client-meta">
+                      <div class="client-top">
+                        <span class="client-name">Carolina Mattos</span>
+                        <span class="tipo gestante"><span class="dot"></span>Aluna · gestante</span>
+                      </div>
+                      <div class="client-sub">28 semanas · desde abr/2025</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="plano-name">Pilates gestante</div>
+                  <div class="plano-sub">Mensal · R$ 480</div>
+                </td>
+                <td>
+                  <span class="prof"><span class="mini">JP</span>Júlia Pacheco</span>
+                </td>
+                <td><span class="status on"><span class="dot"></span>Ativo</span></td>
+                <td>
+                  <div class="next"><strong>Qui · 16:00</strong><span class="rel">Gestante · Sala 2</span></div>
+                </td>
+                <td>
+                  <span class="fin late">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Atrasado · 8 dias
+                  </span>
+                </td>
+                <td class="col-chevron"><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></td>
+              </tr>
+
+              <!-- 4 -->
+              <tr>
+                <td>
+                  <div class="client">
+                    <div class="avatar t-pilates">DV</div>
+                    <div class="client-meta">
+                      <div class="client-top">
+                        <span class="client-name">Daniela Vasconcelos</span>
+                        <span class="tipo pilates"><span class="dot"></span>Aluna</span>
+                      </div>
+                      <div class="client-sub">Pilates · desde set/2022</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="plano-name">Pilates 3×/semana</div>
+                  <div class="plano-sub">Mensal · R$ 560</div>
+                </td>
+                <td>
+                  <span class="prof"><span class="mini">LF</span>Larissa Ferraz</span>
+                </td>
+                <td><span class="status on"><span class="dot"></span>Ativo</span></td>
+                <td>
+                  <div class="next"><strong>Sex · 07:00</strong><span class="rel">Pilates · Sala 2</span></div>
+                </td>
+                <td>
+                  <span class="fin ok">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Em dia
+                  </span>
+                </td>
+                <td class="col-chevron"><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></td>
+              </tr>
+
+              <!-- 5 -->
+              <tr>
+                <td>
+                  <div class="client">
+                    <div class="avatar t-pelvica">EL</div>
+                    <div class="client-meta">
+                      <div class="client-top">
+                        <span class="client-name">Eduarda Lemos</span>
+                        <span class="tipo pelvica"><span class="dot"></span>Paciente</span>
+                      </div>
+                      <div class="client-sub">Pós-parto · desde fev/2025</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="plano-name">Pós-parto · pélvica</div>
+                  <div class="plano-sub">Pacote · 3 de 8</div>
+                </td>
+                <td>
+                  <span class="prof"><span class="mini">TC</span>Tainara Cordeiro</span>
+                </td>
+                <td><span class="status on"><span class="dot"></span>Ativo</span></td>
+                <td>
+                  <div class="next"><strong>28/mai · 10:00</strong><span class="rel">Pélvica · Sala 1</span></div>
+                </td>
+                <td>
+                  <span class="fin ok">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Em dia
+                  </span>
+                </td>
+                <td class="col-chevron"><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></td>
+              </tr>
+
+              <!-- 6 -->
+              <tr class="inactive">
+                <td>
+                  <div class="client">
+                    <div class="avatar t-mut">FG</div>
+                    <div class="client-meta">
+                      <div class="client-top">
+                        <span class="client-name">Fernanda Goulart</span>
+                        <span class="tipo pilates"><span class="dot"></span>Aluna</span>
+                      </div>
+                      <div class="client-sub">Pilates · inativa há 4 meses</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="plano-none">Sem plano ativo</div>
+                </td>
+                <td>
+                  <span class="prof-none">— não atribuída</span>
+                </td>
+                <td><span class="status off"><span class="dot"></span>Inativo</span></td>
+                <td>
+                  <div class="next-none">Sem agendamento</div>
+                </td>
+                <td>
+                  <span class="fin late">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Atrasado · 2 mensal.
+                  </span>
+                </td>
+                <td class="col-chevron"><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></td>
+              </tr>
+
+              <!-- 7 -->
+              <tr>
+                <td>
+                  <div class="client">
+                    <div class="avatar t-gestante">GA</div>
+                    <div class="client-meta">
+                      <div class="client-top">
+                        <span class="client-name">Gabriela Antunes</span>
+                        <span class="tipo gestante"><span class="dot"></span>Aluna · gestante</span>
+                      </div>
+                      <div class="client-sub">34 semanas · desde jan/2025</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="plano-name">Pilates gestante</div>
+                  <div class="plano-sub">Mensal · R$ 480</div>
+                </td>
+                <td>
+                  <span class="prof"><span class="mini">JP</span>Júlia Pacheco</span>
+                </td>
+                <td><span class="status on"><span class="dot"></span>Ativo</span></td>
+                <td>
+                  <div class="next"><strong>Seg · 08:00</strong><span class="rel">Gestante · Sala 2</span></div>
+                </td>
+                <td>
+                  <span class="fin ok">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Em dia
+                  </span>
+                </td>
+                <td class="col-chevron"><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></td>
+              </tr>
+
+              <!-- 8 -->
+              <tr class="inactive">
+                <td>
+                  <div class="client">
+                    <div class="avatar t-mut">HB</div>
+                    <div class="client-meta">
+                      <div class="client-top">
+                        <span class="client-name">Helena Brandão</span>
+                        <span class="tipo pelvica"><span class="dot"></span>Paciente</span>
+                      </div>
+                      <div class="client-sub">Fisio pélvica · alta em abr/2025</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="plano-name">Avaliação · pélvica</div>
+                  <div class="plano-sub">Concluído · alta</div>
+                </td>
+                <td>
+                  <span class="prof"><span class="mini">TC</span>Tainara Cordeiro</span>
+                </td>
+                <td><span class="status off"><span class="dot"></span>Inativo</span></td>
+                <td>
+                  <div class="next-none">Sem agendamento</div>
+                </td>
+                <td>
+                  <span class="fin ok">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Em dia
+                  </span>
+                </td>
+                <td class="col-chevron"><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></td>
+              </tr>
+
+            </tbody>
+          </table>
+
+          <div class="card-foot">
+            <span class="info">Mostrando 8 de 142 clientes</span>
+            <div class="pager">
+              <button disabled aria-label="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+              <button class="active">1</button>
+              <button>2</button>
+              <button>3</button>
+              <button>…</button>
+              <button>18</button>
+              <button aria-label="Próxima"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Chips toggle (visual)
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

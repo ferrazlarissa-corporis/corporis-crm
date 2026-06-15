@@ -1,23 +1,26 @@
-import { getAppointmentsBetween } from "@/lib/queries/appointments";
+import { endOfWeek, startOfWeek } from "date-fns";
+import { getAgendaCompleta, getAgendaOptions } from "@/lib/queries/agenda";
 import { getClinicHours } from "@/lib/queries/clinic-config";
 import AgendaClient from "./agenda-client";
-import { endOfWeek, startOfWeek } from "date-fns";
+
+export const metadata = { title: "Agenda · Corporis" };
 
 export default async function AgendaPage() {
-  const now       = new Date();
+  const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-  const [appointments, clinicHours] = await Promise.all([
-    getAppointmentsBetween(weekStart, weekEnd),
+
+  const [events, clinicHours, options] = await Promise.all([
+    getAgendaCompleta(weekStart, weekEnd),
     getClinicHours(),
+    getAgendaOptions(),
   ]);
 
   return (
     <AgendaClient
-      initialEvents={appointments}
+      initialEvents={events}
+      options={options}
       nowIso={now.toISOString()}
-      nowH={now.getHours()}
-      nowM={now.getMinutes()}
       clinicHours={clinicHours}
       initialRangeStart={weekStart.toISOString()}
       initialRangeEnd={weekEnd.toISOString()}

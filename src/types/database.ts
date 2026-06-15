@@ -61,6 +61,19 @@ export type ActivityType =
 export type CampaignStatus = "rascunho" | "agendada" | "enviando" | "concluida";
 export type TemplateCategory = "lembrete" | "confirmacao" | "reativacao" | "boas_vindas";
 
+// ─── Corporis OS — core ─────────────────────────────────────────────────────────
+
+export type PessoaTipo = "aluna" | "paciente" | "ambos";
+export type PessoaStatus = "lead" | "cliente_ativo" | "inativo";
+export type Pilar = "pilates" | "pilates_gestante" | "fisio_pelvica";
+export type AgendaCategoria = "avaliacao" | "sessao" | "experimental";
+export type PlanoTipo = "recorrente" | "personalizado";
+export type Periodicidade = "mensal" | "trimestral" | "semestral" | "anual" | "avulso";
+export type MatriculaStatus = "ativa" | "pausada" | "cancelada";
+export type ContratoStatus = "rascunho" | "enviado" | "assinado" | "cancelado";
+export type LancamentoStatus = "a_receber" | "recebido" | "atrasado";
+export type DocumentoTipo = "exame" | "atestado" | "laudo" | "outro";
+
 // ─── Database ─────────────────────────────────────────────────────────────────
 
 export interface Database {
@@ -185,13 +198,19 @@ export interface Database {
       appointments: {
         Row: {
           id: string;
-          lead_id: string;
+          lead_id: string | null;
           inicio: string;
           fim: string;
           tipo: AppointmentType;
           status: AppointmentStatus;
           profissional_id: string | null;
           observacoes: string | null;
+          pessoa_id: string | null;
+          servico_id: string | null;
+          sala_id: string | null;
+          matricula_id: string | null;
+          categoria: AgendaCategoria;
+          recorrencia: Json | null;
           lembrete_enviado_at: string | null;
           confirmacao_enviada_at: string | null;
           created_at: string;
@@ -199,13 +218,19 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          lead_id: string;
+          lead_id?: string | null;
           inicio: string;
           fim: string;
           tipo: AppointmentType;
           status?: AppointmentStatus;
           profissional_id?: string | null;
           observacoes?: string | null;
+          pessoa_id?: string | null;
+          servico_id?: string | null;
+          sala_id?: string | null;
+          matricula_id?: string | null;
+          categoria?: AgendaCategoria;
+          recorrencia?: Json | null;
           lembrete_enviado_at?: string | null;
           confirmacao_enviada_at?: string | null;
           created_at?: string;
@@ -371,6 +396,453 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database["crm"]["Tables"]["clinic_config"]["Insert"]>;
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+  core: {
+    Tables: {
+      pessoa: {
+        Row: {
+          id: string;
+          nome: string;
+          cpf: string | null;
+          nascimento: string | null;
+          telefone: string | null;
+          email: string | null;
+          genero: string | null;
+          tipo: PessoaTipo;
+          status: PessoaStatus;
+          pilar_principal: Pilar | null;
+          responsavel_id: string | null;
+          consentimento_lgpd_at: string | null;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          cpf?: string | null;
+          nascimento?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          genero?: string | null;
+          tipo?: PessoaTipo;
+          status?: PessoaStatus;
+          pilar_principal?: Pilar | null;
+          responsavel_id?: string | null;
+          consentimento_lgpd_at?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["core"]["Tables"]["pessoa"]["Insert"]>;
+      };
+      endereco: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          cep: string | null;
+          logradouro: string | null;
+          numero: string | null;
+          complemento: string | null;
+          bairro: string | null;
+          cidade: string | null;
+          uf: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          cep?: string | null;
+          logradouro?: string | null;
+          numero?: string | null;
+          complemento?: string | null;
+          bairro?: string | null;
+          cidade?: string | null;
+          uf?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["core"]["Tables"]["endereco"]["Insert"]>;
+      };
+      servico: {
+        Row: {
+          id: string;
+          nome: string;
+          pilar: Pilar;
+          duracao_min: number;
+          capacidade_slot: number;
+          cor_token: string;
+          ativo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          pilar: Pilar;
+          duracao_min?: number;
+          capacidade_slot?: number;
+          cor_token?: string;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["core"]["Tables"]["servico"]["Insert"]>;
+      };
+      sala: {
+        Row: {
+          id: string;
+          nome: string;
+          capacidade: number;
+          equipamentos: Json;
+          pilares: Json;
+          ativo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          capacidade?: number;
+          equipamentos?: Json;
+          pilares?: Json;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["core"]["Tables"]["sala"]["Insert"]>;
+      };
+      profissional: {
+        Row: {
+          id: string;
+          profile_id: string | null;
+          nome: string;
+          especialidade: string | null;
+          crefito: string | null;
+          pilares: Json;
+          disponibilidade: Json;
+          ativo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id?: string | null;
+          nome: string;
+          especialidade?: string | null;
+          crefito?: string | null;
+          pilares?: Json;
+          disponibilidade?: Json;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["core"]["Tables"]["profissional"]["Insert"]>;
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+  vendas: {
+    Tables: {
+      plano: {
+        Row: {
+          id: string;
+          nome: string;
+          tipo: PlanoTipo;
+          valor: number;
+          periodicidade: Periodicidade;
+          sessoes_semana: number | null;
+          servicos: Json;
+          pilar: Pilar | null;
+          ativo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          tipo?: PlanoTipo;
+          valor: number;
+          periodicidade?: Periodicidade;
+          sessoes_semana?: number | null;
+          servicos?: Json;
+          pilar?: Pilar | null;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["vendas"]["Tables"]["plano"]["Insert"]>;
+      };
+      venda: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          plano_id: string | null;
+          valor: number;
+          desconto: number;
+          data: string;
+          vendedor_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          plano_id?: string | null;
+          valor: number;
+          desconto?: number;
+          data?: string;
+          vendedor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["vendas"]["Tables"]["venda"]["Insert"]>;
+      };
+      matricula: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          plano_id: string;
+          venda_id: string | null;
+          inicio: string;
+          renovacao: string | null;
+          dia_vencimento: number | null;
+          status: MatriculaStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          plano_id: string;
+          venda_id?: string | null;
+          inicio?: string;
+          renovacao?: string | null;
+          dia_vencimento?: number | null;
+          status?: MatriculaStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["vendas"]["Tables"]["matricula"]["Insert"]>;
+      };
+      contrato_modelo: {
+        Row: {
+          id: string;
+          nome: string;
+          corpo: string;
+          pilares: Json;
+          planos: Json;
+          ativo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          corpo: string;
+          pilares?: Json;
+          planos?: Json;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["vendas"]["Tables"]["contrato_modelo"]["Insert"]>;
+      };
+      contrato: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          modelo_id: string | null;
+          venda_id: string | null;
+          corpo_gerado: string | null;
+          status: ContratoStatus;
+          zapsign_doc_id: string | null;
+          via_assinada_url: string | null;
+          enviado_at: string | null;
+          assinado_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          modelo_id?: string | null;
+          venda_id?: string | null;
+          corpo_gerado?: string | null;
+          status?: ContratoStatus;
+          zapsign_doc_id?: string | null;
+          via_assinada_url?: string | null;
+          enviado_at?: string | null;
+          assinado_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["vendas"]["Tables"]["contrato"]["Insert"]>;
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      criar_adesao: {
+        Args: {
+          p_pessoa_id: string;
+          p_plano_id: string;
+          p_valor: number;
+          p_desconto: number;
+          p_dia_vencimento: number;
+          p_inicio: string;
+          p_modelo_contrato_id: string | null;
+          p_vendedor_id: string | null;
+        };
+        Returns: string;
+      };
+    };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+  financeiro: {
+    Tables: {
+      lancamento: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          matricula_id: string | null;
+          competencia: string;
+          descricao: string;
+          valor: number;
+          vencimento: string;
+          status: LancamentoStatus;
+          recebido_at: string | null;
+          finance_tx_external_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          matricula_id?: string | null;
+          competencia: string;
+          descricao: string;
+          valor: number;
+          vencimento: string;
+          status?: LancamentoStatus;
+          recebido_at?: string | null;
+          finance_tx_external_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["financeiro"]["Tables"]["lancamento"]["Insert"]>;
+      };
+    };
+    Views: {
+      resumo_mensal: {
+        Row: {
+          mes: string | null;
+          recebido: number | null;
+          em_aberto: number | null;
+        };
+      };
+    };
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+  clinico: {
+    Tables: {
+      anamnese: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          versao: number;
+          dados: Json;
+          autor_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          versao?: number;
+          dados?: Json;
+          autor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["clinico"]["Tables"]["anamnese"]["Insert"]>;
+      };
+      evolucao: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          agendamento_id: string | null;
+          profissional_id: string | null;
+          servico_id: string | null;
+          texto: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          agendamento_id?: string | null;
+          profissional_id?: string | null;
+          servico_id?: string | null;
+          texto: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["clinico"]["Tables"]["evolucao"]["Insert"]>;
+      };
+      documento: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          tipo: DocumentoTipo;
+          nome: string;
+          storage_path: string;
+          tamanho: number | null;
+          uploaded_by: string | null;
+          archived_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          tipo?: DocumentoTipo;
+          nome: string;
+          storage_path: string;
+          tamanho?: number | null;
+          uploaded_by?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["clinico"]["Tables"]["documento"]["Insert"]>;
+      };
+      acesso_log: {
+        Row: {
+          id: number;
+          pessoa_id: string;
+          tabela: string;
+          acao: string;
+          ator_id: string | null;
+          at: string;
+        };
+        Insert: {
+          id?: number;
+          pessoa_id: string;
+          tabela: string;
+          acao: string;
+          ator_id?: string | null;
+          at?: string;
+        };
+        Update: Partial<Database["clinico"]["Tables"]["acesso_log"]["Insert"]>;
       };
     };
     Views: Record<string, never>;

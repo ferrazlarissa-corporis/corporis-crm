@@ -1,0 +1,1451 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis OS · Amanda Ribeiro · Anamnese</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Corporis OS — Ficha · aba Anamnese — tokens locais
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --surface-raised: var(--bg-card);
+    --surface-sunken: var(--bg-2);
+
+    --pilar-bg: var(--color-bege-claro);
+    --pilar-fg: #6B5526;
+    --pilar-dot: var(--color-bege);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); overflow: hidden; }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh; width: 100vw;
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 0;
+  }
+  .sb-logo { padding: 22px 24px 14px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+
+  .sb-scroll { overflow-y: auto; padding: 4px 16px 12px; min-height: 0; }
+  .sb-scroll::-webkit-scrollbar { width: 8px; }
+  .sb-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+
+  .sb-group { margin-top: 14px; }
+  .sb-group:first-child { margin-top: 2px; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px; letter-spacing: 2.4px;
+    text-transform: uppercase; color: var(--color-bege);
+    font-weight: 500; padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 400;
+    text-decoration: none; cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft),
+                color var(--duration-fast) var(--ease-soft);
+    position: relative;
+  }
+  .sb-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active {
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .sb-item.active::before {
+    content: ""; position: absolute; left: 0; top: 9px; bottom: 9px;
+    width: 2px; background: var(--color-alaranjado); border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado); color: #fff;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.4px;
+    padding: 1px 7px; border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+
+  .sb-footer { border-top: 0.6px solid var(--color-cinza); padding: 10px 16px 12px; }
+  .sb-user { display: flex; align-items: center; gap: 12px; padding: 10px; margin-top: 4px; border-radius: var(--radius-md); }
+  .avatar {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
+  .avatar.tone-pilates { background: var(--color-bege-claro); color: #6B5526; }
+  .avatar.tone-gold    { background: rgba(210, 176, 110, 0.30); color: #7A5E1F; }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); line-height: 1.2; }
+  .sb-user-role { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent; border: 0; color: var(--color-texto-medio); padding: 6px;
+    border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ============================================================
+     MAIN
+     ============================================================ */
+  .main { display: grid; grid-template-rows: var(--topbar-h) 1fr; min-width: 0; overflow: hidden; }
+
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+  }
+  .crumbs {
+    display: inline-flex; align-items: center; gap: 14px;
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--color-texto-medio);
+  }
+  .crumbs .back {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px 7px 10px;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    text-decoration: none;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    letter-spacing: 0.2px;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .crumbs .back svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  .crumbs .back:hover { color: var(--color-alaranjado); border-color: var(--color-tangerina); background: var(--color-bege-claro); }
+  .crumbs .sep { color: var(--color-cinza); }
+  .crumbs .here { color: var(--color-texto-escuro); font-weight: 500; }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: color var(--duration-fast) var(--ease-soft),
+                background var(--duration-fast) var(--ease-soft);
+  }
+  .icon-btn svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .icon-btn:hover { color: var(--color-alaranjado); background: var(--color-bege-claro); }
+  .icon-btn .dot {
+    position: absolute; top: 8px; right: 9px;
+    width: 7px; height: 7px; border-radius: var(--radius-pill);
+    background: var(--color-alaranjado); border: 1.5px solid var(--surface-raised);
+  }
+
+  /* ============================================================
+     CONTENT
+     ============================================================ */
+  .content-wrap { overflow: auto; padding: 24px 32px 48px; min-height: 0; }
+  .content-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
+  .content-wrap::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 26px;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1200px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ============================================================
+     HEADER DO CLIENTE
+     ============================================================ */
+  .client-header {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    padding: 28px 28px 22px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .ch-top { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: flex-start; }
+  .ch-avatar {
+    width: 76px; height: 76px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: #6B5526;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 30px; letter-spacing: -0.01em;
+    flex-shrink: 0;
+  }
+  .ch-meta { min-width: 0; }
+  .ch-name {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: 36px; line-height: 1.1; letter-spacing: -0.005em;
+    color: var(--color-texto-escuro);
+    margin: 0 0 10px; text-wrap: pretty;
+  }
+  .ch-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 1.3px; line-height: 1;
+    padding: 6px 12px 6px 10px;
+    border-radius: var(--radius-pill);
+  }
+  .badge .dot { width: 6px; height: 6px; border-radius: var(--radius-pill); }
+  .badge.tipo   { background: var(--pilar-bg); color: var(--pilar-fg); }
+  .badge.tipo .dot { background: var(--pilar-dot); }
+  .badge.status { background: rgba(172, 192, 149, 0.20); color: #5F7948; padding-left: 10px; }
+  .badge.status .dot { background: var(--color-verde); box-shadow: 0 0 0 3px rgba(172, 192, 149, 0.22); }
+  .badge.pilar  { background: rgba(240, 131, 83, 0.10); color: #B85A2E; border: 0.6px solid rgba(240, 131, 83, 0.30); }
+
+  .ch-contact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
+  .ch-contact-item {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--bg-1);
+    font-family: "Ubuntu Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px; color: var(--color-texto-medio);
+    font-feature-settings: "tnum";
+  }
+  .ch-contact-item svg { width: 14px; height: 14px; stroke-width: 1.6; color: var(--color-bege); }
+
+  .ch-actions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    margin-top: 22px; padding-top: 20px;
+    border-top: 0.6px solid var(--color-cinza);
+  }
+  .btn {
+    appearance: none;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-escuro);
+    border-radius: var(--radius-pill);
+    padding: 9px 16px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    letter-spacing: 0.2px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all var(--duration-fast) var(--ease-soft);
+    text-decoration: none; white-space: nowrap;
+  }
+  .btn svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  .btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .btn.primary { background: var(--color-alaranjado); border-color: var(--color-alaranjado); color: #fff; }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); }
+  .btn.danger { color: #B0453F; }
+  .btn.danger:hover { background: rgba(192, 80, 74, 0.07); border-color: rgba(192, 80, 74, 0.4); color: #B0453F; }
+  .btn.icon-only { padding: 9px 11px; }
+  .ch-actions .spacer { flex: 1; }
+
+  /* ============================================================
+     TABS
+     ============================================================ */
+  .tabs-wrap {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .tabs {
+    display: flex; align-items: center;
+    border-bottom: 0.6px solid var(--color-cinza);
+    padding: 0 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    appearance: none; border: 0; background: transparent;
+    padding: 15px 15px 13px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    color: var(--color-texto-medio); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color var(--duration-fast) var(--ease-soft),
+                border-color var(--duration-fast) var(--ease-soft);
+  }
+  .tab svg { width: 14px; height: 14px; stroke-width: 1.7; flex-shrink: 0; }
+  .tab .count {
+    font-size: 10.5px; color: var(--color-texto-medio);
+    background: var(--surface-sunken); padding: 1px 7px;
+    border-radius: var(--radius-pill); font-feature-settings: "tnum"; font-weight: 400;
+  }
+  .tab:hover { color: var(--color-texto-escuro); }
+  .tab.active { color: var(--color-texto-escuro); border-bottom-color: var(--color-alaranjado); }
+
+  /* ============================================================
+     ANAMNESE — pane
+     ============================================================ */
+  .anam-pane { padding: 0; }
+
+  /* — Barra de versão / meta — */
+  .anam-meta {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+    padding: 18px 24px;
+    border-bottom: 0.6px solid var(--color-cinza);
+  }
+  .anam-title { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+  .anam-title h2 {
+    font-family: var(--font-display); font-weight: 400; font-size: 22px;
+    color: var(--color-texto-escuro); line-height: 1.1; letter-spacing: -0.005em; margin: 0;
+  }
+  .ver-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    color: #6B5526; background: var(--color-bege-claro);
+    padding: 4px 10px; border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+  .anam-meta-sub {
+    font-family: var(--font-body); font-size: 12px; color: var(--color-texto-medio);
+    display: inline-flex; align-items: center; gap: 8px; font-feature-settings: "tnum";
+  }
+  .anam-meta-sub svg { width: 13px; height: 13px; stroke-width: 1.7; color: var(--color-bege); }
+  .anam-meta .spacer { flex: 1; }
+  .txt-btn {
+    appearance: none; cursor: pointer; background: transparent;
+    border: 0.6px solid var(--color-cinza); color: var(--color-texto-medio);
+    border-radius: var(--radius-pill); padding: 7px 14px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .txt-btn svg { width: 13px; height: 13px; stroke-width: 1.8; transition: transform var(--duration-base) var(--ease-soft); }
+  .txt-btn:hover { border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+
+  /* — Faixa de confidencialidade — */
+  .confid {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 24px;
+    background: rgba(210, 176, 110, 0.09);
+    border-bottom: 0.6px solid var(--color-cinza);
+  }
+  .confid svg { width: 14px; height: 14px; stroke-width: 1.7; color: var(--color-bege); flex-shrink: 0; }
+  .confid p {
+    font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio);
+    line-height: 1.4; margin: 0; letter-spacing: 0.1px;
+  }
+  .confid p strong { color: var(--color-texto-escuro); font-weight: 500; }
+
+  /* — Lista de seções colapsáveis — */
+  .anam-sections { padding: 18px 24px 4px; display: flex; flex-direction: column; gap: 12px; }
+
+  .acc {
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    background: var(--bg-1);
+    overflow: hidden;
+    transition: border-color var(--duration-fast) var(--ease-soft);
+  }
+  .acc.open { border-color: var(--color-cinza); background: var(--surface-raised); }
+
+  .acc-head {
+    appearance: none; width: 100%; text-align: left; cursor: pointer;
+    background: transparent; border: 0;
+    display: grid; grid-template-columns: 38px minmax(0,1fr) auto auto; align-items: center; gap: 14px;
+    padding: 15px 18px;
+  }
+  .acc-ic {
+    width: 38px; height: 38px; border-radius: var(--radius-md);
+    background: var(--color-bege-claro); color: #6B5526;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .acc-ic svg { width: 18px; height: 18px; stroke-width: 1.6; }
+  .acc-tt { min-width: 0; }
+  .acc-tt .t {
+    font-family: var(--font-body); font-size: 14.5px; font-weight: 500;
+    color: var(--color-texto-escuro); line-height: 1.25;
+  }
+  .acc-tt .s {
+    font-family: var(--font-body); font-size: 12px; color: var(--color-texto-medio);
+    margin-top: 3px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sec-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-body); font-size: 9.5px; font-weight: 500;
+    letter-spacing: 0.8px; text-transform: uppercase; line-height: 1;
+    padding: 5px 10px 5px 8px; border-radius: var(--radius-pill); white-space: nowrap;
+  }
+  .sec-tag .dot { width: 6px; height: 6px; border-radius: var(--radius-pill); }
+  .sec-tag.ok { background: rgba(172, 192, 149, 0.20); color: #5F7948; }
+  .sec-tag.ok .dot { background: var(--color-verde); }
+  .sec-tag.na { background: var(--surface-sunken); color: var(--color-texto-medio); }
+  .sec-tag.na .dot { background: var(--color-cinza); }
+  .sec-tag.flag { background: rgba(240, 131, 83, 0.12); color: #B85A2E; }
+  .sec-tag.flag .dot { background: var(--color-alaranjado); }
+
+  .acc-chev { color: var(--color-texto-medio); display: flex; flex-shrink: 0; }
+  .acc-chev svg { width: 18px; height: 18px; stroke-width: 1.8; transition: transform var(--duration-base) var(--ease-soft); }
+  .acc.open .acc-chev svg { transform: rotate(180deg); }
+
+  .acc-body { display: none; padding: 4px 18px 22px; border-top: 0.6px solid var(--color-cinza); margin-top: -1px; }
+  .acc.open .acc-body { display: block; }
+
+  /* — Form controls — */
+  .f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 20px; padding-top: 18px; }
+  .f-grid .full { grid-column: 1 / -1; }
+  @media (max-width: 720px) { .f-grid { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; min-width: 0; }
+  .f-label {
+    font-family: var(--font-body); font-size: 9.5px; font-weight: 500;
+    letter-spacing: 1.4px; text-transform: uppercase; color: var(--color-texto-medio);
+    margin-bottom: 7px; display: inline-flex; align-items: center; gap: 7px;
+  }
+  .f-label .opt { letter-spacing: 0.4px; text-transform: none; font-weight: 400; color: var(--color-cinza); font-size: 10px; }
+  .f-input, .f-textarea, .f-select {
+    font-family: var(--font-body); font-size: 13.5px; color: var(--color-texto-escuro);
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    padding: 10px 13px; width: 100%;
+    transition: border-color var(--duration-fast) var(--ease-soft), box-shadow var(--duration-fast) var(--ease-soft);
+  }
+  .acc.open .f-input, .acc.open .f-textarea, .acc.open .f-select { background: var(--bg-1); }
+  .f-textarea { resize: vertical; min-height: 84px; line-height: 1.55; }
+  .f-input:focus, .f-textarea:focus, .f-select:focus {
+    outline: none; border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.12); background: var(--surface-raised);
+  }
+  .f-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237A6E68' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center; padding-right: 36px;
+  }
+  .f-hint { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); margin-top: 6px; line-height: 1.4; }
+
+  /* EVA scale */
+  .eva { display: flex; gap: 5px; }
+  .eva button {
+    appearance: none; cursor: pointer; flex: 1;
+    height: 38px; min-width: 0;
+    border: 0.6px solid var(--color-cinza); background: var(--surface-raised);
+    color: var(--color-texto-medio); border-radius: var(--radius-sm);
+    font-family: var(--font-body); font-size: 13px; font-weight: 500; font-feature-settings: "tnum";
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .acc.open .eva button { background: var(--bg-1); }
+  .eva button:hover { border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .eva button.sel, .acc.open .eva button.sel { background: var(--color-alaranjado); border-color: var(--color-alaranjado); color: #fff; }
+  .eva-scale { display: flex; justify-content: space-between; margin-top: 7px; }
+  .eva-scale span { font-family: var(--font-body); font-size: 10.5px; color: var(--color-texto-medio); }
+
+  /* Chips de seleção */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    appearance: none; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    color: var(--color-texto-medio); background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza); border-radius: var(--radius-pill);
+    padding: 8px 14px; transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .acc.open .chip { background: var(--bg-1); }
+  .chip svg { width: 13px; height: 13px; stroke-width: 2; opacity: 0; transition: opacity var(--duration-fast) var(--ease-soft); }
+  .chip:hover { border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .chip.sel, .acc.open .chip.sel {
+    background: rgba(240, 131, 83, 0.10); border-color: rgba(240, 131, 83, 0.45); color: #B85A2E;
+  }
+  .chip.sel svg { opacity: 1; }
+
+  /* Lista editável (cirurgias / medicamentos) */
+  .ed-list { display: flex; flex-direction: column; gap: 10px; padding-top: 18px; }
+  .ed-row {
+    display: grid; grid-template-columns: 32px minmax(0,1fr) auto; align-items: center; gap: 13px;
+    padding: 11px 13px; border: 0.6px solid var(--color-cinza); border-radius: var(--radius-md);
+    background: var(--surface-raised);
+  }
+  .acc.open .ed-row { background: var(--bg-1); }
+  .ed-ic {
+    width: 32px; height: 32px; border-radius: var(--radius-md);
+    background: var(--bg-2); color: var(--color-bege);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .ed-ic svg { width: 15px; height: 15px; stroke-width: 1.6; }
+  .ed-meta { min-width: 0; }
+  .ed-meta .t { font-family: var(--font-body); font-size: 13.5px; color: var(--color-texto-escuro); line-height: 1.3; }
+  .ed-meta .s { font-family: var(--font-body); font-size: 11.5px; color: var(--color-texto-medio); margin-top: 2px; font-feature-settings: "tnum"; }
+  .ed-del {
+    appearance: none; cursor: pointer; background: transparent; border: 0;
+    color: var(--color-cinza); padding: 6px; border-radius: var(--radius-md);
+    display: flex; transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .ed-del svg { width: 15px; height: 15px; stroke-width: 1.7; }
+  .ed-del:hover { color: #B0453F; background: rgba(192, 80, 74, 0.07); }
+  .add-row {
+    appearance: none; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500; color: var(--color-alaranjado);
+    background: transparent; border: 0.6px dashed var(--color-cinza); border-radius: var(--radius-md);
+    padding: 9px 14px; transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .add-row svg { width: 14px; height: 14px; stroke-width: 1.9; }
+  .add-row:hover { border-color: var(--color-tangerina); background: rgba(240, 131, 83, 0.05); }
+
+  /* Estado vazio dentro de seção (gestação não aplicável) */
+  .sec-toggle {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 16px; border: 0.6px solid var(--color-cinza); border-radius: var(--radius-md);
+    background: var(--surface-raised); margin-top: 18px;
+  }
+  .acc.open .sec-toggle { background: var(--bg-1); }
+  .sec-toggle-meta { flex: 1; min-width: 0; }
+  .sec-toggle-meta .t { font-family: var(--font-body); font-size: 13.5px; color: var(--color-texto-escuro); }
+  .sec-toggle-meta .s { font-family: var(--font-body); font-size: 11.5px; color: var(--color-texto-medio); margin-top: 3px; line-height: 1.45; }
+  .switch {
+    appearance: none; cursor: pointer; flex-shrink: 0;
+    width: 44px; height: 26px; border-radius: var(--radius-pill);
+    background: var(--color-cinza); border: 0; position: relative;
+    transition: background var(--duration-base) var(--ease-soft);
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 20px; height: 20px; border-radius: var(--radius-pill); background: #fff;
+    box-shadow: var(--shadow-sm); transition: transform var(--duration-base) var(--ease-soft);
+  }
+  .switch.on { background: var(--color-alaranjado); }
+  .switch.on::after { transform: translateX(18px); }
+
+  /* — Rodapé de gravação — */
+  .anam-foot {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 18px 24px;
+    border-top: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+  }
+  .save-note {
+    font-family: var(--font-body); font-size: 12px; color: var(--color-texto-medio);
+    display: inline-flex; align-items: center; gap: 8px; font-feature-settings: "tnum";
+  }
+  .save-note svg { width: 14px; height: 14px; stroke-width: 1.7; color: #5F7948; }
+  .anam-foot .spacer { flex: 1; }
+  .btn.lg { padding: 11px 22px; font-size: 13.5px; }
+
+  /* ============================================================
+     COLUNA LATERAL
+     ============================================================ */
+  .side-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .side-card {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    padding: 22px 22px 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .side-card h3 {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase; color: var(--color-bege);
+    margin: 0 0 16px;
+  }
+
+  /* Completude */
+  .compl-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .compl-v { font-family: var(--font-display); font-weight: 400; font-size: 28px; color: var(--color-texto-escuro); line-height: 1; font-feature-settings: "tnum"; }
+  .compl-v small { font-size: 15px; color: var(--color-texto-medio); }
+  .compl-pct { font-family: var(--font-body); font-size: 12px; font-weight: 500; color: #5F7948; }
+  .bar { height: 8px; border-radius: var(--radius-pill); background: var(--bg-2); overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--color-alaranjado); }
+  .compl-sub { font-family: var(--font-body); font-size: 11.5px; color: var(--color-texto-medio); margin-top: 12px; line-height: 1.5; }
+
+  /* Sinalizações */
+  .flag-list { display: flex; flex-direction: column; gap: 0; }
+  .flag-row {
+    display: flex; align-items: flex-start; gap: 11px; padding: 11px 0;
+    border-bottom: 0.6px solid var(--color-cinza);
+  }
+  .flag-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .flag-row:first-child { padding-top: 0; }
+  .flag-ic { width: 28px; height: 28px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .flag-ic svg { width: 15px; height: 15px; stroke-width: 1.7; }
+  .flag-ic.warn { background: rgba(240, 131, 83, 0.14); color: #B85A2E; }
+  .flag-ic.calm { background: var(--bg-2); color: var(--color-bege); }
+  .flag-meta { min-width: 0; flex: 1; }
+  .flag-k { font-family: var(--font-body); font-size: 9.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--color-texto-medio); }
+  .flag-v { font-family: var(--font-body); font-size: 13px; color: var(--color-texto-escuro); line-height: 1.35; margin-top: 3px; }
+
+  /* Versões (histórico) */
+  .ver-list { display: flex; flex-direction: column; }
+  .ver-row {
+    display: grid; grid-template-columns: auto 1fr; gap: 13px; padding: 0 0 16px;
+    position: relative;
+  }
+  .ver-row:last-child { padding-bottom: 0; }
+  .ver-rail { display: flex; flex-direction: column; align-items: center; }
+  .ver-node { width: 11px; height: 11px; border-radius: var(--radius-pill); background: var(--color-cinza); border: 2px solid var(--surface-raised); margin-top: 3px; flex-shrink: 0; }
+  .ver-row.cur .ver-node { background: var(--color-alaranjado); box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.18); }
+  .ver-line { width: 1.5px; flex: 1; background: var(--color-cinza); margin: 3px 0; }
+  .ver-row:last-child .ver-line { display: none; }
+  .ver-meta { min-width: 0; padding-bottom: 2px; }
+  .ver-h { display: flex; align-items: center; gap: 8px; }
+  .ver-n { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); }
+  .ver-cur-tag { font-family: var(--font-body); font-size: 9px; font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; color: #B85A2E; background: rgba(240, 131, 83, 0.10); padding: 2px 7px; border-radius: var(--radius-pill); }
+  .ver-d { font-family: var(--font-body); font-size: 11.5px; color: var(--color-texto-medio); margin-top: 3px; font-feature-settings: "tnum"; line-height: 1.45; }
+
+  .resp { display: flex; align-items: center; gap: 12px; }
+  .resp .avatar { width: 42px; height: 42px; font-size: 15px; }
+  .resp-meta { min-width: 0; }
+  .resp-name { font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--color-texto-escuro); line-height: 1.25; }
+  .resp-role { font-family: var(--font-body); font-size: 11.5px; color: var(--color-texto-medio); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="14 Ficha - Anamnese">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <div class="sb-scroll">
+      <!-- GESTÃO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Gestão</div>
+        <nav class="sb-nav">
+          <a href="02 Dashboard.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="09 Clientes.html" class="sb-item active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Clientes
+          </a>
+          <a href="06 Agenda.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Agenda
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Vendas
+          </a>
+        </nav>
+      </div>
+
+      <!-- RELACIONAMENTO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Relacionamento</div>
+        <nav class="sb-nav">
+          <a href="03 Inbox WhatsApp.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+              <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            </svg>
+            Inbox
+            <span class="sb-badge">7</span>
+          </a>
+          <a href="04 Funil.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Funil
+          </a>
+          <a href="07 Agente de IA.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/>
+              <circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/>
+              <path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/>
+            </svg>
+            Agente de IA
+          </a>
+        </nav>
+      </div>
+
+      <!-- FINANCEIRO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Financeiro</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Lançamentos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            DRE
+          </a>
+        </nav>
+      </div>
+
+      <!-- CADASTROS -->
+      <div class="sb-group">
+        <div class="sb-section-label">Cadastros</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Planos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Modelos de contrato
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+            Serviços
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            Profissionais
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+              <path d="M9 21v-4h6v4"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/>
+            </svg>
+            Salas
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="sb-footer">
+      <nav class="sb-nav">
+        <a href="08 Configurações.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </nav>
+      <div class="sb-user">
+        <div class="avatar">LF</div>
+        <div class="sb-user-meta">
+          <span class="sb-user-name">Larissa Ferraz</span>
+          <span class="sb-user-role">Gestão · Corporis</span>
+        </div>
+        <button class="sb-user-action" aria-label="Mais opções">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="crumbs">
+        <a href="11 Ficha do cliente.html" class="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Voltar à ficha
+        </a>
+        <span class="sep">·</span>
+        <a href="09 Clientes.html" style="color:var(--color-texto-medio);text-decoration:none;">Clientes</a>
+        <span class="sep">›</span>
+        <a href="11 Ficha do cliente.html" style="color:var(--color-texto-medio);text-decoration:none;">Amanda Ribeiro</a>
+        <span class="sep">›</span>
+        <span class="here">Anamnese</span>
+      </div>
+
+      <div class="topbar-right">
+        <button class="icon-btn" aria-label="Notificações">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="dot"></span>
+        </button>
+        <button class="icon-btn" aria-label="Ajuda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content-wrap">
+      <div class="two-col">
+
+        <!-- ============================================================
+             COLUNA PRINCIPAL
+             ============================================================ -->
+        <section class="main-col">
+
+          <!-- HEADER DO CLIENTE -->
+          <header class="client-header">
+            <div class="ch-top">
+              <div class="ch-avatar">AR</div>
+              <div class="ch-meta">
+                <h1 class="ch-name">Amanda Ribeiro</h1>
+                <div class="ch-badges">
+                  <span class="badge tipo"><span class="dot"></span>Aluna</span>
+                  <span class="badge status"><span class="dot"></span>Ativa</span>
+                  <span class="badge pilar">Pilates</span>
+                </div>
+
+                <div class="ch-contact">
+                  <span class="ch-contact-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    (49) 99812-4407
+                  </span>
+                  <span class="ch-contact-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
+                    amanda.ribeiro@gmail.com
+                  </span>
+                  <span class="ch-contact-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    Chapecó · SC
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ch-actions">
+              <button class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>
+                </svg>
+                Editar
+              </button>
+              <a href="06 Agenda.html" class="btn primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  <line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/>
+                </svg>
+                Novo agendamento
+              </a>
+              <button class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                Gerar contrato
+              </button>
+              <span class="spacer"></span>
+              <a href="03 Inbox WhatsApp.html" class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+                Mensagem
+              </a>
+              <button class="btn icon-only" aria-label="Mais opções" title="Mais opções">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <!-- TABS -->
+          <div class="tabs-wrap">
+            <nav class="tabs" role="tablist">
+              <a href="11 Ficha do cliente.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                Visão geral
+              </a>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                Dados pessoais
+              </button>
+              <a href="12 Ficha - Plano ativo.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+                Plano ativo
+              </a>
+              <a href="13 Ficha - Financeiro.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                Financeiro
+              </a>
+              <button class="tab active" role="tab" aria-selected="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 11H3v10h6V11zm6-8H9v18h6V3zm6 4h-6v14h6V7z"/>
+                </svg>
+                Anamnese
+              </button>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                Prontuário
+              </button>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                Evoluções
+                <span class="count">9</span>
+              </button>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Documentos
+                <span class="count">4</span>
+              </button>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/>
+                </svg>
+                Contrato
+              </button>
+            </nav>
+
+            <!-- ANAMNESE -->
+            <div class="anam-pane" role="tabpanel">
+
+              <!-- Versão / meta -->
+              <div class="anam-meta">
+                <div class="anam-title">
+                  <h2>Anamnese</h2>
+                  <span class="ver-pill">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;stroke-width:2;"><polyline points="12 7 12 12 15 14"/><circle cx="12" cy="12" r="9"/></svg>
+                    Versão 3
+                  </span>
+                </div>
+                <span class="anam-meta-sub">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Atualizada em 02 jun 2026 · por Larissa Ferraz
+                </span>
+                <span class="spacer"></span>
+                <button class="txt-btn" id="toggleAll">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Recolher tudo
+                </button>
+              </div>
+
+              <!-- Confidencialidade -->
+              <div class="confid">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <p><strong>Informação clínica confidencial.</strong> Acesso restrito à equipe técnica. Os registros seguem o sigilo profissional e a LGPD.</p>
+              </div>
+
+              <!-- Seções -->
+              <div class="anam-sections">
+
+                <!-- 1 · Queixa principal -->
+                <section class="acc open">
+                  <button class="acc-head" type="button">
+                    <span class="acc-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </span>
+                    <span class="acc-tt">
+                      <span class="t">Queixa principal</span>
+                      <span class="s">Dor lombar baixa ao final do dia · há ~8 meses</span>
+                    </span>
+                    <span class="sec-tag ok"><span class="dot"></span>Preenchida</span>
+                    <span class="acc-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </button>
+                  <div class="acc-body">
+                    <div class="f-grid">
+                      <div class="field full">
+                        <label class="f-label">Descrição da queixa</label>
+                        <textarea class="f-textarea">Relata dor lombar baixa que se intensifica ao final do dia e após longos períodos sentada no trabalho. Procura o Pilates para fortalecimento, alívio das dores e melhora da postura.</textarea>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Início dos sintomas</label>
+                        <input class="f-input" type="text" value="Há cerca de 8 meses"/>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Localização</label>
+                        <input class="f-input" type="text" value="Lombar (L4–L5), bilateral"/>
+                      </div>
+                      <div class="field full">
+                        <label class="f-label">Intensidade da dor · EVA</label>
+                        <div class="eva" data-eva role="group" aria-label="Escala visual analógica de 0 a 10">
+                          <button type="button">0</button>
+                          <button type="button">1</button>
+                          <button type="button">2</button>
+                          <button type="button">3</button>
+                          <button type="button">4</button>
+                          <button type="button">5</button>
+                          <button type="button" class="sel">6</button>
+                          <button type="button">7</button>
+                          <button type="button">8</button>
+                          <button type="button">9</button>
+                          <button type="button">10</button>
+                        </div>
+                        <div class="eva-scale"><span>Sem dor</span><span>Pior dor imaginável</span></div>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Fatores de piora</label>
+                        <input class="f-input" type="text" value="Permanecer sentada; carregar peso"/>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Fatores de melhora</label>
+                        <input class="f-input" type="text" value="Caminhar; alongamento; repouso"/>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 2 · Histórico de saúde -->
+                <section class="acc open">
+                  <button class="acc-head" type="button">
+                    <span class="acc-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    </span>
+                    <span class="acc-tt">
+                      <span class="t">Histórico de saúde</span>
+                      <span class="s">Nega doenças crônicas · alergia a Dipirona</span>
+                    </span>
+                    <span class="sec-tag flag"><span class="dot"></span>Atenção</span>
+                    <span class="acc-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </button>
+                  <div class="acc-body">
+                    <div class="f-grid">
+                      <div class="field full">
+                        <label class="f-label">Doenças / condições prévias</label>
+                        <input class="f-input" type="text" value="Nega doenças crônicas (HAS, DM, cardiopatias)"/>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Alergias</label>
+                        <input class="f-input" type="text" value="Dipirona (alergia medicamentosa)"/>
+                        <span class="f-hint">Sinalizada na ficha clínica.</span>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Pressão arterial habitual</label>
+                        <input class="f-input" type="text" value="120 / 80 mmHg"/>
+                      </div>
+                      <div class="field full">
+                        <label class="f-label">Histórico familiar</label>
+                        <input class="f-input" type="text" value="Mãe com hipertensão; pai com diabetes tipo 2"/>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Tabagismo</label>
+                        <select class="f-select">
+                          <option>Não</option>
+                          <option>Sim</option>
+                          <option>Ex-tabagista</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Etilismo</label>
+                        <select class="f-select">
+                          <option>Não</option>
+                          <option selected>Social</option>
+                          <option>Frequente</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 3 · Cirurgias -->
+                <section class="acc">
+                  <button class="acc-head" type="button">
+                    <span class="acc-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2.5 18 6l-9.5 9.5L5 16l.5-3.5z"/><path d="m18 6 1.5-1.5a1.4 1.4 0 0 0-2-2L16 4"/><line x1="3" y1="21" x2="9" y2="15"/></svg>
+                    </span>
+                    <span class="acc-tt">
+                      <span class="t">Cirurgias e internações</span>
+                      <span class="s">2 registros · sem intercorrências recentes</span>
+                    </span>
+                    <span class="sec-tag ok"><span class="dot"></span>Preenchida</span>
+                    <span class="acc-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </button>
+                  <div class="acc-body">
+                    <div class="ed-list">
+                      <div class="ed-row">
+                        <span class="ed-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="6" width="18" height="16" rx="2"/></svg></span>
+                        <div class="ed-meta">
+                          <div class="t">Cesárea</div>
+                          <div class="s">2019 · sem intercorrências</div>
+                        </div>
+                        <button class="ed-del" type="button" aria-label="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </div>
+                      <div class="ed-row">
+                        <span class="ed-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="6" width="18" height="16" rx="2"/></svg></span>
+                        <div class="ed-meta">
+                          <div class="t">Apendicectomia</div>
+                          <div class="s">2008 · recuperação completa</div>
+                        </div>
+                        <button class="ed-del" type="button" aria-label="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </div>
+                      <button class="add-row" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Adicionar cirurgia
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 4 · Medicamentos -->
+                <section class="acc">
+                  <button class="acc-head" type="button">
+                    <span class="acc-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
+                    </span>
+                    <span class="acc-tt">
+                      <span class="t">Medicamentos em uso</span>
+                      <span class="s">1 de uso contínuo · 1 suplemento</span>
+                    </span>
+                    <span class="sec-tag ok"><span class="dot"></span>Preenchida</span>
+                    <span class="acc-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </button>
+                  <div class="acc-body">
+                    <div class="ed-list">
+                      <div class="ed-row">
+                        <span class="ed-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
+                        <div class="ed-meta">
+                          <div class="t">Anticoncepcional oral</div>
+                          <div class="s">Uso contínuo · 1×/dia</div>
+                        </div>
+                        <button class="ed-del" type="button" aria-label="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </div>
+                      <div class="ed-row">
+                        <span class="ed-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
+                        <div class="ed-meta">
+                          <div class="t">Vitamina D</div>
+                          <div class="s">Suplementação · 1×/dia</div>
+                        </div>
+                        <button class="ed-del" type="button" aria-label="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </div>
+                      <button class="add-row" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Adicionar medicamento
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 5 · Gestação (quando aplicável) -->
+                <section class="acc">
+                  <button class="acc-head" type="button">
+                    <span class="acc-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M12 8c-2 0-3 1.6-3 4v4a3 3 0 0 0 6 0c2.2-.3 3-2 3-4 0-2.5-2-4.5-4.5-4.5"/></svg>
+                    </span>
+                    <span class="acc-tt">
+                      <span class="t">Gestação</span>
+                      <span class="s">Não se aplica a esta cliente no momento</span>
+                    </span>
+                    <span class="sec-tag na"><span class="dot"></span>Não se aplica</span>
+                    <span class="acc-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </button>
+                  <div class="acc-body">
+                    <div class="sec-toggle">
+                      <div class="sec-toggle-meta">
+                        <div class="t">A cliente está gestante?</div>
+                        <div class="s">Ative para registrar idade gestacional, DUM, DPP, acompanhamento pré-natal e restrições.</div>
+                      </div>
+                      <button class="switch" type="button" data-switch aria-label="Gestante" aria-pressed="false"></button>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 6 · Atividade física -->
+                <section class="acc open">
+                  <button class="acc-head" type="button">
+                    <span class="acc-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>
+                    </span>
+                    <span class="acc-tt">
+                      <span class="t">Atividade física</span>
+                      <span class="s">Caminhada 2×/semana · sem experiência prévia em Pilates</span>
+                    </span>
+                    <span class="sec-tag ok"><span class="dot"></span>Preenchida</span>
+                    <span class="acc-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </button>
+                  <div class="acc-body">
+                    <div class="f-grid">
+                      <div class="field">
+                        <label class="f-label">Pratica atividade física?</label>
+                        <select class="f-select">
+                          <option selected>Sim · regularmente</option>
+                          <option>Sim · esporadicamente</option>
+                          <option>Não</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Modalidades</label>
+                        <input class="f-input" type="text" value="Caminhada 2×/semana"/>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Nível de condicionamento</label>
+                        <select class="f-select">
+                          <option selected>Iniciante</option>
+                          <option>Intermediário</option>
+                          <option>Avançado</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="f-label">Experiência prévia em Pilates</label>
+                        <select class="f-select">
+                          <option selected>Não</option>
+                          <option>Sim · menos de 1 ano</option>
+                          <option>Sim · mais de 1 ano</option>
+                        </select>
+                      </div>
+                      <div class="field full">
+                        <label class="f-label">Tempo sentada por dia <span class="opt">· rotina de trabalho</span></label>
+                        <input class="f-input" type="text" value="Cerca de 8h — trabalho administrativo"/>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 7 · Objetivos -->
+                <section class="acc open">
+                  <button class="acc-head" type="button">
+                    <span class="acc-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+                    </span>
+                    <span class="acc-tt">
+                      <span class="t">Objetivos</span>
+                      <span class="s">Alívio de dores · fortalecimento do core · postura</span>
+                    </span>
+                    <span class="sec-tag ok"><span class="dot"></span>Preenchida</span>
+                    <span class="acc-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  </button>
+                  <div class="acc-body">
+                    <div class="f-grid">
+                      <div class="field full">
+                        <label class="f-label">Objetivos com o Pilates</label>
+                        <div class="chips" data-chips>
+                          <button class="chip sel" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Alívio de dores</button>
+                          <button class="chip sel" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Fortalecimento do core</button>
+                          <button class="chip sel" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Melhora da postura</button>
+                          <button class="chip" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Flexibilidade</button>
+                          <button class="chip" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Condicionamento</button>
+                          <button class="chip sel" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Bem-estar e qualidade de vida</button>
+                          <button class="chip" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Reabilitação</button>
+                        </div>
+                      </div>
+                      <div class="field full">
+                        <label class="f-label">Observações e expectativas</label>
+                        <textarea class="f-textarea">Deseja reduzir as dores lombares e melhorar a postura na rotina de trabalho. Disponível para aulas em dois períodos na semana, preferencialmente pela manhã.</textarea>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+              </div>
+
+              <!-- Rodapé · salvar -->
+              <div class="anam-foot">
+                <span class="save-note">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  Rascunho salvo automaticamente há 2 min
+                </span>
+                <span class="spacer"></span>
+                <button class="btn">Descartar alterações</button>
+                <button class="btn primary lg">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  Salvar anamnese
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ============================================================
+             COLUNA LATERAL
+             ============================================================ -->
+        <aside class="side-col">
+
+          <!-- Completude -->
+          <section class="side-card">
+            <h3>Completude</h3>
+            <div class="compl-top">
+              <div class="compl-v">6<small> / 7 seções</small></div>
+              <div class="compl-pct">86%</div>
+            </div>
+            <div class="bar"><i style="width:86%"></i></div>
+            <div class="compl-sub">Gestação marcada como não aplicável. Demais seções preenchidas e revisadas.</div>
+          </section>
+
+          <!-- Sinalizações clínicas -->
+          <section class="side-card">
+            <h3>Sinalizações clínicas</h3>
+            <div class="flag-list">
+              <div class="flag-row">
+                <span class="flag-ic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+                <div class="flag-meta">
+                  <div class="flag-k">Alergia</div>
+                  <div class="flag-v">Dipirona — evitar prescrição</div>
+                </div>
+              </div>
+              <div class="flag-row">
+                <span class="flag-ic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+                <div class="flag-meta">
+                  <div class="flag-k">Queixa ativa</div>
+                  <div class="flag-v">Dor lombar L4–L5 · EVA 6/10</div>
+                </div>
+              </div>
+              <div class="flag-row">
+                <span class="flag-ic calm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>
+                <div class="flag-meta">
+                  <div class="flag-k">Cuidado postural</div>
+                  <div class="flag-v">8h sentada/dia · core fraco</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Versões -->
+          <section class="side-card">
+            <h3>Histórico de versões</h3>
+            <div class="ver-list">
+              <div class="ver-row cur">
+                <div class="ver-rail"><span class="ver-node"></span><span class="ver-line"></span></div>
+                <div class="ver-meta">
+                  <div class="ver-h"><span class="ver-n">Versão 3</span><span class="ver-cur-tag">Atual</span></div>
+                  <div class="ver-d">02 jun 2026 · Larissa Ferraz<br/>Revisão da queixa e dos objetivos</div>
+                </div>
+              </div>
+              <div class="ver-row">
+                <div class="ver-rail"><span class="ver-node"></span><span class="ver-line"></span></div>
+                <div class="ver-meta">
+                  <div class="ver-h"><span class="ver-n">Versão 2</span></div>
+                  <div class="ver-d">18 mai 2026 · Larissa Ferraz<br/>Atualização de medicamentos</div>
+                </div>
+              </div>
+              <div class="ver-row">
+                <div class="ver-rail"><span class="ver-node"></span></div>
+                <div class="ver-meta">
+                  <div class="ver-h"><span class="ver-n">Versão 1</span></div>
+                  <div class="ver-d">04 abr 2026 · Larissa Ferraz<br/>Anamnese inicial na avaliação</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Responsável -->
+          <section class="side-card">
+            <h3>Profissional responsável</h3>
+            <div class="resp">
+              <div class="avatar tone-pilates">LF</div>
+              <div class="resp-meta">
+                <div class="resp-name">Larissa Ferraz</div>
+                <div class="resp-role">Instrutora · Pilates · CREFITO 12345-F</div>
+              </div>
+            </div>
+          </section>
+
+        </aside>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Accordion
+  document.querySelectorAll('.acc-head').forEach(function (h) {
+    h.addEventListener('click', function () {
+      h.closest('.acc').classList.toggle('open');
+    });
+  });
+
+  // Recolher / Expandir tudo
+  (function () {
+    var btn = document.getElementById('toggleAll');
+    if (!btn) return;
+    var label = btn.querySelector('svg').nextSibling;
+    btn.addEventListener('click', function () {
+      var accs = document.querySelectorAll('.acc');
+      var anyOpen = document.querySelectorAll('.acc.open').length > 0;
+      accs.forEach(function (a) { a.classList.toggle('open', !anyOpen); });
+      btn.lastChild.textContent = anyOpen ? ' Expandir tudo' : ' Recolher tudo';
+    });
+  })();
+
+  // EVA scale
+  document.querySelectorAll('[data-eva]').forEach(function (group) {
+    group.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        group.querySelectorAll('button').forEach(function (x) { x.classList.remove('sel'); });
+        b.classList.add('sel');
+      });
+    });
+  });
+
+  // Chips
+  document.querySelectorAll('[data-chips] .chip').forEach(function (c) {
+    c.addEventListener('click', function () { c.classList.toggle('sel'); });
+  });
+
+  // Switch (gestação)
+  document.querySelectorAll('[data-switch]').forEach(function (s) {
+    s.addEventListener('click', function () {
+      var on = s.classList.toggle('on');
+      s.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  });
+</script>
+
+</body>
+</html>

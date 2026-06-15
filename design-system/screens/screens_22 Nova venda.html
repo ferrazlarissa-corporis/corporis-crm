@@ -1,0 +1,1715 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis OS · Nova venda</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Corporis OS — Nova venda / adesão
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --surface-raised: var(--bg-card);
+    --surface-soft: var(--bg-2);
+    --content-max: 1320px;
+    --pillar-pilates: var(--color-alaranjado);
+    --pillar-gestante: var(--color-bege);
+    --pillar-pelvica: var(--color-verde);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg-1);
+    color: var(--color-texto-escuro);
+    overflow: hidden;
+  }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+  svg { stroke-width: 1.5; }
+
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 0;
+    z-index: 20;
+  }
+  .sb-logo { padding: 22px 24px 14px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+  .sb-scroll {
+    overflow-y: auto;
+    min-height: 0;
+    padding: 4px 16px 12px;
+  }
+  .sb-scroll::-webkit-scrollbar { width: 8px; }
+  .sb-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .sb-group { margin-top: 14px; }
+  .sb-group:first-child { margin-top: 2px; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 400;
+    text-decoration: none;
+    position: relative;
+    transition: background var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active {
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .sb-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 2px;
+    background: var(--color-alaranjado);
+    border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+  .sb-footer {
+    border-top: 0.6px solid var(--color-cinza);
+    padding: 10px 16px 12px;
+  }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    margin-top: 4px;
+    border-radius: var(--radius-md);
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-size: 13px; font-weight: 500; line-height: 1.2; color: var(--color-texto-escuro); }
+  .sb-user-role { font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent;
+    border: 0;
+    color: var(--color-texto-medio);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) auto 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 0 32px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    min-width: 0;
+  }
+  .topbar-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+    letter-spacing: -0.005em;
+  }
+  .topbar-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .topbar-crumb .sep {
+    width: 3px;
+    height: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--color-cinza);
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .menu-btn { display: none; }
+
+  .btn {
+    min-height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background var(--duration-fast) var(--ease-soft), border-color var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .btn svg { width: 15px; height: 15px; }
+  .btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .btn.primary {
+    border-color: var(--color-alaranjado);
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+  }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); color: var(--color-fundo-claro); }
+  .btn.icon { width: 36px; padding: 0; }
+  .btn:disabled {
+    cursor: not-allowed;
+    background: var(--color-cinza);
+    border-color: var(--color-cinza);
+    color: var(--color-texto-medio);
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-pill::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege);
+  }
+
+  /* ============================================================
+     CONTENT
+     ============================================================ */
+  .progressbar {
+    border-bottom: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+    padding: 12px 32px;
+  }
+  .steps {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .step-btn {
+    min-width: 0;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--surface-raised);
+    border-radius: var(--radius-lg);
+    padding: 10px 12px;
+    color: var(--color-texto-medio);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    transition: border-color var(--duration-fast) var(--ease-soft), background var(--duration-fast) var(--ease-soft), transform var(--duration-fast) var(--ease-soft);
+  }
+  .step-btn:hover { border-color: var(--color-tangerina); transform: translateY(-1px); }
+  .step-index {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-2);
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    font-weight: 500;
+    font-feature-settings: "tnum";
+    flex-shrink: 0;
+  }
+  .step-copy { min-width: 0; display: grid; gap: 2px; }
+  .step-copy strong {
+    color: var(--color-texto-escuro);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .step-copy span {
+    color: var(--color-texto-medio);
+    font-size: 11px;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .step-btn.active {
+    border-color: var(--color-alaranjado);
+    background: var(--color-bege-claro);
+  }
+  .step-btn.active .step-index {
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+  }
+  .step-btn.done .step-index {
+    background: var(--color-bege);
+    color: var(--color-texto-escuro);
+  }
+
+  .scroll {
+    overflow: auto;
+    min-height: 0;
+  }
+  .content {
+    width: min(var(--content-max), 100%);
+    margin: 0 auto;
+    padding: 32px;
+  }
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
+    gap: 24px;
+  }
+  .wizard-card,
+  .summary-card,
+  .panel,
+  .success-card {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  .wizard-card { min-width: 0; overflow: hidden; }
+  .wizard-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 28px 20px;
+    border-bottom: 0.6px solid var(--color-cinza);
+  }
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 11px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .wizard-head h2 {
+    font-family: var(--font-display);
+    font-size: 34px;
+    line-height: 1.12;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+    margin: 0;
+    text-wrap: balance;
+  }
+  .wizard-head p,
+  .section-intro p {
+    margin: 8px 0 0;
+    color: var(--color-texto-medio);
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 680px;
+  }
+  .wizard-body { padding: 28px; }
+  .wizard-step { display: none; }
+  .wizard-step.active { display: block; animation: stepIn var(--duration-base) var(--ease-out); }
+  @keyframes stepIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .wizard-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 28px;
+    border-top: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+  }
+  .foot-note {
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .foot-actions { display: flex; align-items: center; gap: 8px; }
+
+  .section-intro {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 20px;
+  }
+  .section-intro h3 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    line-height: 1.15;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+    margin: 0;
+  }
+
+  .search-box {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--bg-1);
+    color: var(--color-texto-medio);
+    transition: border-color var(--duration-fast) var(--ease-soft), box-shadow var(--duration-fast) var(--ease-soft);
+  }
+  .search-box:focus-within {
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.15);
+  }
+  .search-box svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .search-box input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--color-texto-escuro);
+    min-width: 0;
+    font-size: 14px;
+  }
+  .search-box input::placeholder { color: var(--color-texto-medio); }
+
+  .client-list,
+  .plan-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .choice-card {
+    position: relative;
+    width: 100%;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+    padding: 16px;
+    color: var(--color-texto-escuro);
+    text-align: left;
+    display: grid;
+    gap: 12px;
+    transition: border-color var(--duration-fast) var(--ease-soft), box-shadow var(--duration-fast) var(--ease-soft), transform var(--duration-fast) var(--ease-soft);
+  }
+  .choice-card:hover { border-color: var(--color-tangerina); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .choice-card.selected {
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.12);
+  }
+  .choice-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .choice-title {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+  .choice-title strong {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+  }
+  .choice-title span {
+    font-size: 12.5px;
+    color: var(--color-texto-medio);
+    line-height: 1.35;
+  }
+  .choice-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-2);
+    color: var(--color-texto-medio);
+    padding: 0 10px;
+    font-size: 11.5px;
+    font-weight: 500;
+  }
+  .tag.soft { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .tag.success { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .tag.alert { background: rgba(240, 131, 83, 0.14); color: var(--color-texto-escuro); }
+  .swatch {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-pill);
+    background: var(--color-alaranjado);
+    display: inline-block;
+  }
+  .swatch.gestante { background: var(--color-bege); }
+  .swatch.pelvica { background: var(--color-verde); }
+
+  .mode-tabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--bg-1);
+  }
+  .mode-tabs button {
+    border: 0;
+    background: transparent;
+    color: var(--color-texto-medio);
+    border-radius: var(--radius-pill);
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  .mode-tabs button.active {
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+  }
+  .custom-panel {
+    display: none;
+    margin-top: 18px;
+  }
+  .custom-panel.active { display: block; }
+  .plan-list.hidden { display: none; }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .field {
+    display: grid;
+    gap: 7px;
+  }
+  .field.full { grid-column: 1 / -1; }
+  .field label,
+  .check-label {
+    color: var(--color-texto-medio);
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-height: 44px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-1);
+    color: var(--color-texto-escuro);
+    padding: 0 12px;
+    outline: 0;
+    transition: border-color var(--duration-fast) var(--ease-soft), box-shadow var(--duration-fast) var(--ease-soft);
+  }
+  .field textarea {
+    min-height: 92px;
+    padding: 12px;
+    resize: vertical;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px rgba(240, 131, 83, 0.15);
+  }
+  .check-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .check-row {
+    min-height: 44px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    color: var(--color-texto-escuro);
+    font-size: 13px;
+  }
+  .check-row input { accent-color: var(--color-alaranjado); }
+
+  .review-grid {
+    display: grid;
+    gap: 16px;
+  }
+  .review-card {
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .review-card h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+  }
+  .review-card p {
+    margin: 0;
+    color: var(--color-texto-medio);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .review-lines {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+  .review-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 0.6px solid var(--color-cinza);
+    color: var(--color-texto-medio);
+    font-size: 13px;
+  }
+  .review-line:last-child { border-bottom: 0; }
+  .review-line strong {
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+    text-align: right;
+  }
+  .created-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .created-item {
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    background: var(--bg-1);
+    padding: 14px;
+    min-height: 134px;
+    display: grid;
+    gap: 10px;
+  }
+  .created-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .created-icon svg { width: 17px; height: 17px; }
+  .created-item strong { font-size: 13.5px; font-weight: 500; color: var(--color-texto-escuro); }
+  .created-item span { color: var(--color-texto-medio); font-size: 12px; line-height: 1.4; }
+
+  .summary-card {
+    position: sticky;
+    top: 24px;
+    padding: 20px;
+    display: grid;
+    gap: 18px;
+  }
+  .summary-card h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 25px;
+    line-height: 1.15;
+    font-weight: 400;
+  }
+  .summary-block {
+    border-top: 0.6px solid var(--color-cinza);
+    padding-top: 14px;
+    display: grid;
+    gap: 10px;
+  }
+  .summary-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+  }
+  .summary-value {
+    color: var(--color-texto-escuro);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .summary-muted {
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .total-box {
+    background: var(--color-bege-claro);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: grid;
+    gap: 4px;
+  }
+  .total-box span {
+    color: var(--color-texto-medio);
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .total-box strong {
+    color: var(--color-texto-escuro);
+    font-family: var(--font-display);
+    font-size: 30px;
+    line-height: 1;
+    font-weight: 400;
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(42, 31, 26, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-soft);
+    z-index: 40;
+  }
+  body.menu-open .backdrop,
+  body.summary-open .backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .success-panel {
+    position: fixed;
+    right: 24px;
+    top: 24px;
+    bottom: 24px;
+    width: min(480px, calc(100vw - 48px));
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+    transform: translateX(calc(100% + 32px));
+    transition: transform var(--duration-slow) var(--ease-out);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+  }
+  body.summary-open .success-panel { transform: translateX(0); }
+  .success-head {
+    padding: 24px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .success-head h2 {
+    margin: 6px 0 0;
+    font-family: var(--font-display);
+    font-size: 30px;
+    line-height: 1.12;
+    font-weight: 400;
+  }
+  .close-btn {
+    width: 36px;
+    height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .close-btn:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .close-btn svg { width: 16px; height: 16px; }
+  .success-body {
+    overflow: auto;
+    padding: 24px;
+    display: grid;
+    align-content: start;
+    gap: 16px;
+  }
+  .success-card { padding: 16px; display: grid; gap: 12px; }
+  .success-card h3 { margin: 0; font-size: 15px; font-weight: 500; }
+  .success-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 18px 24px;
+    border-top: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+  }
+
+  @media (max-width: 1180px) {
+    .workspace { grid-template-columns: 1fr; }
+    .summary-card { position: static; }
+    .created-list { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    .app { display: block; min-height: 100vh; width: 100%; }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: min(var(--sidebar-w), 88vw);
+      transform: translateX(-105%);
+      transition: transform 260ms var(--ease-out);
+      box-shadow: var(--shadow-lg);
+    }
+    body.menu-open .sidebar { transform: translateX(0); }
+    .main { min-height: 100vh; }
+    .topbar { padding: 0 18px; }
+    .menu-btn { display: inline-flex; }
+    .topbar-left { gap: 10px; }
+    .topbar-crumb { display: none; }
+    .progressbar { padding: 10px 18px; overflow-x: auto; }
+    .steps { min-width: 760px; }
+    .content { padding: 24px 18px 48px; }
+  }
+
+  @media (max-width: 680px) {
+    .topbar-title { font-size: 24px; }
+    .status-pill { display: none; }
+    .wizard-head,
+    .section-intro,
+    .wizard-foot {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .wizard-head { padding: 22px; }
+    .wizard-head h2 { font-size: 29px; }
+    .wizard-body { padding: 22px; }
+    .wizard-foot { padding: 16px 22px; }
+    .foot-actions { width: 100%; }
+    .foot-actions .btn { flex: 1; }
+    .form-grid,
+    .check-grid { grid-template-columns: 1fr; }
+    .mode-tabs { width: 100%; }
+    .mode-tabs button { flex: 1; }
+    .success-panel {
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 100vw;
+      border-radius: 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="22 Nova venda">
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <div class="sb-scroll">
+      <div class="sb-group">
+        <div class="sb-section-label">Gestão</div>
+        <nav class="sb-nav">
+          <a href="02 Dashboard.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="09 Clientes.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Clientes
+          </a>
+          <a href="06 Agenda.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Agenda
+          </a>
+          <a href="#" class="sb-item active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Vendas
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Relacionamento</div>
+        <nav class="sb-nav">
+          <a href="03 Inbox WhatsApp.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+              <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            </svg>
+            Inbox
+            <span class="sb-badge">7</span>
+          </a>
+          <a href="04 Funil.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Funil
+          </a>
+          <a href="07 Agente de IA.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/>
+              <circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/>
+              <path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/>
+            </svg>
+            Agente de IA
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Financeiro</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Lançamentos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            DRE
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Cadastros</div>
+        <nav class="sb-nav">
+          <a href="21 Planos.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Planos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Modelos de contrato
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+            Serviços
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            Profissionais
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+              <path d="M9 21v-4h6v4"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/>
+            </svg>
+            Salas
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="sb-footer">
+      <nav class="sb-nav">
+        <a href="08 Configurações.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </nav>
+      <div class="sb-user">
+        <div class="avatar">LF</div>
+        <div class="sb-user-meta">
+          <span class="sb-user-name">Larissa Ferraz</span>
+          <span class="sb-user-role">Gestão · Corporis</span>
+        </div>
+        <button class="sb-user-action" aria-label="Mais opções">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn icon menu-btn" type="button" data-menu-open aria-label="Abrir navegação">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+          </svg>
+        </button>
+        <h1 class="topbar-title">Nova venda</h1>
+        <span class="topbar-crumb">
+          <span>Vendas</span>
+          <span class="sep"></span>
+          <span>/vendas/nova</span>
+        </span>
+      </div>
+      <div class="topbar-right">
+        <span class="status-pill" id="draftStatus">Rascunho salvo</span>
+        <a class="btn" href="21 Planos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+            <line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+          <span class="label">Catálogo</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="progressbar" aria-label="Etapas da venda">
+      <div class="steps" id="stepNav">
+        <button class="step-btn active" type="button" data-step-target="1">
+          <span class="step-index">1</span>
+          <span class="step-copy"><strong>Cliente</strong><span>Busca e seleção</span></span>
+        </button>
+        <button class="step-btn" type="button" data-step-target="2">
+          <span class="step-index">2</span>
+          <span class="step-copy"><strong>Plano</strong><span>Catálogo ou personalizado</span></span>
+        </button>
+        <button class="step-btn" type="button" data-step-target="3">
+          <span class="step-index">3</span>
+          <span class="step-copy"><strong>Condições</strong><span>Valor e vencimento</span></span>
+        </button>
+        <button class="step-btn" type="button" data-step-target="4">
+          <span class="step-index">4</span>
+          <span class="step-copy"><strong>Revisão</strong><span>Matrícula, recebíveis e contrato</span></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div class="content">
+        <div class="workspace">
+          <section class="wizard-card" aria-label="Wizard de nova venda">
+            <div class="wizard-head">
+              <div>
+                <div class="eyebrow" id="stepEyebrow">Etapa 1 de 4</div>
+                <h2 id="stepTitle">Escolha a aluna para iniciar a adesão.</h2>
+                <p id="stepLead">Busque uma cliente já cadastrada. O resumo financeiro ajuda a equipe a confirmar se existe alguma pendência antes de vender um novo plano.</p>
+              </div>
+            </div>
+
+            <div class="wizard-body">
+              <div class="wizard-step active" data-step="1">
+                <div class="section-intro">
+                  <div>
+                    <h3>Cliente</h3>
+                    <p>Resultados aparecem com plano atual, último contato e situação financeira.</p>
+                  </div>
+                </div>
+                <label class="search-box">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input id="clientSearch" type="search" placeholder="Buscar por nome, telefone ou objetivo clínico"/>
+                </label>
+                <div class="client-list" id="clientList"></div>
+              </div>
+
+              <div class="wizard-step" data-step="2">
+                <div class="section-intro">
+                  <div>
+                    <h3>Plano</h3>
+                    <p>Use um plano do catálogo ou monte uma condição personalizada sem alterar o cadastro padrão.</p>
+                  </div>
+                  <div class="mode-tabs" role="tablist" aria-label="Tipo de plano">
+                    <button class="active" type="button" data-plan-mode="catalogo">Catálogo</button>
+                    <button type="button" data-plan-mode="personalizado">Personalizado</button>
+                  </div>
+                </div>
+                <div class="plan-list" id="planList"></div>
+                <div class="custom-panel" id="customPanel">
+                  <div class="form-grid">
+                    <div class="field full">
+                      <label for="customName">Nome interno</label>
+                      <input id="customName" type="text" value="Plano personalizado de reabilitação"/>
+                    </div>
+                    <div class="field">
+                      <label for="customPillar">Pilar</label>
+                      <select id="customPillar">
+                        <option value="pilates">Pilates terapêutico</option>
+                        <option value="gestante">Pilates gestante</option>
+                        <option value="pelvica">Fisio pélvica</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="customSessions">Sessões por semana</label>
+                      <select id="customSessions">
+                        <option value="1">1 sessão</option>
+                        <option value="2" selected>2 sessões</option>
+                        <option value="3">3 sessões</option>
+                        <option value="agenda combinada">Agenda combinada</option>
+                      </select>
+                    </div>
+                    <div class="field full">
+                      <label for="customNotes">Descrição para revisão</label>
+                      <textarea id="customNotes">Condição combinada após avaliação inicial, com acompanhamento individual e revisão em 30 dias.</textarea>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="check-label">Serviços incluídos</div>
+                    <div class="check-grid">
+                      <label class="check-row"><input type="checkbox" data-service checked value="Avaliação fisioterapêutica"/> Avaliação fisioterapêutica</label>
+                      <label class="check-row"><input type="checkbox" data-service checked value="Pilates terapêutico"/> Pilates terapêutico</label>
+                      <label class="check-row"><input type="checkbox" data-service value="Fisio pélvica individual"/> Fisio pélvica individual</label>
+                      <label class="check-row"><input type="checkbox" data-service value="Orientação domiciliar"/> Orientação domiciliar</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-step" data-step="3">
+                <div class="section-intro">
+                  <div>
+                    <h3>Condições comerciais</h3>
+                    <p>Defina valor, desconto, vencimento e parcelamento. O total líquido atualiza a revisão automaticamente.</p>
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="saleValue">Valor do plano</label>
+                    <input id="saleValue" inputmode="numeric" type="text" value="420,00"/>
+                  </div>
+                  <div class="field">
+                    <label for="discount">Desconto</label>
+                    <input id="discount" inputmode="numeric" type="text" value="0,00"/>
+                  </div>
+                  <div class="field">
+                    <label for="dueDay">Dia de vencimento</label>
+                    <select id="dueDay">
+                      <option>5</option>
+                      <option selected>10</option>
+                      <option>15</option>
+                      <option>20</option>
+                      <option>25</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="startDate">Início</label>
+                    <input id="startDate" type="date" value="2026-06-17"/>
+                  </div>
+                  <div class="field">
+                    <label for="paymentMethod">Forma de pagamento</label>
+                    <select id="paymentMethod">
+                      <option selected>Pix recorrente</option>
+                      <option>Cartão de crédito</option>
+                      <option>Boleto mensal</option>
+                      <option>Dinheiro na recepção</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="installments">Número de parcelas</label>
+                    <select id="installments">
+                      <option value="1">1 parcela</option>
+                      <option value="3">3 parcelas</option>
+                      <option value="6" selected>6 parcelas</option>
+                      <option value="12">12 parcelas</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-step" data-step="4">
+                <div class="section-intro">
+                  <div>
+                    <h3>Revisão da adesão</h3>
+                    <p>Confira os registros que serão criados antes de confirmar a venda.</p>
+                  </div>
+                </div>
+                <div class="review-grid">
+                  <article class="review-card">
+                    <h4>Resumo comercial</h4>
+                    <dl class="review-lines">
+                      <div class="review-line"><dt>Aluna</dt><dd><strong id="reviewClient">—</strong></dd></div>
+                      <div class="review-line"><dt>Plano</dt><dd><strong id="reviewPlan">—</strong></dd></div>
+                      <div class="review-line"><dt>Condição</dt><dd><strong id="reviewCondition">—</strong></dd></div>
+                    </dl>
+                  </article>
+
+                  <div class="created-list" aria-label="Registros que serão criados">
+                    <article class="created-item">
+                      <span class="created-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                          <path d="M19 8v6"/><path d="M22 11h-6"/>
+                        </svg>
+                      </span>
+                      <strong>Matrícula ativa</strong>
+                      <span id="reviewEnrollment">Plano vinculado à ficha da aluna com início informado.</span>
+                    </article>
+                    <article class="created-item">
+                      <span class="created-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                      </span>
+                      <strong>Lançamentos a receber</strong>
+                      <span id="reviewReceivables">Parcelas mensais com vencimento definido.</span>
+                    </article>
+                    <article class="created-item">
+                      <span class="created-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                      </span>
+                      <strong>Contrato</strong>
+                      <span>Modelo selecionado para assinatura digital ou impressão.</span>
+                    </article>
+                  </div>
+
+                  <article class="review-card">
+                    <h4>Modelo de contrato</h4>
+                    <div class="field">
+                      <label for="contractModel">Escolha o modelo</label>
+                      <select id="contractModel">
+                        <option>Contrato de plano recorrente · Pilates</option>
+                        <option>Termo de adesão · Pilates gestante</option>
+                        <option>Contrato de pacote terapêutico · Fisio pélvica</option>
+                        <option>Contrato personalizado · Reabilitação</option>
+                      </select>
+                    </div>
+                    <p id="contractHint">Inclui política de reposição, vencimentos e consentimento de tratamento de dados.</p>
+                  </article>
+                </div>
+              </div>
+            </div>
+
+            <div class="wizard-foot">
+              <span class="foot-note" id="stepNote">Selecione uma aluna para liberar a próxima etapa.</span>
+              <div class="foot-actions">
+                <button class="btn" type="button" id="backBtn">Voltar</button>
+                <button class="btn primary" type="button" id="nextBtn">Continuar</button>
+              </div>
+            </div>
+          </section>
+
+          <aside class="summary-card" aria-label="Resumo da venda">
+            <div>
+              <div class="eyebrow">Resumo</div>
+              <h3>Adesão em construção</h3>
+            </div>
+            <div class="summary-block">
+              <span class="summary-label">Cliente</span>
+              <span class="summary-value" id="summaryClient">Nenhuma aluna selecionada</span>
+              <span class="summary-muted" id="summaryClientMeta">Busque e selecione uma cliente existente.</span>
+            </div>
+            <div class="summary-block">
+              <span class="summary-label">Plano</span>
+              <span class="summary-value" id="summaryPlan">Pilates Essencial</span>
+              <span class="summary-muted" id="summaryPlanMeta">Recorrente · 2 sessões por semana</span>
+            </div>
+            <div class="summary-block">
+              <span class="summary-label">Financeiro</span>
+              <span class="summary-value" id="summaryFinance">R$ 420,00 · vencimento dia 10</span>
+              <span class="summary-muted" id="summaryFinanceMeta">6 parcelas · Pix recorrente</span>
+            </div>
+            <div class="total-box">
+              <span>Total líquido</span>
+              <strong id="summaryTotal">R$ 420,00</strong>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="backdrop" data-close aria-hidden="true"></div>
+
+<aside class="success-panel" aria-label="Resumo da matrícula criada" aria-hidden="true">
+  <div class="success-head">
+    <div>
+      <div class="eyebrow">Venda confirmada</div>
+      <h2>Matrícula criada com os registros financeiros.</h2>
+    </div>
+    <button class="close-btn" type="button" data-close aria-label="Fechar resumo da matrícula">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="success-body">
+    <article class="success-card">
+      <h3 id="successTitle">Matrícula COR-2026-118</h3>
+      <dl class="review-lines">
+        <div class="review-line"><dt>Aluna</dt><dd><strong id="successClient">—</strong></dd></div>
+        <div class="review-line"><dt>Plano</dt><dd><strong id="successPlan">—</strong></dd></div>
+        <div class="review-line"><dt>Início</dt><dd><strong id="successStart">—</strong></dd></div>
+      </dl>
+    </article>
+    <article class="success-card">
+      <h3>Próximas ações</h3>
+      <p id="successNext">Contrato pronto para envio e lançamentos a receber programados.</p>
+      <div class="choice-meta">
+        <span class="tag soft">Matrícula ativa</span>
+        <span class="tag soft">Contrato gerado</span>
+        <span class="tag alert">Recebíveis criados</span>
+      </div>
+    </article>
+  </div>
+  <div class="success-foot">
+    <button class="btn" type="button" data-close>Fechar</button>
+    <a class="btn primary" href="11 Ficha do cliente.html">Abrir ficha da aluna</a>
+  </div>
+</aside>
+
+<script>
+  const body = document.body;
+  const clientSearch = document.getElementById('clientSearch');
+  const clientList = document.getElementById('clientList');
+  const planList = document.getElementById('planList');
+  const customPanel = document.getElementById('customPanel');
+  const stepButtons = Array.from(document.querySelectorAll('[data-step-target]'));
+  const stepPanels = Array.from(document.querySelectorAll('[data-step]'));
+  const backBtn = document.getElementById('backBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const stepEyebrow = document.getElementById('stepEyebrow');
+  const stepTitle = document.getElementById('stepTitle');
+  const stepLead = document.getElementById('stepLead');
+  const stepNote = document.getElementById('stepNote');
+  const draftStatus = document.getElementById('draftStatus');
+  const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const clients = [
+    {
+      id: 'ana',
+      name: 'Ana Paula Monteiro',
+      phone: '(49) 99118-2044',
+      goal: 'Dor lombar recorrente',
+      status: 'Sem pendências',
+      contact: 'Atendimento há 2 dias',
+      current: 'Aula experimental concluída'
+    },
+    {
+      id: 'marina',
+      name: 'Marina Bortolanza',
+      phone: '(49) 99802-4417',
+      goal: 'Pós-parto acompanhado',
+      status: 'Mensalidade em aberto',
+      contact: 'WhatsApp hoje',
+      current: 'Retorno indicado pela fisio'
+    },
+    {
+      id: 'clara',
+      name: 'Clara Steffens',
+      phone: '(49) 99954-1860',
+      goal: 'Pilates para gestante',
+      status: 'Sem pendências',
+      contact: 'Avaliação marcada',
+      current: 'Gestante · 22 semanas'
+    }
+  ];
+
+  const plans = [
+    {
+      id: 'essencial',
+      name: 'Pilates Essencial',
+      kind: 'Recorrente',
+      pillar: 'pilates',
+      value: 420,
+      sessions: '2 sessões por semana',
+      services: ['Pilates terapêutico', 'Reavaliação mensal'],
+      note: 'Entrada recomendada para alunas com rotina regular.'
+    },
+    {
+      id: 'continuo',
+      name: 'Pilates Contínuo',
+      kind: 'Recorrente',
+      pillar: 'pilates',
+      value: 590,
+      sessions: '3 sessões por semana',
+      services: ['Pilates terapêutico', 'Plano de evolução'],
+      note: 'Acompanhamento mais próximo, indicado para objetivos funcionais.'
+    },
+    {
+      id: 'gestante',
+      name: 'Gestante Acolhida',
+      kind: 'Recorrente',
+      pillar: 'gestante',
+      value: 540,
+      sessions: '2 sessões por semana',
+      services: ['Pilates gestante', 'Orientação postural'],
+      note: 'Movimento seguro com adaptações por trimestre.'
+    },
+    {
+      id: 'pelvica',
+      name: 'Fisio pélvica 10 sessões',
+      kind: 'Personalizado',
+      pillar: 'pelvica',
+      value: 1450,
+      sessions: '1 sessão por semana',
+      services: ['Avaliação pélvica', 'Sessões individuais'],
+      note: 'Pacote individual com início após avaliação.'
+    }
+  ];
+
+  const copy = {
+    1: {
+      eyebrow: 'Etapa 1 de 4',
+      title: 'Escolha a aluna para iniciar a adesão.',
+      lead: 'Busque uma cliente já cadastrada. O resumo financeiro ajuda a equipe a confirmar se existe alguma pendência antes de vender um novo plano.',
+      note: 'Selecione uma aluna para liberar a próxima etapa.'
+    },
+    2: {
+      eyebrow: 'Etapa 2 de 4',
+      title: 'Defina o plano que será vinculado à matrícula.',
+      lead: 'A venda pode usar um plano do catálogo ou uma condição personalizada quando a avaliação pede outro ritmo.',
+      note: 'Escolha um plano do catálogo ou revise a condição personalizada.'
+    },
+    3: {
+      eyebrow: 'Etapa 3 de 4',
+      title: 'Ajuste as condições comerciais com clareza.',
+      lead: 'Valor, desconto, vencimento e parcelas alimentam automaticamente os lançamentos a receber.',
+      note: 'Condições salvas no rascunho da venda.'
+    },
+    4: {
+      eyebrow: 'Etapa 4 de 4',
+      title: 'Revise o que será criado antes de confirmar.',
+      lead: 'A confirmação cria matrícula, lançamentos a receber e contrato com o modelo selecionado.',
+      note: 'Confirme apenas depois de revisar cliente, plano e contrato.'
+    }
+  };
+
+  const state = {
+    step: 1,
+    selectedClient: clients[0],
+    planMode: 'catalogo',
+    selectedPlan: plans[0]
+  };
+
+  function parseMoney(value) {
+    const normalized = String(value || '0').replace(/[^\d,.-]/g, '').replace('.', '').replace(',', '.');
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  function pillarLabel(pillar) {
+    return {
+      pilates: 'Pilates',
+      gestante: 'Gestante',
+      pelvica: 'Fisio pélvica'
+    }[pillar] || 'Pilates';
+  }
+
+  function currentCustomPlan() {
+    const services = Array.from(document.querySelectorAll('[data-service]:checked')).map(input => input.value);
+    const sessionsValue = document.getElementById('customSessions').value;
+    const sessions = sessionsValue === 'agenda combinada' ? 'agenda combinada' : `${sessionsValue} ${sessionsValue === '1' ? 'sessão' : 'sessões'} por semana`;
+    return {
+      id: 'custom',
+      name: document.getElementById('customName').value || 'Plano personalizado',
+      kind: 'Personalizado',
+      pillar: document.getElementById('customPillar').value,
+      value: parseMoney(document.getElementById('saleValue').value),
+      sessions,
+      services,
+      note: document.getElementById('customNotes').value
+    };
+  }
+
+  function activePlan() {
+    return state.planMode === 'personalizado' ? currentCustomPlan() : state.selectedPlan;
+  }
+
+  function netValue() {
+    return Math.max(0, parseMoney(document.getElementById('saleValue').value) - parseMoney(document.getElementById('discount').value));
+  }
+
+  function renderClients() {
+    const term = clientSearch.value.trim().toLowerCase();
+    clientList.innerHTML = '';
+    clients
+      .filter(client => {
+        const haystack = `${client.name} ${client.phone} ${client.goal} ${client.current}`.toLowerCase();
+        return !term || haystack.includes(term);
+      })
+      .forEach(client => {
+        const selected = state.selectedClient.id === client.id;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `choice-card${selected ? ' selected' : ''}`;
+        button.innerHTML = `
+          <span class="choice-top">
+            <span class="choice-title">
+              <strong>${client.name}</strong>
+              <span>${client.phone} · ${client.goal}</span>
+            </span>
+            <span class="tag ${client.status === 'Sem pendências' ? 'success' : 'alert'}">${client.status}</span>
+          </span>
+          <span class="choice-meta">
+            <span class="tag soft">${client.current}</span>
+            <span class="tag">${client.contact}</span>
+          </span>
+        `;
+        button.addEventListener('click', () => {
+          state.selectedClient = client;
+          renderClients();
+          sync();
+        });
+        clientList.appendChild(button);
+      });
+  }
+
+  function renderPlans() {
+    planList.innerHTML = '';
+    plans.forEach(plan => {
+      const selected = state.selectedPlan.id === plan.id;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `choice-card${selected ? ' selected' : ''}`;
+      button.innerHTML = `
+        <span class="choice-top">
+          <span class="choice-title">
+            <strong>${plan.name}</strong>
+            <span>${plan.note}</span>
+          </span>
+          <span class="tag soft">${plan.kind}</span>
+        </span>
+        <span class="choice-meta">
+          <span class="tag"><span class="swatch ${plan.pillar}"></span>${pillarLabel(plan.pillar)}</span>
+          <span class="tag">${money.format(plan.value)}</span>
+          <span class="tag">${plan.sessions}</span>
+        </span>
+      `;
+      button.addEventListener('click', () => {
+        state.selectedPlan = plan;
+        document.getElementById('saleValue').value = plan.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        renderPlans();
+        sync();
+      });
+      planList.appendChild(button);
+    });
+  }
+
+  function setStep(step) {
+    state.step = Math.min(4, Math.max(1, step));
+    stepPanels.forEach(panel => panel.classList.toggle('active', Number(panel.dataset.step) === state.step));
+    stepButtons.forEach(button => {
+      const target = Number(button.dataset.stepTarget);
+      button.classList.toggle('active', target === state.step);
+      button.classList.toggle('done', target < state.step);
+    });
+    stepEyebrow.textContent = copy[state.step].eyebrow;
+    stepTitle.textContent = copy[state.step].title;
+    stepLead.textContent = copy[state.step].lead;
+    stepNote.textContent = copy[state.step].note;
+    backBtn.disabled = state.step === 1;
+    nextBtn.textContent = state.step === 4 ? 'Confirmar venda' : 'Continuar';
+    sync();
+  }
+
+  function sync() {
+    const plan = activePlan();
+    const client = state.selectedClient;
+    const total = netValue();
+    const dueDay = document.getElementById('dueDay').value;
+    const installments = document.getElementById('installments').value;
+    const payment = document.getElementById('paymentMethod').value;
+    const start = document.getElementById('startDate').value;
+    const contract = document.getElementById('contractModel').value;
+
+    document.getElementById('summaryClient').textContent = client ? client.name : 'Nenhuma aluna selecionada';
+    document.getElementById('summaryClientMeta').textContent = client ? `${client.goal} · ${client.status}` : 'Busque e selecione uma cliente existente.';
+    document.getElementById('summaryPlan').textContent = plan.name;
+    document.getElementById('summaryPlanMeta').textContent = `${plan.kind} · ${plan.sessions}`;
+    document.getElementById('summaryFinance').textContent = `${money.format(total)} · vencimento dia ${dueDay}`;
+    document.getElementById('summaryFinanceMeta').textContent = `${installments} ${installments === '1' ? 'parcela' : 'parcelas'} · ${payment}`;
+    document.getElementById('summaryTotal').textContent = money.format(total);
+
+    document.getElementById('reviewClient').textContent = client ? client.name : '—';
+    document.getElementById('reviewPlan').textContent = `${plan.name} · ${pillarLabel(plan.pillar)}`;
+    document.getElementById('reviewCondition').textContent = `${money.format(total)} · ${installments} ${installments === '1' ? 'parcela' : 'parcelas'} · vencimento dia ${dueDay}`;
+    document.getElementById('reviewEnrollment').textContent = `Matrícula inicia em ${formatDate(start)} com ${plan.sessions}.`;
+    document.getElementById('reviewReceivables').textContent = `${installments} ${installments === '1' ? 'lançamento' : 'lançamentos'} a receber por ${payment.toLowerCase()}.`;
+    document.getElementById('contractHint').textContent = `${contract}. Inclui regras de reposição, vencimento e aceite da aluna.`;
+
+    document.getElementById('successClient').textContent = client ? client.name : '—';
+    document.getElementById('successPlan').textContent = `${plan.name} · ${money.format(total)}`;
+    document.getElementById('successStart').textContent = formatDate(start);
+    document.getElementById('successNext').textContent = `Contrato "${contract}" pronto para envio e ${installments} ${installments === '1' ? 'lançamento programado' : 'lançamentos programados'} no financeiro.`;
+
+    draftStatus.textContent = 'Rascunho salvo';
+  }
+
+  function formatDate(value) {
+    if (!value) return '—';
+    const [year, month, day] = value.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  function setPlanMode(mode) {
+    state.planMode = mode;
+    document.querySelectorAll('[data-plan-mode]').forEach(button => {
+      button.classList.toggle('active', button.dataset.planMode === mode);
+    });
+    planList.classList.toggle('hidden', mode !== 'catalogo');
+    customPanel.classList.toggle('active', mode === 'personalizado');
+    if (mode === 'personalizado') {
+      document.getElementById('saleValue').value = '520,00';
+    } else {
+      document.getElementById('saleValue').value = state.selectedPlan.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    sync();
+  }
+
+  function confirmSale() {
+    sync();
+    body.classList.add('summary-open');
+    document.querySelector('.success-panel').setAttribute('aria-hidden', 'false');
+  }
+
+  clientSearch.addEventListener('input', renderClients);
+  stepButtons.forEach(button => {
+    button.addEventListener('click', () => setStep(Number(button.dataset.stepTarget)));
+  });
+  backBtn.addEventListener('click', () => setStep(state.step - 1));
+  nextBtn.addEventListener('click', () => {
+    if (state.step === 4) {
+      confirmSale();
+      return;
+    }
+    setStep(state.step + 1);
+  });
+  document.querySelectorAll('[data-plan-mode]').forEach(button => {
+    button.addEventListener('click', () => setPlanMode(button.dataset.planMode));
+  });
+  document.querySelectorAll('input, select, textarea').forEach(control => {
+    control.addEventListener('input', sync);
+    control.addEventListener('change', sync);
+  });
+  document.querySelector('[data-menu-open]').addEventListener('click', () => body.classList.add('menu-open'));
+  document.querySelectorAll('[data-close]').forEach(control => {
+    control.addEventListener('click', () => {
+      body.classList.remove('menu-open', 'summary-open');
+      document.querySelector('.success-panel').setAttribute('aria-hidden', 'true');
+    });
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      body.classList.remove('menu-open', 'summary-open');
+      document.querySelector('.success-panel').setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  renderClients();
+  renderPlans();
+  setStep(1);
+</script>
+</body>
+</html>

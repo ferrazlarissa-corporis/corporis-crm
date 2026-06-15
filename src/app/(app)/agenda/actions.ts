@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAppointmentsBetween } from "@/lib/queries/appointments";
+import { getAgendaCompleta, getAgendaOptions } from "@/lib/queries/agenda";
 import { CLINIC_CONFIG_ID, normalizeClinicHours, validateAppointmentWithinClinicHours } from "@/lib/clinic-config";
-import type { AppointmentType, AppointmentStatus, LeadStage } from "@/types/database";
+import type { AppointmentType, AppointmentStatus, LeadStage, Pilar } from "@/types/database";
 
 const createAppointmentSchema = z.object({
   lead_id: z.string().uuid(),
@@ -158,6 +159,94 @@ export async function getLeadsForSelect(): Promise<LeadSelectOption[]> {
     .is("archived_at", null)
     .order("nome");
   return (data ?? []) as LeadSelectOption[];
+}
+
+// ─── Agenda completa: agendamento de sessão/cliente (com capacidade) ─────────────
+
+const PILAR_TO_TIPO: Record<Pilar, AppointmentType> = {
+  pilates: "avaliacao_pilates",
+  pilates_gestante: "avaliacao_gestante",
+  fisio_pelvica: "avaliacao_fisio_pelvica",
+};
+
+const criarAgendamentoSchema = z.object({
+  pessoa_id: z.string().uuid(),
+  servico_id: z.string().uuid(),
+  sala_id: z.string().uuid().nullable().default(null),
+  profissional_id: z.string().uuid().nullable().default(null),
+  inicio: z.string().datetime({ offset: true }),
+  categoria: z.enum(["avaliacao", "sessao", "experimental"]).default("sessao"),
+  observacoes: z.string().trim().max(2000).optional().default(""),
+});
+
+export async function criarAgendamento(
+  input: z.infer<typeof criarAgendamentoSchema>,
+): Promise<CreateAppointmentResult> {
+  const parsed = criarAgendamentoSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: "Dados inválidos: " + parsed.error.message };
+  const d = parsed.data;
+
+  const supabase = await createClient();
+
+  // Serviço define duração, capacidade e pilar (→ tipo legado).
+  const { data: servico } = await supabase
+    .schema("core").from("servico")
+    .select("duracao_min, capacidade_slot, pilar").eq("id", d.servico_id).maybeSingle();
+  if (!servico) return { success: false, error: "Serviço não encontrado." };
+
+  const inicio = new Date(d.inicio);
+  const fim = new Date(inicio.getTime() + servico.duracao_min * 60_000);
+
+  // Janela de funcionamento da clínica.
+  const { data: clinicConfig } = await supabase.schema("crm").from("clinic_config")
+    .select("funcionamento").eq("id", CLINIC_CONFIG_ID).maybeSingle();
+  const scheduleValidation = validateAppointmentWithinClinicHours(
+    normalizeClinicHours(clinicConfig?.funcionamento), inicio, fim,
+  );
+  if (!scheduleValidation.ok) return { success: false, error: scheduleValidation.message };
+
+  // Regra de capacidade: nº de agendamentos ativos no mesmo início + sala + serviço.
+  let capQuery = supabase.schema("crm").from("appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("inicio", inicio.toISOString())
+    .eq("servico_id", d.servico_id)
+    .in("status", ["agendado", "confirmado"]);
+  capQuery = d.sala_id ? capQuery.eq("sala_id", d.sala_id) : capQuery.is("sala_id", null);
+  const { count } = await capQuery;
+  if ((count ?? 0) >= servico.capacidade_slot) {
+    return { success: false, error: `Capacidade do horário esgotada (${servico.capacidade_slot} por slot).` };
+  }
+
+  const { data, error } = await supabase.schema("crm").from("appointments").insert({
+    pessoa_id: d.pessoa_id,
+    servico_id: d.servico_id,
+    sala_id: d.sala_id,
+    profissional_id: d.profissional_id,
+    inicio: inicio.toISOString(),
+    fim: fim.toISOString(),
+    tipo: PILAR_TO_TIPO[servico.pilar as Pilar],
+    categoria: d.categoria,
+    status: "agendado",
+    observacoes: d.observacoes || null,
+  }).select("id").single();
+
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/agenda");
+  return { success: true, id: data.id };
+}
+
+export async function getAgendaCompletaData(startIso: string, endIso: string) {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    return { success: false as const, error: "Período inválido." };
+  }
+  const events = await getAgendaCompleta(start, end);
+  return { success: true as const, events };
+}
+
+export async function getAgendaFilterOptions() {
+  return getAgendaOptions();
 }
 
 export async function getAgendaAppointments(startIso: string, endIso: string) {

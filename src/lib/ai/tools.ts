@@ -198,8 +198,19 @@ export async function executeTool(
           return JSON.stringify({ success: false, error: scheduleValidation.message });
         }
 
+        // Vincula o agendamento à espinha (core.pessoa) via lead.
+        const { data: leadRow } = await db
+          .from("leads")
+          .select("pessoa_id")
+          .eq("id", lead_id)
+          .single();
+
         const { data } = await db.from("appointments").insert({
-          lead_id, inicio, fim, tipo, observacoes: notes, status: "agendado",
+          lead_id,
+          pessoa_id: leadRow?.pessoa_id ?? null,
+          inicio, fim, tipo, observacoes: notes,
+          categoria: "avaliacao",
+          status: "agendado",
         }).select("id").single();
 
         await db.from("leads").update({

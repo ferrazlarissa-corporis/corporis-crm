@@ -1,0 +1,1467 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis OS · Dashboard de gestão</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --surface-raised: var(--bg-card);
+    --surface-soft: var(--bg-2);
+    --content-max: 1360px;
+    --pillar-pilates: var(--color-alaranjado);
+    --pillar-avaliacao: var(--color-bege);
+    --pillar-pelvica: var(--color-verde);
+    --tone-warning: var(--color-tangerina);
+    --tone-risk: var(--color-ui-error);
+    --tone-success: var(--color-verde);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg-1);
+    color: var(--color-texto-escuro);
+    overflow: hidden;
+  }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  svg { stroke-width: 1.5; }
+
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 0;
+    z-index: 20;
+  }
+  .sb-logo { padding: 22px 24px 14px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+  .sb-scroll {
+    overflow-y: auto;
+    min-height: 0;
+    padding: 4px 16px 12px;
+  }
+  .sb-scroll::-webkit-scrollbar { width: 8px; }
+  .sb-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .sb-group { margin-top: 14px; }
+  .sb-group:first-child { margin-top: 2px; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 400;
+    text-decoration: none;
+    position: relative;
+    transition: background var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active {
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .sb-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 2px;
+    background: var(--color-alaranjado);
+    border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+  .sb-footer {
+    border-top: 0.6px solid var(--color-cinza);
+    padding: 10px 16px 12px;
+  }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    margin-top: 4px;
+    border-radius: var(--radius-md);
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-size: 13px; font-weight: 500; line-height: 1.2; color: var(--color-texto-escuro); }
+  .sb-user-role { font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent;
+    border: 0;
+    color: var(--color-texto-medio);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 0 32px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    min-width: 0;
+  }
+  .topbar-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+    letter-spacing: -0.005em;
+  }
+  .topbar-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .topbar-crumb .sep {
+    width: 3px;
+    height: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--color-cinza);
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .menu-btn { display: none; }
+
+  .btn {
+    min-height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background var(--duration-fast) var(--ease-soft), border-color var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+    white-space: nowrap;
+  }
+  .btn svg { width: 15px; height: 15px; }
+  .btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .btn.primary {
+    border-color: var(--color-alaranjado);
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+  }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); color: var(--color-fundo-claro); }
+  .btn.icon { width: 36px; padding: 0; }
+  .btn.subtle { background: var(--bg-1); color: var(--color-texto-medio); }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.54;
+    background: var(--color-cinza);
+    border-color: var(--color-cinza);
+    color: var(--color-texto-medio);
+  }
+  .btn:focus-visible,
+  .kpi-card:focus-visible,
+  .pending-item:focus-visible,
+  .close-btn:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-alaranjado) 24%, transparent);
+    outline-offset: 2px;
+  }
+
+  .scroll {
+    overflow: auto;
+    min-width: 0;
+  }
+  .content {
+    width: min(100%, var(--content-max));
+    margin: 0 auto;
+    padding: 32px;
+    display: grid;
+    gap: 24px;
+  }
+  .page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .page-head h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(34px, 4vw, 46px);
+    line-height: 1.08;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+  }
+  .page-head p {
+    margin: 10px 0 0;
+    max-width: 680px;
+    color: var(--color-texto-medio);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .period-pill {
+    min-height: 38px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .period-pill svg { width: 15px; height: 15px; color: var(--color-bege); }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .kpi-card,
+  .panel,
+  .chart-card,
+  .schedule-card,
+  .pending-card,
+  .drawer,
+  .toast {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  .kpi-card {
+    appearance: none;
+    width: 100%;
+    min-height: 168px;
+    padding: 18px;
+    text-align: left;
+    color: inherit;
+    display: grid;
+    align-content: space-between;
+    gap: 18px;
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--duration-fast) var(--ease-soft), border-color var(--duration-fast) var(--ease-soft), box-shadow var(--duration-fast) var(--ease-soft);
+  }
+  .kpi-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--color-alaranjado);
+  }
+  .kpi-card[data-tone="bege"]::before { background: var(--color-bege); }
+  .kpi-card[data-tone="risco"]::before { background: var(--tone-risk); }
+  .kpi-card[data-tone="verde"]::before { background: var(--tone-success); }
+  .kpi-card:hover,
+  .kpi-card.active {
+    transform: translateY(-1px);
+    border-color: var(--color-tangerina);
+    box-shadow: var(--shadow-md);
+  }
+  .kpi-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .kpi-label {
+    font-size: 10px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .kpi-icon svg { width: 17px; height: 17px; }
+  .kpi-value {
+    margin-top: 10px;
+    font-family: var(--font-display);
+    font-size: 34px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-note {
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.75fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .left-stack,
+  .right-stack {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+  }
+  .panel {
+    padding: 18px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .panel-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-texto-escuro);
+  }
+  .panel-icon svg { width: 19px; height: 19px; }
+  .panel h3,
+  .chart-head h3,
+  .schedule-head h3,
+  .pending-head h3,
+  .drawer-head h2 {
+    margin: 0;
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .panel h3 { font-size: 15px; }
+  .panel p {
+    margin: 4px 0 0;
+    color: var(--color-texto-medio);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .panel strong {
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+
+  .chart-card,
+  .schedule-card,
+  .pending-card {
+    overflow: hidden;
+  }
+  .chart-head,
+  .schedule-head,
+  .pending-head {
+    min-height: 64px;
+    padding: 18px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .chart-head h3,
+  .schedule-head h3,
+  .pending-head h3 {
+    font-size: 17px;
+  }
+  .subcopy {
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    line-height: 1.45;
+    margin-top: 3px;
+  }
+  .legend {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege);
+  }
+  .legend-dot.pilates { background: var(--pillar-pilates); }
+  .legend-dot.pelvica { background: var(--pillar-pelvica); }
+  .legend-dot.avaliacao { background: var(--pillar-avaliacao); }
+
+  .chart-body { padding: 22px 18px 18px; }
+  .chart-plot {
+    height: 300px;
+    border-left: 0.6px solid var(--color-cinza);
+    border-bottom: 0.6px solid var(--color-cinza);
+    background:
+      linear-gradient(to top, color-mix(in srgb, var(--color-cinza) 34%, transparent) 0.6px, transparent 0.6px) 0 0 / 100% 25%;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(62px, 1fr));
+    align-items: end;
+    gap: 18px;
+    padding: 18px 18px 0;
+    overflow-x: auto;
+  }
+  .day-group {
+    min-width: 62px;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 10px;
+  }
+  .bars {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: end;
+    gap: 6px;
+  }
+  .bar {
+    min-height: 20px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    background: var(--color-alaranjado);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bg-card) 54%, transparent);
+  }
+  .bar.pelvica { background: var(--pillar-pelvica); }
+  .bar.avaliacao { background: var(--pillar-avaliacao); }
+  .h-38 { height: 38%; }
+  .h-44 { height: 44%; }
+  .h-48 { height: 48%; }
+  .h-52 { height: 52%; }
+  .h-56 { height: 56%; }
+  .h-60 { height: 60%; }
+  .h-64 { height: 64%; }
+  .h-68 { height: 68%; }
+  .h-72 { height: 72%; }
+  .h-76 { height: 76%; }
+  .h-82 { height: 82%; }
+  .h-88 { height: 88%; }
+  .day-label {
+    text-align: center;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .chart-foot {
+    padding: 0 18px 18px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .chart-stat {
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-1);
+    padding: 12px;
+    display: grid;
+    gap: 4px;
+  }
+  .chart-stat span {
+    color: var(--color-texto-medio);
+    font-size: 11px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+  }
+  .chart-stat strong {
+    color: var(--color-texto-escuro);
+    font-size: 18px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .schedule-list,
+  .pending-list {
+    display: grid;
+  }
+  .appointment,
+  .pending-item {
+    padding: 16px 18px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: grid;
+    gap: 10px;
+  }
+  .appointment:last-child,
+  .pending-item:last-child { border-bottom: 0; }
+  .appointment-top,
+  .pending-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .time {
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .appointment strong,
+  .pending-item strong {
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .appointment p,
+  .pending-item p {
+    margin: 0;
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .status-pill,
+  .type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 26px;
+    width: max-content;
+    max-width: 100%;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+    color: var(--color-texto-medio);
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .status-pill::before,
+  .type-pill::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege);
+    flex-shrink: 0;
+  }
+  .status-confirmado::before { background: var(--color-alaranjado); }
+  .status-chegou::before,
+  .status-resolvida::before { background: var(--tone-success); }
+  .status-pendente::before { background: var(--tone-warning); }
+  .status-risco::before { background: var(--tone-risk); }
+  .type-contrato::before { background: var(--color-alaranjado); }
+  .type-plano::before { background: var(--color-bege); }
+  .type-inadimplencia::before { background: var(--tone-risk); }
+  .type-anamnese::before { background: var(--color-tangerina); }
+  .type-lead::before { background: var(--color-texto-medio); }
+
+  .pending-item {
+    appearance: none;
+    width: 100%;
+    background: transparent;
+    text-align: left;
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    color: inherit;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-soft);
+  }
+  .pending-item:hover { background: color-mix(in srgb, var(--color-bege-claro) 36%, transparent); }
+  .pending-item.resolved {
+    opacity: 0.72;
+    background: var(--bg-1);
+  }
+  .pending-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+  }
+  .pending-count {
+    min-width: 28px;
+    height: 28px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-texto-escuro);
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-espresso) 52%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-soft);
+    z-index: 40;
+  }
+  body.menu-open .backdrop,
+  body.drawer-open .backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .drawer {
+    position: fixed;
+    right: 24px;
+    top: 24px;
+    bottom: 24px;
+    width: min(520px, calc(100vw - 48px));
+    z-index: 50;
+    transform: translateX(calc(100% + 32px));
+    transition: transform var(--duration-slow) var(--ease-out);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+  }
+  body.drawer-open .drawer { transform: translateX(0); }
+  .drawer-head {
+    padding: 24px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .drawer-head h2 {
+    margin: 6px 0 0;
+    font-family: var(--font-display);
+    font-size: 30px;
+    line-height: 1.12;
+    font-weight: 400;
+  }
+  .drawer-body {
+    overflow: auto;
+    padding: 24px;
+    display: grid;
+    align-content: start;
+    gap: 16px;
+  }
+  .drawer-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 18px 24px;
+    border-top: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+  }
+  .close-btn {
+    width: 36px;
+    height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .close-btn:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .close-btn svg { width: 16px; height: 16px; }
+  .detail-card {
+    padding: 16px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+    display: grid;
+    gap: 12px;
+  }
+  .detail-card h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+  }
+  .detail-note {
+    margin: 0;
+    color: var(--color-texto-medio);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .detail-lines {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+  .detail-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 0.6px solid var(--color-cinza);
+    color: var(--color-texto-medio);
+    font-size: 13px;
+  }
+  .detail-line:last-child { border-bottom: 0; }
+  .detail-line strong {
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+    text-align: right;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translate(-50%, 20px);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 70;
+    min-height: 42px;
+    border-radius: var(--radius-pill);
+    background: var(--color-espresso);
+    color: var(--color-fundo-claro);
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    font-size: 13px;
+    transition: opacity var(--duration-base) var(--ease-soft), transform var(--duration-base) var(--ease-soft);
+  }
+  .toast.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  @media (max-width: 1240px) {
+    .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .right-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    .app { display: block; min-height: 100vh; width: 100%; }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: min(var(--sidebar-w), 88vw);
+      transform: translateX(-105%);
+      transition: transform 260ms var(--ease-out);
+      box-shadow: var(--shadow-lg);
+    }
+    body.menu-open .sidebar { transform: translateX(0); }
+    .main { min-height: 100vh; }
+    .topbar { padding: 0 18px; }
+    .menu-btn { display: inline-flex; }
+    .topbar-left { gap: 10px; }
+    .topbar-crumb { display: none; }
+    .content { padding: 24px 18px 48px; }
+    .page-head { align-items: stretch; flex-direction: column; }
+    .right-stack { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 760px) {
+    .topbar-title { font-size: 24px; }
+    .topbar-right .period-pill { display: none; }
+    .kpi-grid,
+    .chart-foot {
+      grid-template-columns: 1fr;
+    }
+    .kpi-card { min-height: 144px; }
+    .chart-head,
+    .schedule-head,
+    .pending-head {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .legend { justify-content: flex-start; }
+    .chart-plot {
+      grid-template-columns: repeat(6, 64px);
+      gap: 14px;
+      padding-inline: 14px;
+    }
+    .appointment-top,
+    .pending-top {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .drawer {
+      inset: auto 0 0;
+      top: 72px;
+      width: 100vw;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      transform: translateY(105%);
+    }
+    body.drawer-open .drawer { transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="28 Dashboard de gestão">
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <div class="sb-scroll">
+      <div class="sb-group">
+        <div class="sb-section-label">Gestão</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="09 Clientes.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Clientes
+          </a>
+          <a href="06 Agenda.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Agenda
+          </a>
+          <a href="23 Vendas.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Vendas
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Relacionamento</div>
+        <nav class="sb-nav">
+          <a href="03 Inbox WhatsApp.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+              <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            </svg>
+            Inbox
+            <span class="sb-badge">7</span>
+          </a>
+          <a href="04 Funil.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Funil
+          </a>
+          <a href="07 Agente de IA.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/>
+              <circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/>
+              <path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/>
+            </svg>
+            Agente de IA
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Financeiro</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Lançamentos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            DRE
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Cadastros</div>
+        <nav class="sb-nav">
+          <a href="21 Planos.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Planos
+          </a>
+          <a href="27 Modelos de contrato.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Modelos de contrato
+          </a>
+          <a href="24 Serviços.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+            Serviços
+          </a>
+          <a href="25 Profissionais.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            Profissionais
+          </a>
+          <a href="26 Salas.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+              <path d="M9 21v-4h6v4"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/>
+            </svg>
+            Salas
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="sb-footer">
+      <nav class="sb-nav">
+        <a href="08 Configurações.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </nav>
+      <div class="sb-user">
+        <div class="avatar">LF</div>
+        <div class="sb-user-meta">
+          <span class="sb-user-name">Larissa Ferraz</span>
+          <span class="sb-user-role">Gestão · Corporis</span>
+        </div>
+        <button class="sb-user-action" type="button" aria-label="Mais opções">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn icon menu-btn" type="button" data-menu-open aria-label="Abrir navegação">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+          </svg>
+        </button>
+        <h1 class="topbar-title">Dashboard</h1>
+        <span class="topbar-crumb">
+          <span>Gestão</span>
+          <span class="sep"></span>
+          <span>/dashboard</span>
+        </span>
+      </div>
+      <div class="topbar-right">
+        <span class="period-pill" aria-label="Período dos indicadores">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Junho 2026
+        </span>
+      </div>
+    </header>
+
+    <div class="scroll">
+      <section class="content">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Gestão mensal</div>
+            <h2>Visão de saúde da clínica</h2>
+            <p>Indicadores de clientes, agenda, recorrência, recebíveis e conversão para decidir a semana sem perder o tom cuidadoso da operação.</p>
+          </div>
+          <span class="period-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-5 5"/>
+            </svg>
+            Atualizado há 12 min
+          </span>
+        </div>
+
+        <div class="kpi-grid" aria-label="Indicadores principais">
+          <button class="kpi-card active" type="button" data-kpi="Clientes ativos" data-metric="186" data-text="Base ativa em junho, com 17 novas adesões e 8 retornos de clientes que estavam pausados. O volume sustenta a agenda sem pressionar a equipe.">
+            <span class="kpi-top">
+              <span class="kpi-label">Clientes ativos</span>
+              <span class="kpi-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                </svg>
+              </span>
+            </span>
+            <span>
+              <span class="kpi-value">186</span>
+              <span class="kpi-note">17 adesões no mês · 8 reativações</span>
+            </span>
+          </button>
+
+          <button class="kpi-card" type="button" data-tone="bege" data-kpi="Ocupação da agenda" data-metric="78%" data-text="Média semanal de junho. Pilates trabalha perto do teto em terça e quinta; Fisio pélvica tem folga técnica para encaixes de avaliação.">
+            <span class="kpi-top">
+              <span class="kpi-label">Ocupação da agenda</span>
+              <span class="kpi-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+              </span>
+            </span>
+            <span>
+              <span class="kpi-value">78%</span>
+              <span class="kpi-note">média semanal em junho</span>
+            </span>
+          </button>
+
+          <button class="kpi-card" type="button" data-kpi="Receita recorrente" data-metric="R$ 48.760" data-text="MRR estimado pelos planos ativos. A maior concentração está nos planos recorrentes de Pilates duas vezes por semana.">
+            <span class="kpi-top">
+              <span class="kpi-label">Receita recorrente</span>
+              <span class="kpi-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </span>
+            </span>
+            <span>
+              <span class="kpi-value">R$ 48,8k</span>
+              <span class="kpi-note">MRR previsto para junho</span>
+            </span>
+          </button>
+
+          <button class="kpi-card" type="button" data-tone="risco" data-kpi="Inadimplência sinalizada" data-metric="R$ 5.420" data-text="Onze clientes com cobrança vencida ou cartão recusado. O maior impacto está em planos recorrentes com vencimento entre os dias 5 e 10.">
+            <span class="kpi-top">
+              <span class="kpi-label">Inadimplência sinalizada</span>
+              <span class="kpi-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </span>
+            </span>
+            <span>
+              <span class="kpi-value">R$ 5,4k</span>
+              <span class="kpi-note">11 clientes com alerta financeiro</span>
+            </span>
+          </button>
+
+          <button class="kpi-card" type="button" data-tone="bege" data-kpi="Conversão de leads" data-metric="34%" data-text="Conversão de leads captados para primeira avaliação. O maior ganho vem dos retornos feitos em até duas horas pelo Inbox.">
+            <span class="kpi-top">
+              <span class="kpi-label">Conversão de leads</span>
+              <span class="kpi-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-5 5"/>
+                </svg>
+              </span>
+            </span>
+            <span>
+              <span class="kpi-value">34%</span>
+              <span class="kpi-note">42 avaliações agendadas no mês</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="left-stack">
+            <section class="panel" aria-live="polite">
+              <span class="panel-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/>
+                </svg>
+              </span>
+              <div>
+                <h3 id="insightTitle">Clientes ativos · 186</h3>
+                <p id="insightText">Base ativa em junho, com <strong>17 novas adesões</strong> e <strong>8 reativações</strong>. O volume sustenta a agenda sem pressionar a equipe.</p>
+              </div>
+            </section>
+
+            <section class="chart-card" aria-labelledby="chartTitle">
+              <div class="chart-head">
+                <div>
+                  <h3 id="chartTitle">Ocupação por dia e pilar</h3>
+                  <div class="subcopy">Semana de referência dentro de junho · capacidade vinda de serviços e salas cadastradas.</div>
+                </div>
+                <div class="legend" aria-label="Legenda do gráfico">
+                  <span class="legend-item"><span class="legend-dot pilates"></span>Pilates</span>
+                  <span class="legend-item"><span class="legend-dot pelvica"></span>Fisio pélvica</span>
+                  <span class="legend-item"><span class="legend-dot avaliacao"></span>Avaliação</span>
+                </div>
+              </div>
+              <div class="chart-body">
+                <div class="chart-plot" aria-label="Gráfico de barras de ocupação">
+                  <div class="day-group">
+                    <div class="bars"><span class="bar h-68"></span><span class="bar pelvica h-44"></span><span class="bar avaliacao h-38"></span></div>
+                    <span class="day-label">Seg</span>
+                  </div>
+                  <div class="day-group">
+                    <div class="bars"><span class="bar h-88"></span><span class="bar pelvica h-60"></span><span class="bar avaliacao h-48"></span></div>
+                    <span class="day-label">Ter</span>
+                  </div>
+                  <div class="day-group">
+                    <div class="bars"><span class="bar h-76"></span><span class="bar pelvica h-56"></span><span class="bar avaliacao h-44"></span></div>
+                    <span class="day-label">Qua</span>
+                  </div>
+                  <div class="day-group">
+                    <div class="bars"><span class="bar h-82"></span><span class="bar pelvica h-64"></span><span class="bar avaliacao h-52"></span></div>
+                    <span class="day-label">Qui</span>
+                  </div>
+                  <div class="day-group">
+                    <div class="bars"><span class="bar h-72"></span><span class="bar pelvica h-68"></span><span class="bar avaliacao h-56"></span></div>
+                    <span class="day-label">Sex</span>
+                  </div>
+                  <div class="day-group">
+                    <div class="bars"><span class="bar h-60"></span><span class="bar pelvica h-48"></span><span class="bar avaliacao h-38"></span></div>
+                    <span class="day-label">Sáb</span>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-foot">
+                <div class="chart-stat"><span>Maior pressão</span><strong>Terça · Pilates 88%</strong></div>
+                <div class="chart-stat"><span>Folga clínica</span><strong>Segunda · Pélvica 44%</strong></div>
+                <div class="chart-stat"><span>Encaixes seguros</span><strong>9 janelas livres</strong></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="right-stack">
+            <section class="schedule-card" aria-labelledby="todayTitle">
+              <div class="schedule-head">
+                <div>
+                  <h3 id="todayTitle">Agendamentos de hoje</h3>
+                  <div class="subcopy">Horário, cliente e status operacional.</div>
+                </div>
+              </div>
+              <div class="schedule-list">
+                <article class="appointment">
+                  <div class="appointment-top">
+                    <span class="time">08:00</span>
+                    <span class="status-pill status-chegou">Chegou</span>
+                  </div>
+                  <div>
+                    <strong>Marina Lopes</strong>
+                    <p>Pilates recorrente · sala Estúdio 01</p>
+                  </div>
+                </article>
+                <article class="appointment">
+                  <div class="appointment-top">
+                    <span class="time">09:30</span>
+                    <span class="status-pill status-confirmado">Confirmado</span>
+                  </div>
+                  <div>
+                    <strong>Ana Beatriz Nogueira</strong>
+                    <p>Fisio pélvica · avaliação de retorno</p>
+                  </div>
+                </article>
+                <article class="appointment">
+                  <div class="appointment-top">
+                    <span class="time">11:00</span>
+                    <span class="status-pill status-pendente">Pendente</span>
+                  </div>
+                  <div>
+                    <strong>Renata Silveira</strong>
+                    <p>Pilates experimental · confirmar presença</p>
+                  </div>
+                </article>
+                <article class="appointment">
+                  <div class="appointment-top">
+                    <span class="time">15:30</span>
+                    <span class="status-pill status-confirmado">Confirmado</span>
+                  </div>
+                  <div>
+                    <strong>Cláudia Martins</strong>
+                    <p>Pilates recorrente · turma reduzida</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="pending-card" aria-labelledby="pendingTitle">
+              <div class="pending-head">
+                <div>
+                  <h3 id="pendingTitle">Pendências</h3>
+                  <div class="subcopy">Clique para abrir detalhe e resolver.</div>
+                </div>
+                <span class="pending-count" data-pending-count>5</span>
+              </div>
+              <div class="pending-list">
+                <button class="pending-item" type="button" data-pending-id="contrato" data-type="Contrato pendente" data-owner="Marina Lopes" data-detail="Contrato de adesão do Plano Pilates 2x precisa ser enviado para assinatura digital antes da próxima cobrança." data-action="Enviar contrato para assinatura digital">
+                  <div class="pending-top">
+                    <span class="type-pill type-contrato">Contrato</span>
+                    <span class="status-pill status-pendente">Aberto</span>
+                  </div>
+                  <div>
+                    <strong>Marina Lopes · contrato sem assinatura</strong>
+                    <p>Plano Pilates 2x · venda confirmada ontem.</p>
+                  </div>
+                  <div class="pending-meta"><span>Responsável: financeiro</span><span>vence hoje</span></div>
+                </button>
+
+                <button class="pending-item" type="button" data-pending-id="plano" data-type="Plano vencendo" data-owner="Cláudia Martins" data-detail="Plano recorrente encerra em 5 dias. A cliente tem boa frequência e pode renovar mantendo turma de terça e quinta." data-action="Abrir renovação do plano">
+                  <div class="pending-top">
+                    <span class="type-pill type-plano">Plano</span>
+                    <span class="status-pill status-pendente">Aberto</span>
+                  </div>
+                  <div>
+                    <strong>Cláudia Martins · plano vence em 5 dias</strong>
+                    <p>Manter reserva em horários de maior ocupação.</p>
+                  </div>
+                  <div class="pending-meta"><span>Responsável: recepção</span><span>20 jun</span></div>
+                </button>
+
+                <button class="pending-item" type="button" data-pending-id="inadimplencia" data-type="Inadimplência sinalizada" data-owner="Beatriz Cunha" data-detail="Cobrança recorrente recusada duas vezes. Antes de bloquear a agenda, enviar orientação acolhedora para atualização do cartão." data-action="Abrir cobrança assistida">
+                  <div class="pending-top">
+                    <span class="type-pill type-inadimplencia">Financeiro</span>
+                    <span class="status-pill status-risco">Sinalizada</span>
+                  </div>
+                  <div>
+                    <strong>Beatriz Cunha · cobrança recusada</strong>
+                    <p>R$ 420 em aberto · plano de Pilates.</p>
+                  </div>
+                  <div class="pending-meta"><span>Responsável: financeiro</span><span>2 dias</span></div>
+                </button>
+
+                <button class="pending-item" type="button" data-pending-id="anamnese" data-type="Anamnese em aberto" data-owner="Ana Beatriz Nogueira" data-detail="Anamnese de fisio pélvica incompleta. Falta revisar histórico cirúrgico e objetivo terapêutico antes do atendimento." data-action="Abrir anamnese da cliente">
+                  <div class="pending-top">
+                    <span class="type-pill type-anamnese">Anamnese</span>
+                    <span class="status-pill status-pendente">Aberta</span>
+                  </div>
+                  <div>
+                    <strong>Ana Beatriz Nogueira · campos clínicos pendentes</strong>
+                    <p>Atendimento marcado para 09:30.</p>
+                  </div>
+                  <div class="pending-meta"><span>Responsável: profissional</span><span>hoje</span></div>
+                </button>
+
+                <button class="pending-item" type="button" data-pending-id="lead" data-type="Lead sem retorno" data-owner="Patrícia Melo" data-detail="Lead pediu horários para avaliação de Pilates e ainda não recebeu retorno no Inbox. Prioridade moderada por origem indicação." data-action="Abrir conversa no Inbox">
+                  <div class="pending-top">
+                    <span class="type-pill type-lead">Lead</span>
+                    <span class="status-pill status-pendente">Aberto</span>
+                  </div>
+                  <div>
+                    <strong>Patrícia Melo · sem retorno desde ontem</strong>
+                    <p>Interesse em Pilates para dor lombar.</p>
+                  </div>
+                  <div class="pending-meta"><span>Responsável: relacionamento</span><span>18 h</span></div>
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="backdrop" data-close-layer></div>
+
+<aside class="drawer" aria-label="Detalhe da pendência" aria-hidden="true">
+  <div class="drawer-head">
+    <div>
+      <div class="eyebrow" id="drawerType">Pendência</div>
+      <h2 id="drawerTitle">Selecione uma pendência</h2>
+    </div>
+    <button class="close-btn" type="button" data-drawer-close aria-label="Fechar detalhe">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="drawer-body">
+    <section class="detail-card">
+      <h3>Contexto</h3>
+      <p class="detail-note" id="drawerDetail">Abra uma pendência da lista para ver o próximo passo recomendado.</p>
+    </section>
+    <section class="detail-card">
+      <h3>Resumo operacional</h3>
+      <dl class="detail-lines">
+        <div class="detail-line"><dt>Cliente</dt><dd><strong id="drawerOwner">—</strong></dd></div>
+        <div class="detail-line"><dt>Próximo passo</dt><dd><strong id="drawerAction">—</strong></dd></div>
+        <div class="detail-line"><dt>Status</dt><dd><strong id="drawerStatus">Aberta</strong></dd></div>
+      </dl>
+    </section>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn" type="button" data-drawer-close>Fechar</button>
+    <button class="btn primary" type="button" data-resolve-current>Marcar como resolvida</button>
+  </div>
+</aside>
+
+<div class="toast" role="status" aria-live="polite" data-toast>Atualizado</div>
+
+<script>
+  const body = document.body;
+  const menuOpen = document.querySelector("[data-menu-open]");
+  const closeLayer = document.querySelector("[data-close-layer]");
+  const drawer = document.querySelector(".drawer");
+  const drawerType = document.getElementById("drawerType");
+  const drawerTitle = document.getElementById("drawerTitle");
+  const drawerDetail = document.getElementById("drawerDetail");
+  const drawerOwner = document.getElementById("drawerOwner");
+  const drawerAction = document.getElementById("drawerAction");
+  const drawerStatus = document.getElementById("drawerStatus");
+  const resolveButton = document.querySelector("[data-resolve-current]");
+  const toast = document.querySelector("[data-toast]");
+  let currentPending = null;
+  let toastTimer = null;
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add("visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("visible"), 2200);
+  }
+
+  function closePanels() {
+    body.classList.remove("menu-open", "drawer-open");
+    drawer.setAttribute("aria-hidden", "true");
+  }
+
+  menuOpen?.addEventListener("click", () => body.classList.add("menu-open"));
+  closeLayer?.addEventListener("click", closePanels);
+  document.querySelectorAll("[data-drawer-close]").forEach((button) => {
+    button.addEventListener("click", closePanels);
+  });
+
+  document.querySelectorAll(".kpi-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".kpi-card").forEach((item) => item.classList.remove("active"));
+      card.classList.add("active");
+      document.getElementById("insightTitle").textContent = `${card.dataset.kpi} · ${card.dataset.metric}`;
+      document.getElementById("insightText").textContent = card.dataset.text;
+    });
+  });
+
+  function updatePendingCount() {
+    const openCount = document.querySelectorAll(".pending-item:not(.resolved)").length;
+    document.querySelector("[data-pending-count]").textContent = openCount;
+  }
+
+  document.querySelectorAll(".pending-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      currentPending = item;
+      drawerType.textContent = item.dataset.type;
+      drawerTitle.textContent = item.dataset.owner;
+      drawerDetail.textContent = item.dataset.detail;
+      drawerOwner.textContent = item.dataset.owner;
+      drawerAction.textContent = item.dataset.action;
+      drawerStatus.textContent = item.classList.contains("resolved") ? "Resolvida" : "Aberta";
+      resolveButton.disabled = item.classList.contains("resolved");
+      body.classList.add("drawer-open");
+      drawer.setAttribute("aria-hidden", "false");
+    });
+  });
+
+  resolveButton.addEventListener("click", () => {
+    if (!currentPending || currentPending.classList.contains("resolved")) return;
+    currentPending.classList.add("resolved");
+    const status = currentPending.querySelector(".status-pill");
+    status.className = "status-pill status-resolvida";
+    status.textContent = "Resolvida";
+    drawerStatus.textContent = "Resolvida";
+    resolveButton.disabled = true;
+    updatePendingCount();
+    showToast("Pendência marcada como resolvida");
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePanels();
+  });
+</script>
+</body>
+</html>
