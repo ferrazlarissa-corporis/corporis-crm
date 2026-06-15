@@ -1,0 +1,1759 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis OS · Serviços</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Corporis OS — Serviços
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --surface-raised: var(--bg-card);
+    --surface-soft: var(--bg-2);
+    --content-max: 1320px;
+    --accent-pilates: var(--color-alaranjado);
+    --accent-pelvica: var(--color-verde);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg-1);
+    color: var(--color-texto-escuro);
+    overflow: hidden;
+  }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  svg { stroke-width: 1.5; }
+
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ============================================================
+     SHELL
+     ============================================================ */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 0;
+    z-index: 20;
+  }
+  .sb-logo { padding: 22px 24px 14px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+  .sb-scroll {
+    overflow-y: auto;
+    min-height: 0;
+    padding: 4px 16px 12px;
+  }
+  .sb-scroll::-webkit-scrollbar { width: 8px; }
+  .sb-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .sb-group { margin-top: 14px; }
+  .sb-group:first-child { margin-top: 2px; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 400;
+    text-decoration: none;
+    position: relative;
+    transition: background var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active {
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+  }
+  .sb-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 2px;
+    background: var(--color-alaranjado);
+    border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+  .sb-footer {
+    border-top: 0.6px solid var(--color-cinza);
+    padding: 10px 16px 12px;
+  }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    margin-top: 4px;
+    border-radius: var(--radius-md);
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-size: 13px; font-weight: 500; line-height: 1.2; color: var(--color-texto-escuro); }
+  .sb-user-role { font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent;
+    border: 0;
+    color: var(--color-texto-medio);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 0 32px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    min-width: 0;
+  }
+  .topbar-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+    letter-spacing: -0.005em;
+  }
+  .topbar-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .topbar-crumb .sep {
+    width: 3px;
+    height: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--color-cinza);
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .menu-btn { display: none; }
+
+  .btn {
+    min-height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background var(--duration-fast) var(--ease-soft), border-color var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+    white-space: nowrap;
+  }
+  .btn svg { width: 15px; height: 15px; }
+  .btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .btn.primary {
+    border-color: var(--color-alaranjado);
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+  }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); color: var(--color-fundo-claro); }
+  .btn.icon { width: 36px; padding: 0; }
+  .btn.subtle { background: var(--bg-1); color: var(--color-texto-medio); }
+  .btn.danger:hover {
+    background: color-mix(in srgb, var(--color-ui-error) 12%, transparent);
+    border-color: var(--color-ui-error);
+    color: var(--color-ui-error);
+  }
+
+  /* ============================================================
+     CONTENT
+     ============================================================ */
+  .scroll { overflow: auto; min-width: 0; }
+  .content {
+    width: min(100%, var(--content-max));
+    margin: 0 auto;
+    padding: 32px;
+    display: grid;
+    gap: 24px;
+  }
+  .page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .page-head h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(34px, 4vw, 46px);
+    line-height: 1.08;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+  }
+  .page-head p {
+    margin: 10px 0 0;
+    max-width: 680px;
+    color: var(--color-texto-medio);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .summary-card,
+  .filter-card,
+  .service-card,
+  .empty-state,
+  .drawer-card {
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  .summary-card {
+    padding: 20px;
+    min-height: 142px;
+    display: grid;
+    align-content: space-between;
+    gap: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .summary-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--color-alaranjado);
+  }
+  .summary-card:nth-child(2)::before { background: var(--color-bege); }
+  .summary-card:nth-child(3)::before { background: var(--color-tangerina); }
+  .summary-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .summary-label {
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+  }
+  .summary-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+  }
+  .summary-icon svg { width: 17px; height: 17px; }
+  .summary-value {
+    font-family: var(--font-display);
+    font-size: 34px;
+    line-height: 1;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+    font-variant-numeric: tabular-nums;
+  }
+  .summary-note {
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .filter-card {
+    padding: 18px;
+    display: grid;
+    gap: 16px;
+  }
+  .filter-row {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.4fr) repeat(3, minmax(160px, 0.7fr)) auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .field { display: grid; gap: 8px; }
+  .field label,
+  .status-label,
+  .form-label {
+    font-size: 10px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+  }
+  .input-shell {
+    min-height: 40px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    color: var(--color-texto-medio);
+    transition: border-color var(--duration-fast) var(--ease-soft), box-shadow var(--duration-fast) var(--ease-soft);
+  }
+  .input-shell:focus-within {
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-alaranjado) 16%, transparent);
+  }
+  .input-shell svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .input-shell input,
+  .input-shell select {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--color-texto-escuro);
+    font-size: 13.5px;
+  }
+  .input-shell input::placeholder { color: var(--color-texto-medio); }
+  .filter-meta {
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    text-align: right;
+    align-self: center;
+  }
+  .segmented {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--bg-1);
+  }
+  .segmented button {
+    border: 0;
+    min-height: 30px;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-texto-medio);
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .segmented button.active {
+    background: var(--surface-raised);
+    color: var(--color-texto-escuro);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .catalog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .catalog-head h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+  }
+  .catalog-head p {
+    margin: 2px 0 0;
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+  }
+  .service-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .service-card {
+    padding: 18px;
+    display: grid;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .service-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--color-alaranjado);
+  }
+  .service-card.accent-tangerina::before { background: var(--color-tangerina); }
+  .service-card.accent-bege::before { background: var(--color-bege); }
+  .service-card.accent-bege-claro::before { background: var(--color-bege-claro); }
+  .service-card.accent-verde::before { background: var(--color-verde); }
+  .service-card.inativo {
+    background: color-mix(in srgb, var(--surface-raised) 72%, var(--bg-1));
+  }
+  .service-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .service-title { display: grid; gap: 8px; min-width: 0; }
+  .service-title h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 24px;
+    line-height: 1.15;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+  }
+  .service-sub {
+    color: var(--color-texto-medio);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .status-pill,
+  .pillar-pill,
+  .plan-chip,
+  .capacity-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 26px;
+    width: max-content;
+    max-width: 100%;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+    color: var(--color-texto-medio);
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .pillar-pill::before,
+  .status-pill::before,
+  .capacity-pill::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege);
+    flex-shrink: 0;
+  }
+  .pillar-pilates::before { background: var(--accent-pilates); }
+  .pillar-pelvica::before { background: var(--accent-pelvica); }
+  .status-ativo::before { background: var(--color-alaranjado); }
+  .status-inativo::before { background: var(--color-ui-error); }
+  .capacity-pill::before { background: var(--color-bege); }
+  .service-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .metric {
+    padding: 12px;
+    display: grid;
+    gap: 4px;
+    border-right: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+  }
+  .metric:last-child { border-right: 0; }
+  .metric span {
+    color: var(--color-bege);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .metric strong {
+    color: var(--color-texto-escuro);
+    font-size: 13px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .plan-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .service-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .mini-btn {
+    min-height: 30px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background var(--duration-fast) var(--ease-soft), border-color var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .mini-btn svg { width: 13px; height: 13px; }
+  .mini-btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); color: var(--color-texto-escuro); }
+  .mini-btn.danger:hover {
+    background: color-mix(in srgb, var(--color-ui-error) 10%, transparent);
+    border-color: var(--color-ui-error);
+    color: var(--color-ui-error);
+  }
+
+  .empty-state {
+    display: none;
+    padding: 36px;
+    text-align: center;
+    justify-items: center;
+    gap: 16px;
+  }
+  .empty-state.visible { display: grid; }
+  .empty-state h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 400;
+  }
+  .empty-state p {
+    margin: 0;
+    max-width: 520px;
+    color: var(--color-texto-medio);
+    line-height: 1.55;
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-espresso) 54%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-soft);
+    z-index: 40;
+  }
+  body.menu-open .backdrop,
+  body.drawer-open .backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .drawer {
+    position: fixed;
+    right: 24px;
+    top: 24px;
+    bottom: 24px;
+    width: min(560px, calc(100vw - 48px));
+    background: var(--surface-raised);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+    transform: translateX(calc(100% + 32px));
+    transition: transform var(--duration-slow) var(--ease-out);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+  }
+  body.drawer-open .drawer { transform: translateX(0); }
+  .drawer-head {
+    padding: 24px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .drawer-head h2 {
+    margin: 6px 0 0;
+    font-family: var(--font-display);
+    font-size: 30px;
+    line-height: 1.12;
+    font-weight: 400;
+  }
+  .drawer-body {
+    overflow: auto;
+    padding: 24px;
+    display: grid;
+    align-content: start;
+    gap: 16px;
+  }
+  .drawer-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 18px 24px;
+    border-top: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+  }
+  .close-btn {
+    width: 36px;
+    height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .close-btn:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .close-btn svg { width: 16px; height: 16px; }
+  .drawer-card {
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .drawer-card h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-texto-escuro);
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .form-field { display: grid; gap: 8px; }
+  .form-field.full { grid-column: 1 / -1; }
+  .form-field input,
+  .form-field select {
+    min-height: 40px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-1);
+    color: var(--color-texto-escuro);
+    padding: 0 12px;
+    outline: 0;
+    font-size: 13.5px;
+  }
+  .form-field input:focus,
+  .form-field select:focus {
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-alaranjado) 16%, transparent);
+  }
+  .readonly-box {
+    min-height: 40px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-1);
+    padding: 10px 12px;
+    display: grid;
+    gap: 2px;
+  }
+  .readonly-box strong { font-size: 13.5px; font-weight: 500; }
+  .readonly-box span { color: var(--color-texto-medio); font-size: 12px; }
+  .swatch-grid,
+  .plan-checks {
+    display: grid;
+    gap: 8px;
+  }
+  .swatch-option,
+  .check-option {
+    min-height: 38px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-1);
+    color: var(--color-texto-escuro);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .swatch-option input,
+  .check-option input { accent-color: var(--color-alaranjado); }
+  .swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    flex-shrink: 0;
+  }
+  .color-alaranjado { background: var(--color-alaranjado); }
+  .color-tangerina { background: var(--color-tangerina); }
+  .color-bege { background: var(--color-bege); }
+  .color-bege-claro { background: var(--color-bege-claro); }
+  .color-verde { background: var(--color-verde); }
+  .helper {
+    margin: 0;
+    color: var(--color-texto-medio);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .impact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .impact-tile {
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-1);
+    padding: 12px;
+    display: grid;
+    gap: 4px;
+  }
+  .impact-tile span {
+    color: var(--color-bege);
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .impact-tile strong {
+    color: var(--color-texto-escuro);
+    font-size: 16px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translate(-50%, 20px);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 70;
+    min-height: 42px;
+    border-radius: var(--radius-pill);
+    background: var(--color-espresso);
+    color: var(--color-fundo-claro);
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    font-size: 13px;
+    transition: opacity var(--duration-base) var(--ease-soft), transform var(--duration-base) var(--ease-soft);
+  }
+  .toast.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  @media (max-width: 1180px) {
+    .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .summary-card:first-child { grid-column: span 2; }
+    .filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .filter-meta { text-align: left; }
+    .service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    .app { display: block; min-height: 100vh; width: 100%; }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: min(var(--sidebar-w), 88vw);
+      transform: translateX(-105%);
+      transition: transform 260ms var(--ease-out);
+      box-shadow: var(--shadow-lg);
+    }
+    body.menu-open .sidebar { transform: translateX(0); }
+    .main { min-height: 100vh; }
+    .topbar { padding: 0 18px; }
+    .menu-btn { display: inline-flex; }
+    .topbar-left { gap: 10px; }
+    .topbar-crumb { display: none; }
+    .content { padding: 24px 18px 48px; }
+  }
+
+  @media (max-width: 760px) {
+    .topbar-title { font-size: 24px; }
+    .topbar-right .btn:not(.primary) { display: none; }
+    .page-head {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .summary-grid,
+    .filter-row,
+    .service-grid,
+    .form-grid,
+    .impact-grid {
+      grid-template-columns: 1fr;
+    }
+    .summary-card:first-child { grid-column: auto; }
+    .catalog-head {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .service-metrics { grid-template-columns: 1fr; }
+    .metric { border-right: 0; border-bottom: 0.6px solid var(--color-cinza); }
+    .metric:last-child { border-bottom: 0; }
+    .segmented {
+      width: 100%;
+      overflow-x: auto;
+      justify-content: flex-start;
+    }
+    .drawer {
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 100vw;
+      border-radius: 0;
+    }
+    .drawer-foot { flex-direction: column; }
+    .drawer-foot .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="24 Serviços">
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <div class="sb-scroll">
+      <div class="sb-group">
+        <div class="sb-section-label">Gestão</div>
+        <nav class="sb-nav">
+          <a href="02 Dashboard.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="09 Clientes.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Clientes
+          </a>
+          <a href="06 Agenda.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Agenda
+          </a>
+          <a href="23 Vendas.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Vendas
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Relacionamento</div>
+        <nav class="sb-nav">
+          <a href="03 Inbox WhatsApp.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+              <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            </svg>
+            Inbox
+            <span class="sb-badge">7</span>
+          </a>
+          <a href="04 Funil.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Funil
+          </a>
+          <a href="07 Agente de IA.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/>
+              <circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/>
+              <path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/>
+            </svg>
+            Agente de IA
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Financeiro</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Lançamentos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            DRE
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Cadastros</div>
+        <nav class="sb-nav">
+          <a href="21 Planos.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Planos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Modelos de contrato
+          </a>
+          <a href="24 Serviços.html" class="sb-item active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+            Serviços
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            Profissionais
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+              <path d="M9 21v-4h6v4"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/>
+            </svg>
+            Salas
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="sb-footer">
+      <nav class="sb-nav">
+        <a href="08 Configurações.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </nav>
+      <div class="sb-user">
+        <div class="avatar">LF</div>
+        <div class="sb-user-meta">
+          <span class="sb-user-name">Larissa Ferraz</span>
+          <span class="sb-user-role">Gestão · Corporis</span>
+        </div>
+        <button class="sb-user-action" aria-label="Mais opções">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn icon menu-btn" type="button" data-menu-open aria-label="Abrir navegação">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+          </svg>
+        </button>
+        <h1 class="topbar-title">Serviços</h1>
+        <span class="topbar-crumb">
+          <span>Cadastros</span>
+          <span class="sep"></span>
+          <span>/cadastros/servicos</span>
+        </span>
+      </div>
+      <div class="topbar-right">
+        <a class="btn" href="21 Planos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+            <line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+          Planos
+        </a>
+        <button class="btn primary" type="button" data-new-service>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Novo serviço
+        </button>
+      </div>
+    </header>
+
+    <div class="scroll">
+      <div class="content">
+        <section class="page-head" aria-labelledby="page-title">
+          <div>
+            <div class="eyebrow">Agenda e catálogo</div>
+            <h2 id="page-title">Cadastre serviços com duração, capacidade e vínculo aos planos.</h2>
+            <p>A capacidade por slot nasce aqui: Pilates opera com até 4 pessoas por horário, enquanto Fisio pélvica permanece individual.</p>
+          </div>
+          <button class="btn primary" type="button" data-new-service>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Novo serviço
+          </button>
+        </section>
+
+        <section class="summary-grid" aria-label="Resumo de serviços">
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-label">Serviços ativos</span>
+              <span class="summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6 9 17l-5-5"/>
+                </svg>
+              </span>
+            </div>
+            <div>
+              <div class="summary-value" id="activeCount">0</div>
+              <div class="summary-note" id="activeNote">Dentro do recorte atual</div>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-label">Capacidade por semana</span>
+              <span class="summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+              </span>
+            </div>
+            <div>
+              <div class="summary-value" id="weekCapacity">0</div>
+              <div class="summary-note">Vagas teóricas nos horários configurados</div>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-label">Planos vinculados</span>
+              <span class="summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+              </span>
+            </div>
+            <div>
+              <div class="summary-value" id="linkedPlans">0</div>
+              <div class="summary-note">Planos comerciais usando serviços do recorte</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="filter-card" aria-label="Filtros de serviços">
+          <div class="filter-row">
+            <div class="field">
+              <label for="searchInput">Buscar serviço</label>
+              <div class="input-shell">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input id="searchInput" type="search" placeholder="Nome, plano ou observação"/>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="pillarFilter">Pilar</label>
+              <div class="input-shell">
+                <select id="pillarFilter">
+                  <option value="todos">Todos os pilares</option>
+                  <option value="pilates">Pilates</option>
+                  <option value="pelvica">Fisio pélvica</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="planFilter">Plano vinculado</label>
+              <div class="input-shell">
+                <select id="planFilter"></select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Status</label>
+              <div class="segmented" id="statusTabs" role="tablist" aria-label="Status do serviço">
+                <button class="active" type="button" data-status="todos">Todos</button>
+                <button type="button" data-status="ativo">Ativos</button>
+                <button type="button" data-status="inativo">Inativos</button>
+              </div>
+            </div>
+
+            <div class="filter-meta" id="resultMeta">0 serviços encontrados</div>
+          </div>
+        </section>
+
+        <section aria-label="Catálogo de serviços">
+          <div class="catalog-head">
+            <div>
+              <h3>Serviços cadastrados</h3>
+              <p>Duração e capacidade serão usados pela agenda ao montar os slots disponíveis.</p>
+            </div>
+            <button class="btn subtle" type="button" id="clearFilters">Limpar filtros</button>
+          </div>
+        </section>
+
+        <section class="service-grid" id="serviceGrid" aria-live="polite"></section>
+
+        <section class="empty-state" id="emptyState" aria-live="polite">
+          <div class="summary-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </div>
+          <h3>Nenhum serviço encontrado.</h3>
+          <p>Ajuste os filtros ou cadastre um novo serviço para liberar capacidade na agenda.</p>
+          <button class="btn primary" type="button" data-new-service>Novo serviço</button>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="backdrop" data-close-layer></div>
+
+<aside class="drawer" aria-label="Painel de serviço" aria-hidden="true">
+  <div class="drawer-head">
+    <div>
+      <div class="eyebrow" id="drawerEyebrow">Cadastro</div>
+      <h2 id="drawerTitle">Novo serviço</h2>
+    </div>
+    <button class="close-btn" type="button" data-close-drawer aria-label="Fechar painel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-foot" id="drawerFoot"></div>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite">Atualizado</div>
+
+<script>
+  const plans = [
+    "Pilates terapêutico 2x",
+    "Pilates terapêutico 3x",
+    "Pilates manutenção",
+    "Fisio pélvica individual",
+    "Fisio pélvica + pilates"
+  ];
+
+  const services = [
+    {
+      id: "SRV-101",
+      name: "Pilates em aparelhos",
+      pillar: "pilates",
+      duration: 50,
+      capacity: 4,
+      color: "alaranjado",
+      plans: ["Pilates terapêutico 2x", "Pilates terapêutico 3x", "Pilates manutenção"],
+      status: "ativo",
+      agendaSlots: 24,
+      nextUse: "Hoje, 14:00",
+      note: "Turmas reduzidas com controle de vagas por horário."
+    },
+    {
+      id: "SRV-102",
+      name: "Pilates reabilitação",
+      pillar: "pilates",
+      duration: 50,
+      capacity: 4,
+      color: "tangerina",
+      plans: ["Pilates terapêutico 2x", "Pilates terapêutico 3x"],
+      status: "ativo",
+      agendaSlots: 12,
+      nextUse: "Amanhã, 09:00",
+      note: "Indicado para alunas em retorno pós-lesão com evolução acompanhada."
+    },
+    {
+      id: "SRV-103",
+      name: "Pilates manutenção",
+      pillar: "pilates",
+      duration: 50,
+      capacity: 4,
+      color: "bege",
+      plans: ["Pilates manutenção"],
+      status: "ativo",
+      agendaSlots: 10,
+      nextUse: "Qui, 17:00",
+      note: "Serviço de continuidade para alunas já liberadas para turma regular."
+    },
+    {
+      id: "SRV-201",
+      name: "Fisio pélvica avaliação",
+      pillar: "pelvica",
+      duration: 60,
+      capacity: 1,
+      color: "verde",
+      plans: ["Fisio pélvica individual", "Fisio pélvica + pilates"],
+      status: "ativo",
+      agendaSlots: 8,
+      nextUse: "Hoje, 16:30",
+      note: "Primeiro atendimento individual com anamnese e plano terapêutico."
+    },
+    {
+      id: "SRV-202",
+      name: "Fisio pélvica sessão",
+      pillar: "pelvica",
+      duration: 50,
+      capacity: 1,
+      color: "verde",
+      plans: ["Fisio pélvica individual", "Fisio pélvica + pilates"],
+      status: "ativo",
+      agendaSlots: 18,
+      nextUse: "Amanhã, 11:00",
+      note: "Sessão individual de acompanhamento terapêutico."
+    },
+    {
+      id: "SRV-203",
+      name: "Fisio pélvica retorno",
+      pillar: "pelvica",
+      duration: 40,
+      capacity: 1,
+      color: "bege-claro",
+      plans: ["Fisio pélvica individual"],
+      status: "inativo",
+      agendaSlots: 0,
+      nextUse: "Sem horários ativos",
+      note: "Modelo reservado para retornos pontuais, hoje inativo na agenda."
+    }
+  ];
+
+  const state = {
+    query: "",
+    pillar: "todos",
+    plan: "todos",
+    status: "todos",
+    selectedId: null,
+    mode: "create"
+  };
+
+  const els = {
+    grid: document.getElementById("serviceGrid"),
+    empty: document.getElementById("emptyState"),
+    search: document.getElementById("searchInput"),
+    pillar: document.getElementById("pillarFilter"),
+    plan: document.getElementById("planFilter"),
+    statusTabs: document.getElementById("statusTabs"),
+    clear: document.getElementById("clearFilters"),
+    resultMeta: document.getElementById("resultMeta"),
+    activeCount: document.getElementById("activeCount"),
+    activeNote: document.getElementById("activeNote"),
+    weekCapacity: document.getElementById("weekCapacity"),
+    linkedPlans: document.getElementById("linkedPlans"),
+    drawer: document.querySelector(".drawer"),
+    drawerEyebrow: document.getElementById("drawerEyebrow"),
+    drawerTitle: document.getElementById("drawerTitle"),
+    drawerBody: document.getElementById("drawerBody"),
+    drawerFoot: document.getElementById("drawerFoot"),
+    toast: document.getElementById("toast")
+  };
+
+  function normalizeText(value) {
+    return String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&apos;"
+    }[char]));
+  }
+
+  function capacityFor(pillar) {
+    return pillar === "pelvica" ? 1 : 4;
+  }
+
+  function pillarLabel(pillar) {
+    return {
+      pilates: "Pilates",
+      pelvica: "Fisio pélvica"
+    }[pillar];
+  }
+
+  function colorLabel(color) {
+    return {
+      alaranjado: "Alaranjado",
+      tangerina: "Tangerina",
+      bege: "Bege",
+      "bege-claro": "Bege claro",
+      verde: "Verde"
+    }[color];
+  }
+
+  function recommendedColor(pillar) {
+    return pillar === "pelvica" ? "verde" : "alaranjado";
+  }
+
+  function swatchesFor(pillar) {
+    if (pillar === "pelvica") {
+      return [
+        { id: "verde", label: "Verde", note: "recomendado para fisio pélvica" },
+        { id: "bege", label: "Bege", note: "apoio neutro" },
+        { id: "bege-claro", label: "Bege claro", note: "baixo contraste" }
+      ];
+    }
+    return [
+      { id: "alaranjado", label: "Alaranjado", note: "recomendado para Pilates" },
+      { id: "tangerina", label: "Tangerina", note: "variação de agenda" },
+      { id: "bege", label: "Bege", note: "apoio neutro" }
+    ];
+  }
+
+  function filteredServices() {
+    const query = normalizeText(state.query);
+    return services.filter((item) => {
+      const haystack = normalizeText(`${item.name} ${item.note} ${item.plans.join(" ")} ${pillarLabel(item.pillar)}`);
+      if (query && !haystack.includes(query)) return false;
+      if (state.pillar !== "todos" && item.pillar !== state.pillar) return false;
+      if (state.plan !== "todos" && !item.plans.includes(state.plan)) return false;
+      if (state.status !== "todos" && item.status !== state.status) return false;
+      return true;
+    });
+  }
+
+  function renderPlanFilter() {
+    const options = ["todos", ...plans];
+    els.plan.innerHTML = options.map((plan) => {
+      const label = plan === "todos" ? "Todos os planos" : plan;
+      return `<option value="${plan}">${label}</option>`;
+    }).join("");
+    els.plan.value = state.plan;
+  }
+
+  function serviceActions(item) {
+    const statusAction = item.status === "ativo" ? "Inativar" : "Ativar";
+    return `
+      <button class="mini-btn" type="button" data-action="edit" data-id="${item.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+        Editar
+      </button>
+      <button class="mini-btn" type="button" data-action="impact" data-id="${item.id}">Impacto</button>
+      <button class="mini-btn" type="button" data-action="toggle" data-id="${item.id}">${statusAction}</button>
+      <button class="mini-btn danger" type="button" data-action="delete" data-id="${item.id}">Excluir</button>
+    `;
+  }
+
+  function renderCards(items) {
+    els.grid.innerHTML = items.map((item) => `
+      <article class="service-card accent-${item.color} ${item.status}" data-service-id="${item.id}">
+        <div class="service-top">
+          <div class="service-title">
+            <div class="pillar-pill pillar-${item.pillar}">${pillarLabel(item.pillar)}</div>
+            <h3>${escapeHtml(item.name)}</h3>
+            <div class="service-sub">${escapeHtml(item.note)}</div>
+          </div>
+          <span class="status-pill status-${item.status}">${item.status === "ativo" ? "Ativo" : "Inativo"}</span>
+        </div>
+        <div class="service-metrics" aria-label="Configuração do serviço">
+          <div class="metric"><span>Duração</span><strong>${item.duration} min</strong></div>
+          <div class="metric"><span>Capacidade</span><strong>${item.capacity} por slot</strong></div>
+          <div class="metric"><span>Cor</span><strong>${colorLabel(item.color)}</strong></div>
+        </div>
+        <div class="plan-list" aria-label="Planos vinculados">
+          ${item.plans.length ? item.plans.map((plan) => `<span class="plan-chip">${escapeHtml(plan)}</span>`).join("") : `<span class="plan-chip">Sem plano vinculado</span>`}
+        </div>
+        <div class="service-actions">${serviceActions(item)}</div>
+      </article>
+    `).join("");
+  }
+
+  function renderSummary(items) {
+    const active = items.filter((item) => item.status === "ativo");
+    const capacity = active.reduce((sum, item) => sum + item.capacity * item.agendaSlots, 0);
+    const linked = new Set(items.flatMap((item) => item.plans));
+    els.activeCount.textContent = active.length;
+    els.activeNote.textContent = `${items.length} serviço${items.length === 1 ? "" : "s"} no recorte atual`;
+    els.weekCapacity.textContent = capacity;
+    els.linkedPlans.textContent = linked.size;
+    els.resultMeta.textContent = `${items.length} serviço${items.length === 1 ? "" : "s"} encontrado${items.length === 1 ? "" : "s"}`;
+  }
+
+  function render() {
+    const items = filteredServices();
+    renderSummary(items);
+    renderCards(items);
+    els.empty.classList.toggle("visible", items.length === 0);
+  }
+
+  function setStatusFilter(status) {
+    state.status = status;
+    els.statusTabs.querySelectorAll("button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.status === status);
+    });
+    render();
+  }
+
+  function showToast(message) {
+    els.toast.textContent = message;
+    els.toast.classList.add("visible");
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => els.toast.classList.remove("visible"), 2400);
+  }
+
+  function selectedService() {
+    return services.find((item) => item.id === state.selectedId) || null;
+  }
+
+  function openDrawer() {
+    document.body.classList.add("drawer-open");
+    els.drawer.setAttribute("aria-hidden", "false");
+  }
+
+  function closeDrawer() {
+    document.body.classList.remove("drawer-open");
+    els.drawer.setAttribute("aria-hidden", "true");
+  }
+
+  function planChecks(selectedPlans) {
+    return plans.map((plan) => `
+      <label class="check-option">
+        <input type="checkbox" name="plans" value="${plan}" ${selectedPlans.includes(plan) ? "checked" : ""}/>
+        <span>${plan}</span>
+      </label>
+    `).join("");
+  }
+
+  function swatchRadios(pillar, currentColor) {
+    return swatchesFor(pillar).map((swatch) => `
+      <label class="swatch-option">
+        <input type="radio" name="color" value="${swatch.id}" ${currentColor === swatch.id ? "checked" : ""}/>
+        <span class="swatch color-${swatch.id}" aria-hidden="true"></span>
+        <span>${swatch.label} · ${swatch.note}</span>
+      </label>
+    `).join("");
+  }
+
+  function renderServiceForm(service) {
+    const draft = service || {
+      id: "",
+      name: "",
+      pillar: "pilates",
+      duration: 50,
+      capacity: 4,
+      color: "alaranjado",
+      plans: ["Pilates terapêutico 2x"],
+      status: "ativo"
+    };
+    const capacity = capacityFor(draft.pillar);
+    els.drawerEyebrow.textContent = service ? "Editar serviço" : "Cadastro";
+    els.drawerTitle.textContent = service ? draft.name : "Novo serviço";
+    els.drawerBody.innerHTML = `
+      <form class="drawer-card" id="serviceForm">
+        <div class="form-grid">
+          <div class="form-field full">
+            <label class="form-label" for="serviceName">Nome do serviço</label>
+            <input id="serviceName" name="name" type="text" value="${escapeHtml(draft.name)}" placeholder="Ex.: Pilates em aparelhos"/>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="servicePillar">Pilar</label>
+            <select id="servicePillar" name="pillar">
+              <option value="pilates" ${draft.pillar === "pilates" ? "selected" : ""}>Pilates</option>
+              <option value="pelvica" ${draft.pillar === "pelvica" ? "selected" : ""}>Fisio pélvica</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="serviceDuration">Duração</label>
+            <select id="serviceDuration" name="duration">
+              <option value="40" ${draft.duration === 40 ? "selected" : ""}>40 minutos</option>
+              <option value="50" ${draft.duration === 50 ? "selected" : ""}>50 minutos</option>
+              <option value="60" ${draft.duration === 60 ? "selected" : ""}>60 minutos</option>
+              <option value="75" ${draft.duration === 75 ? "selected" : ""}>75 minutos</option>
+            </select>
+          </div>
+          <div class="form-field full">
+            <span class="form-label">Capacidade por slot</span>
+            <div class="readonly-box" id="capacityPreview">
+              <strong>${capacity} ${capacity === 1 ? "pessoa" : "pessoas"} por horário</strong>
+              <span>${draft.pillar === "pelvica" ? "Fisio pélvica permanece individual." : "Pilates usa turma reduzida com até 4 pessoas."}</span>
+            </div>
+          </div>
+          <div class="form-field full">
+            <span class="form-label">Cor na agenda</span>
+            <div class="swatch-grid" id="swatchGrid">
+              ${swatchRadios(draft.pillar, draft.color)}
+            </div>
+          </div>
+          <div class="form-field full">
+            <span class="form-label">Planos vinculados</span>
+            <div class="plan-checks">
+              ${planChecks(draft.plans)}
+            </div>
+          </div>
+        </div>
+      </form>
+    `;
+    els.drawerFoot.innerHTML = `
+      <button class="btn subtle" type="button" data-close-drawer>Cancelar</button>
+      <button class="btn primary" type="submit" form="serviceForm">Salvar serviço</button>
+    `;
+    const form = document.getElementById("serviceForm");
+    const pillarSelect = document.getElementById("servicePillar");
+    pillarSelect.addEventListener("change", () => {
+      const pillar = pillarSelect.value;
+      const newColor = recommendedColor(pillar);
+      const capacityText = capacityFor(pillar);
+      document.getElementById("capacityPreview").innerHTML = `
+        <strong>${capacityText} ${capacityText === 1 ? "pessoa" : "pessoas"} por horário</strong>
+        <span>${pillar === "pelvica" ? "Fisio pélvica permanece individual." : "Pilates usa turma reduzida com até 4 pessoas."}</span>
+      `;
+      document.getElementById("swatchGrid").innerHTML = swatchRadios(pillar, newColor);
+    });
+    form.addEventListener("submit", saveService);
+    openDrawer();
+  }
+
+  function saveService(event) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get("name") || "").trim();
+    if (!name) {
+      showToast("Informe o nome do serviço.");
+      return;
+    }
+    const pillar = String(formData.get("pillar"));
+    const color = String(formData.get("color") || recommendedColor(pillar));
+    const selectedPlans = formData.getAll("plans").map(String);
+    const existing = selectedService();
+    const payload = {
+      id: existing?.id || `SRV-${Math.floor(300 + Math.random() * 600)}`,
+      name,
+      pillar,
+      duration: Number(formData.get("duration")),
+      capacity: capacityFor(pillar),
+      color,
+      plans: selectedPlans,
+      status: existing?.status || "ativo",
+      agendaSlots: existing?.agendaSlots || (pillar === "pelvica" ? 6 : 10),
+      nextUse: existing?.nextUse || "A definir na agenda",
+      note: existing?.note || "Serviço cadastrado para uso nos horários da agenda."
+    };
+    if (existing) {
+      Object.assign(existing, payload);
+      showToast(`${payload.name} atualizado.`);
+    } else {
+      services.unshift(payload);
+      showToast(`${payload.name} cadastrado.`);
+    }
+    closeDrawer();
+    renderPlanFilter();
+    render();
+  }
+
+  function openForm(id) {
+    state.mode = id ? "edit" : "create";
+    state.selectedId = id || null;
+    renderServiceForm(selectedService());
+  }
+
+  function renderImpact(service) {
+    const weeklyCapacity = service.capacity * service.agendaSlots;
+    const linkedText = service.plans.length ? service.plans.join(", ") : "Sem planos vinculados";
+    els.drawerEyebrow.textContent = "Impacto na agenda";
+    els.drawerTitle.textContent = service.name;
+    els.drawerBody.innerHTML = `
+      <article class="drawer-card">
+        <h3>Capacidade aplicada aos slots</h3>
+        <div class="impact-grid">
+          <div class="impact-tile"><span>Pilar</span><strong>${pillarLabel(service.pillar)}</strong></div>
+          <div class="impact-tile"><span>Duração</span><strong>${service.duration} min</strong></div>
+          <div class="impact-tile"><span>Capacidade</span><strong>${service.capacity} por slot</strong></div>
+          <div class="impact-tile"><span>Vagas semanais</span><strong>${weeklyCapacity}</strong></div>
+        </div>
+        <p class="helper">A agenda usa essa capacidade ao abrir horários. Para Pilates, cada slot aceita até 4 alunas; em Fisio pélvica, o slot permanece individual.</p>
+      </article>
+      <article class="drawer-card">
+        <h3>Uso atual</h3>
+        <div class="impact-grid">
+          <div class="impact-tile"><span>Próximo uso</span><strong>${service.nextUse}</strong></div>
+          <div class="impact-tile"><span>Status</span><strong>${service.status === "ativo" ? "Ativo" : "Inativo"}</strong></div>
+        </div>
+        <p class="helper">Planos vinculados: ${linkedText}.</p>
+      </article>
+    `;
+    els.drawerFoot.innerHTML = `
+      <button class="btn subtle" type="button" data-close-drawer>Fechar</button>
+      <button class="btn primary" type="button" data-action="edit" data-id="${service.id}">Editar serviço</button>
+    `;
+    openDrawer();
+  }
+
+  function mutateService(id, action) {
+    const index = services.findIndex((item) => item.id === id);
+    if (index < 0) return;
+    const service = services[index];
+    if (action === "edit") {
+      openForm(id);
+      return;
+    }
+    if (action === "impact") {
+      state.selectedId = id;
+      renderImpact(service);
+      return;
+    }
+    if (action === "toggle") {
+      service.status = service.status === "ativo" ? "inativo" : "ativo";
+      showToast(`${service.name} ${service.status === "ativo" ? "ativado" : "inativado"}.`);
+    }
+    if (action === "delete") {
+      services.splice(index, 1);
+      showToast(`${service.name} removido do cadastro.`);
+    }
+    renderPlanFilter();
+    render();
+  }
+
+  els.search.addEventListener("input", (event) => {
+    state.query = event.target.value;
+    render();
+  });
+  els.pillar.addEventListener("change", (event) => {
+    state.pillar = event.target.value;
+    render();
+  });
+  els.plan.addEventListener("change", (event) => {
+    state.plan = event.target.value;
+    render();
+  });
+  els.statusTabs.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-status]");
+    if (button) setStatusFilter(button.dataset.status);
+  });
+  els.clear.addEventListener("click", () => {
+    state.query = "";
+    state.pillar = "todos";
+    state.plan = "todos";
+    els.search.value = "";
+    els.pillar.value = "todos";
+    els.plan.value = "todos";
+    setStatusFilter("todos");
+  });
+  document.addEventListener("click", (event) => {
+    const newButton = event.target.closest("[data-new-service]");
+    if (newButton) {
+      openForm(null);
+      return;
+    }
+    const actionButton = event.target.closest("[data-action][data-id]");
+    if (actionButton) {
+      mutateService(actionButton.dataset.id, actionButton.dataset.action);
+    }
+  });
+  document.querySelector("[data-menu-open]").addEventListener("click", () => {
+    document.body.classList.add("menu-open");
+  });
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("[data-close-drawer]")) closeDrawer();
+  });
+  document.querySelector("[data-close-layer]").addEventListener("click", () => {
+    document.body.classList.remove("menu-open");
+    closeDrawer();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      document.body.classList.remove("menu-open");
+      closeDrawer();
+    }
+  });
+
+  renderPlanFilter();
+  render();
+</script>
+</body>
+</html>

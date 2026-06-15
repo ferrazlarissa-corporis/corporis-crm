@@ -1,0 +1,1246 @@
+<!doctype html>
+<!-- @dsCard group="Brand" name="18 Agenda completa" subtitle="Agenda semanal com capacidade por slot e popover de atendimento" -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis OS · Agenda completa</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --hour-row-h: 60px;
+    --grid-start-h: 7;
+    --grid-end-h: 19;
+    --hour-col-w: 64px;
+    --panel-w: 312px;
+
+    --service-pilates: var(--color-alaranjado);
+    --service-pilates-soft: color-mix(in srgb, var(--color-alaranjado) 16%, var(--bg-card));
+    --service-pilates-ink: var(--color-texto-escuro);
+    --service-pelvica: var(--color-verde);
+    --service-pelvica-soft: color-mix(in srgb, var(--color-verde) 34%, var(--bg-card));
+    --service-pelvica-ink: var(--color-texto-escuro);
+    --service-avaliacao: var(--color-bege);
+    --service-avaliacao-soft: color-mix(in srgb, var(--color-bege) 25%, var(--bg-card));
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { min-height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg-1);
+    color: var(--fg-1);
+    font-family: var(--font-body);
+    overflow: hidden;
+  }
+  button, input, select { font: inherit; }
+
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .sidebar {
+    background: var(--bg-card);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--space-md);
+    padding: 24px 16px 16px;
+    min-height: 0;
+    z-index: 20;
+  }
+  .sb-logo { padding: 8px 12px 4px; }
+  .sb-logo img { display: block; width: 132px; height: auto; }
+  .sb-scroll { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 20px; padding-right: 2px; }
+  .sb-group { display: flex; flex-direction: column; gap: 8px; }
+  .sb-section-label {
+    font-size: 10px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    padding: 0 14px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    text-decoration: none;
+    font-size: 14px;
+    position: relative;
+    transition: background var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex: 0 0 auto; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active { background: var(--color-bege-claro); color: var(--color-texto-escuro); font-weight: 500; }
+  .sb-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    border-radius: var(--radius-pill);
+    background: var(--color-alaranjado);
+  }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 20px;
+    height: 20px;
+    border-radius: var(--radius-pill);
+    background: var(--color-alaranjado);
+    color: var(--fg-on-dark);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+  }
+  .sb-footer { display: flex; flex-direction: column; gap: 8px; }
+  .sb-user {
+    border-top: 0.6px solid var(--color-cinza);
+    padding: 12px 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 14px;
+    flex: 0 0 auto;
+  }
+  .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
+  .avatar.pelvica { background: var(--service-pelvica-soft); }
+  .sb-user-meta { display: grid; min-width: 0; }
+  .sb-user-name { font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sb-user-role { font-size: 11px; color: var(--color-texto-medio); }
+  .sb-user-action, .icon-btn {
+    width: 36px;
+    height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--bg-card);
+    color: var(--color-texto-medio);
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .sb-user-action { border: 0; margin-left: auto; }
+  .sb-user-action svg, .icon-btn svg { width: 17px; height: 17px; stroke-width: 1.5; }
+  .icon-btn:hover, .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-width: 0;
+    min-height: 0;
+  }
+  .topbar {
+    height: var(--topbar-h);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 32px;
+    background: var(--bg-1);
+  }
+  .menu-btn { display: none; }
+  .topbar-left { display: flex; align-items: baseline; gap: 16px; min-width: 0; }
+  .topbar-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 400;
+    margin: 0;
+    color: var(--color-texto-escuro);
+    white-space: nowrap;
+  }
+  .topbar-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .topbar-crumb .sep {
+    width: 4px;
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--color-cinza);
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .primary-btn, .ghost-btn, .danger-btn {
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    min-height: 40px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .primary-btn {
+    border-color: var(--color-alaranjado);
+    background: var(--color-alaranjado);
+    color: var(--fg-on-dark);
+  }
+  .primary-btn:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); }
+  .ghost-btn { background: var(--bg-card); color: var(--color-texto-escuro); }
+  .ghost-btn:hover { background: var(--color-bege-claro); }
+  .danger-btn { color: var(--color-ui-error); background: var(--bg-card); }
+  .danger-btn:hover { background: color-mix(in srgb, var(--color-ui-error) 10%, var(--bg-card)); }
+  .primary-btn svg, .ghost-btn svg, .danger-btn svg { width: 16px; height: 16px; stroke-width: 1.5; }
+
+  .page {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr var(--panel-w);
+    overflow: hidden;
+  }
+  .agenda-area {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    border-right: 0.6px solid var(--color-cinza);
+  }
+  .filters {
+    padding: 20px 32px 16px;
+    display: grid;
+    grid-template-columns: 1.2fr repeat(3, minmax(160px, 0.6fr));
+    gap: 12px;
+    align-items: end;
+  }
+  .field { display: grid; gap: 6px; min-width: 0; }
+  .field label {
+    font-size: 10px;
+    letter-spacing: 1.7px;
+    text-transform: uppercase;
+    color: var(--color-texto-medio);
+    font-weight: 500;
+  }
+  .field input, .field select {
+    width: 100%;
+    height: 40px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--color-texto-escuro);
+    padding: 0 12px;
+    outline: none;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--color-alaranjado);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-alaranjado) 18%, transparent);
+  }
+  .week-strip {
+    padding: 0 32px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .week-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .week-label {
+    min-width: 208px;
+    text-align: center;
+    color: var(--color-texto-escuro);
+    font-weight: 500;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .legend-inline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--color-texto-medio);
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--dot);
+    display: inline-block;
+  }
+  .legend-inline span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .calendar {
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+    background: var(--bg-1);
+  }
+  .days-header {
+    display: grid;
+    grid-template-columns: var(--hour-col-w) repeat(6, minmax(132px, 1fr));
+    border-top: 0.6px solid var(--color-cinza);
+    border-bottom: 0.6px solid var(--color-cinza);
+    min-width: 900px;
+  }
+  .dh-spacer { background: var(--bg-1); }
+  .dh-cell {
+    border-left: 0.6px solid var(--color-cinza);
+    padding: 12px 14px;
+    display: grid;
+    gap: 3px;
+  }
+  .dh-dow {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.8px;
+    color: var(--color-texto-medio);
+    font-weight: 500;
+  }
+  .dh-date {
+    font-family: var(--font-display);
+    font-size: 21px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+  }
+  .dh-count { font-size: 11px; color: var(--color-texto-medio); font-variant-numeric: tabular-nums; }
+
+  .grid-scroll {
+    overflow: auto;
+    position: relative;
+  }
+  .grid-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+  .grid-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .grid {
+    min-width: 900px;
+    min-height: calc(var(--hour-row-h) * (var(--grid-end-h) - var(--grid-start-h)));
+    display: grid;
+    grid-template-columns: var(--hour-col-w) repeat(6, minmax(132px, 1fr));
+    position: relative;
+  }
+  .hours-col { position: relative; grid-column: 1; }
+  .hour-label {
+    position: absolute;
+    right: 9px;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--color-texto-medio);
+    background: var(--bg-1);
+    padding: 0 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .day-col {
+    position: relative;
+    height: calc(var(--hour-row-h) * (var(--grid-end-h) - var(--grid-start-h)));
+    border-left: 0.6px solid var(--color-cinza);
+  }
+  .day-col::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(to bottom, var(--color-cinza) 0, var(--color-cinza) 0.6px, transparent 0.6px, transparent var(--hour-row-h));
+    background-size: 100% var(--hour-row-h);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .day-col::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(to bottom, transparent 0, transparent calc(var(--hour-row-h) / 2 - 0.3px), var(--color-cinza) calc(var(--hour-row-h) / 2 - 0.3px), var(--color-cinza) calc(var(--hour-row-h) / 2 + 0.3px), transparent calc(var(--hour-row-h) / 2 + 0.3px));
+    background-size: 100% var(--hour-row-h);
+    opacity: 0.18;
+    pointer-events: none;
+  }
+  .event {
+    position: absolute;
+    left: 7px;
+    right: 7px;
+    border: 0.6px solid color-mix(in srgb, var(--event-color) 50%, var(--color-cinza));
+    border-left: 4px solid var(--event-color);
+    border-radius: var(--radius-md);
+    background: var(--event-bg);
+    color: var(--event-ink);
+    padding: 7px 8px;
+    cursor: pointer;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 4px;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--duration-fast) var(--ease-soft), box-shadow var(--duration-fast) var(--ease-soft);
+    z-index: 2;
+  }
+  .event:hover, .event:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    outline: none;
+  }
+  .event.selected { box-shadow: 0 0 0 2px var(--event-color), var(--shadow-md); }
+  .event-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: center;
+    font-size: 10.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-texto-escuro);
+  }
+  .capacity {
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--event-color) 18%, var(--bg-card));
+    border: 0.6px solid color-mix(in srgb, var(--event-color) 38%, var(--color-cinza));
+    font-size: 10px;
+    color: var(--color-texto-escuro);
+  }
+  .event-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.22;
+    color: var(--color-texto-escuro);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .event-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    border-radius: var(--radius-pill);
+    padding: 2px 7px;
+    background: var(--bg-card);
+    color: var(--color-texto-medio);
+    border: 0.6px solid var(--color-cinza);
+    font-size: 9px;
+    line-height: 1.25;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tag.highlight { color: var(--color-alaranjado); border-color: color-mix(in srgb, var(--color-alaranjado) 42%, var(--color-cinza)); }
+  .tag.pelvica { color: var(--color-texto-escuro); background: var(--service-pelvica-soft); border-color: color-mix(in srgb, var(--color-verde) 45%, var(--color-cinza)); }
+  .free-slot {
+    position: absolute;
+    left: 7px;
+    right: 7px;
+    border-radius: var(--radius-md);
+    border: 0.6px dashed transparent;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-soft);
+    z-index: 1;
+  }
+  .free-slot:hover {
+    background: color-mix(in srgb, var(--color-bege-claro) 40%, transparent);
+    border-color: var(--color-bege);
+  }
+  .free-slot:hover::after {
+    content: "+ novo";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--color-alaranjado);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .side-panel {
+    background: var(--bg-1);
+    padding: 24px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .panel-card {
+    background: var(--bg-card);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 18px;
+  }
+  .panel-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .panel-title h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 400;
+  }
+  .panel-title span { color: var(--color-texto-medio); font-size: 12px; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .summary-item {
+    background: var(--bg-2);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    min-height: 76px;
+  }
+  .summary-item strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 24px;
+    line-height: 1.05;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+    font-variant-numeric: tabular-nums;
+  }
+  .summary-item span { display: block; margin-top: 5px; font-size: 11px; color: var(--color-texto-medio); line-height: 1.35; }
+  .next-list { display: grid; gap: 10px; }
+  .next-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: start;
+    padding-bottom: 10px;
+    border-bottom: 0.6px solid var(--color-cinza);
+  }
+  .next-item:last-child { border-bottom: 0; padding-bottom: 0; }
+  .time-pill {
+    min-width: 56px;
+    border-radius: var(--radius-md);
+    background: var(--bg-2);
+    color: var(--color-texto-escuro);
+    padding: 8px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .next-name { font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); }
+  .next-sub { font-size: 12px; color: var(--color-texto-medio); line-height: 1.35; margin-top: 2px; }
+  .legend-list { display: grid; gap: 10px; }
+  .legend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+  .legend-row .left { display: inline-flex; align-items: center; gap: 8px; }
+  .legend-row .rule { color: var(--color-texto-medio); font-size: 12px; }
+  .swatch { width: 11px; height: 11px; border-radius: var(--radius-pill); background: var(--swatch); }
+  .panel-note {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--bg-2);
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .popover {
+    position: fixed;
+    width: min(360px, calc(100vw - 32px));
+    background: var(--bg-card);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: 60;
+    overflow: hidden;
+    display: none;
+  }
+  .popover.open { display: block; }
+  .pop-head {
+    padding: 18px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    background: var(--bg-card);
+  }
+  .pop-kicker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--color-texto-medio);
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .pop-close {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--bg-2);
+    color: var(--color-texto-medio);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .pop-close svg { width: 15px; height: 15px; stroke-width: 1.5; }
+  .pop-title {
+    margin: 8px 0 0;
+    font-family: var(--font-display);
+    font-size: 24px;
+    line-height: 1.15;
+    font-weight: 400;
+  }
+  .pop-sub { margin-top: 6px; color: var(--color-texto-medio); font-size: 13px; }
+  .pop-body { padding: 16px 18px; display: grid; gap: 12px; }
+  .pop-row { display: grid; grid-template-columns: 88px 1fr; gap: 10px; align-items: start; }
+  .pop-row .label {
+    color: var(--color-texto-medio);
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding-top: 3px;
+  }
+  .pop-row .value { color: var(--color-texto-escuro); font-size: 13px; line-height: 1.4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .people-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .waitlist {
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-ui-error) 9%, var(--bg-card));
+    padding: 10px 12px;
+    color: var(--color-texto-escuro);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .pop-actions {
+    padding: 14px 18px 18px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-top: 0.6px solid var(--color-cinza);
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-espresso) 28%, transparent);
+    z-index: 70;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    width: min(560px, 100%);
+    background: var(--bg-card);
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .modal-head {
+    padding: 18px 20px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .modal-head h2 { font-family: var(--font-display); font-size: 24px; font-weight: 400; margin: 0; }
+  .modal-head p { margin: 4px 0 0; color: var(--color-texto-medio); font-size: 13px; line-height: 1.4; }
+  .modal-form { padding: 18px 20px 20px; display: grid; gap: 14px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-status {
+    min-height: 20px;
+    color: var(--color-texto-medio);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+
+  .mobile-backdrop { display: none; }
+
+  @media (max-width: 1180px) {
+    body { overflow: auto; }
+    .app { height: auto; min-height: 100vh; grid-template-columns: 1fr; }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: min(var(--sidebar-w), 88vw);
+      transform: translateX(-102%);
+      transition: transform var(--duration-base) var(--ease-soft);
+      box-shadow: var(--shadow-lg);
+    }
+    body.menu-open .sidebar { transform: translateX(0); }
+    .mobile-backdrop {
+      position: fixed;
+      inset: 0;
+      background: color-mix(in srgb, var(--color-espresso) 24%, transparent);
+      z-index: 15;
+    }
+    body.menu-open .mobile-backdrop { display: block; }
+    .main { min-height: 100vh; }
+    .menu-btn { display: inline-flex; }
+    .page { grid-template-columns: 1fr; overflow: visible; }
+    .agenda-area { border-right: 0; min-height: 720px; }
+    .side-panel { border-top: 0.6px solid var(--color-cinza); }
+    .filters { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 720px) {
+    .topbar { padding: 0 16px; }
+    .topbar-left { align-items: center; gap: 10px; }
+    .topbar-crumb { display: none; }
+    .topbar-title { font-size: 23px; }
+    .topbar-right .ghost-btn { display: none; }
+    .primary-btn span { display: none; }
+    .filters { padding: 16px; grid-template-columns: 1fr; }
+    .week-strip { padding: 0 16px 14px; align-items: flex-start; flex-direction: column; }
+    .legend-inline { gap: 8px; }
+    .side-panel { padding: 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .pop-row { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="app" data-screen-label="18 Agenda completa">
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo"><img src="assets/logo-cores.png" alt="Corporis"/></div>
+    <div class="sb-scroll">
+      <div class="sb-group">
+        <div class="sb-section-label">Gestão</div>
+        <nav class="sb-nav">
+          <a href="02 Dashboard.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+            Dashboard
+          </a>
+          <a href="09 Clientes.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Clientes
+          </a>
+          <a href="#" class="sb-item active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Agenda
+          </a>
+          <a href="23 Vendas.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Vendas
+          </a>
+        </nav>
+      </div>
+      <div class="sb-group">
+        <div class="sb-section-label">Relacionamento</div>
+        <nav class="sb-nav">
+          <a href="03 Inbox WhatsApp.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+            Inbox <span class="sb-badge">7</span>
+          </a>
+          <a href="04 Funil.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Funil
+          </a>
+          <a href="07 Agente de IA.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/><circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/><path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/></svg>
+            Agente de IA
+          </a>
+        </nav>
+      </div>
+      <div class="sb-group">
+        <div class="sb-section-label">Financeiro</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Lançamentos</a>
+          <a href="#" class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>DRE</a>
+        </nav>
+      </div>
+      <div class="sb-group">
+        <div class="sb-section-label">Cadastros</div>
+        <nav class="sb-nav">
+          <a href="21 Planos.html" class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Planos</a>
+          <a href="27 Modelos de contrato.html" class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Modelos de contrato</a>
+          <a href="24 Serviços.html" class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>Serviços</a>
+          <a href="25 Profissionais.html" class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Profissionais</a>
+          <a href="26 Salas.html" class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 21v-4h6v4"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/></svg>Salas</a>
+        </nav>
+      </div>
+    </div>
+    <div class="sb-footer">
+      <nav class="sb-nav">
+        <a href="08 Configurações.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Configurações
+        </a>
+      </nav>
+      <div class="sb-user">
+        <div class="avatar">LF</div>
+        <div class="sb-user-meta">
+          <span class="sb-user-name">Larissa Ferraz</span>
+          <span class="sb-user-role">Gestão · Corporis</span>
+        </div>
+        <button class="sb-user-action" aria-label="Mais opções"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-btn menu-btn" type="button" aria-label="Abrir navegação" data-menu-open>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        </button>
+        <h1 class="topbar-title">Agenda</h1>
+        <div class="topbar-crumb"><span>Gestão</span><span class="sep"></span><span>Semana completa</span></div>
+      </div>
+      <div class="topbar-right">
+        <button class="ghost-btn" type="button" data-today>Hoje</button>
+        <button class="primary-btn" type="button" data-open-booking>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Novo agendamento</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="page">
+      <div class="agenda-area">
+        <div class="filters" aria-label="Filtros da agenda">
+          <div class="field">
+            <label for="search">Buscar cliente ou serviço</label>
+            <input id="search" type="search" placeholder="Nome, serviço ou observação"/>
+          </div>
+          <div class="field">
+            <label for="professional">Profissional</label>
+            <select id="professional">
+              <option value="todos">Todos</option>
+              <option>Larissa Ferraz</option>
+              <option>Tainara Fracasso</option>
+              <option>Bruna Kipper</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="room">Sala</label>
+            <select id="room">
+              <option value="todos">Todas</option>
+              <option>Estúdio Pilates</option>
+              <option>Sala Pélvica</option>
+              <option>Sala Avaliação</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pillar">Pilar</label>
+            <select id="pillar">
+              <option value="todos">Todos</option>
+              <option>Pilates</option>
+              <option>Fisio pélvica</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="week-strip">
+          <div class="week-nav">
+            <button class="icon-btn" type="button" aria-label="Semana anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <span class="week-label">15–20 jun · 2026</span>
+            <button class="icon-btn" type="button" aria-label="Próxima semana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+          </div>
+          <div class="legend-inline" aria-label="Legenda de serviços">
+            <span><i class="legend-dot" style="--dot: var(--color-alaranjado);"></i>Pilates · até 4 por slot</span>
+            <span><i class="legend-dot" style="--dot: var(--color-verde);"></i>Fisio pélvica · 1 por slot</span>
+            <span><i class="legend-dot" style="--dot: var(--color-bege);"></i>Avaliações</span>
+          </div>
+        </div>
+
+        <div class="calendar">
+          <div class="days-header" id="daysHeader"></div>
+          <div class="grid-scroll" id="gridScroll">
+            <div class="grid" id="grid">
+              <div class="hours-col" id="hoursCol"></div>
+              <div class="day-col" data-day="0"></div>
+              <div class="day-col" data-day="1"></div>
+              <div class="day-col" data-day="2"></div>
+              <div class="day-col" data-day="3"></div>
+              <div class="day-col" data-day="4"></div>
+              <div class="day-col" data-day="5"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="side-panel" aria-label="Resumo da agenda">
+        <section class="panel-card">
+          <div class="panel-title"><h2>Hoje</h2><span>seg, 15 jun</span></div>
+          <div class="summary-grid">
+            <div class="summary-item"><strong id="summaryTotal">0</strong><span>atendimentos na grade</span></div>
+            <div class="summary-item"><strong id="summaryOpen">0</strong><span>vagas em Pilates</span></div>
+            <div class="summary-item"><strong id="summaryEval">0</strong><span>avaliações sinalizadas</span></div>
+            <div class="summary-item"><strong id="summaryWait">0</strong><span>em lista de espera</span></div>
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-title"><h2>Próximas</h2><span>a confirmar</span></div>
+          <div class="next-list" id="nextList"></div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-title"><h2>Capacidade</h2><span>regra do cadastro</span></div>
+          <div class="legend-list">
+            <div class="legend-row"><span class="left"><i class="swatch" style="--swatch: var(--color-alaranjado);"></i>Pilates</span><span class="rule">até 4 pessoas</span></div>
+            <div class="legend-row"><span class="left"><i class="swatch" style="--swatch: var(--color-verde);"></i>Fisio pélvica</span><span class="rule">1 por slot</span></div>
+            <div class="legend-row"><span class="left"><i class="swatch" style="--swatch: var(--color-bege);"></i>Avaliação</span><span class="rule">badge no bloco</span></div>
+          </div>
+          <div class="panel-note">Quando um horário está completo, o popover mostra a lista de espera e mantém a ação de reagendar sem criar overbooking silencioso.</div>
+        </section>
+      </aside>
+    </section>
+  </main>
+</div>
+<button class="mobile-backdrop" type="button" aria-label="Fechar navegação" data-menu-close></button>
+
+<aside class="popover" id="popover" aria-live="polite"></aside>
+
+<div class="modal-backdrop" id="bookingModal" role="dialog" aria-modal="true" aria-labelledby="bookingTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="bookingTitle">Novo agendamento</h2>
+        <p>Escolha o serviço e confirme a capacidade antes de salvar o horário.</p>
+      </div>
+      <button class="pop-close" type="button" aria-label="Fechar" data-close-booking>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form class="modal-form" id="bookingForm">
+      <div class="form-grid">
+        <div class="field"><label for="bookingClient">Cliente</label><input id="bookingClient" required value="Fernanda Martins"/></div>
+        <div class="field"><label for="bookingService">Serviço</label><select id="bookingService"><option>Pilates aparelhos</option><option>Avaliação pélvica</option><option>Fisio pélvica</option></select></div>
+        <div class="field"><label for="bookingProfessional">Profissional</label><select id="bookingProfessional"><option>Larissa Ferraz</option><option>Tainara Fracasso</option><option>Bruna Kipper</option></select></div>
+        <div class="field"><label for="bookingRoom">Sala</label><select id="bookingRoom"><option>Estúdio Pilates</option><option>Sala Pélvica</option><option>Sala Avaliação</option></select></div>
+        <div class="field"><label for="bookingDay">Dia</label><select id="bookingDay"><option value="0">Seg, 15 jun</option><option value="1">Ter, 16 jun</option><option value="2">Qua, 17 jun</option><option value="3">Qui, 18 jun</option><option value="4">Sex, 19 jun</option><option value="5">Sáb, 20 jun</option></select></div>
+        <div class="field"><label for="bookingTime">Horário</label><select id="bookingTime"><option>12:00</option><option>07:00</option><option>08:00</option><option>09:00</option><option>10:00</option><option>11:00</option><option>14:00</option><option>15:00</option><option>16:00</option><option>17:00</option><option>18:00</option></select></div>
+      </div>
+      <div class="field"><label for="bookingNote">Observação curta</label><input id="bookingNote" value="Preferência por avaliação antes de aderir ao plano"/></div>
+      <div class="modal-status" id="bookingStatus"></div>
+      <div class="modal-actions">
+        <button class="ghost-btn" type="button" data-close-booking>Cancelar</button>
+        <button class="primary-btn" type="submit">Salvar agendamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const HOUR_START = 7;
+  const HOUR_END = 19;
+  const HOUR_PX = 60;
+  const DAYS = [
+    { dow: "Seg", date: "15", mon: "jun" },
+    { dow: "Ter", date: "16", mon: "jun" },
+    { dow: "Qua", date: "17", mon: "jun" },
+    { dow: "Qui", date: "18", mon: "jun" },
+    { dow: "Sex", date: "19", mon: "jun" },
+    { dow: "Sáb", date: "20", mon: "jun" }
+  ];
+  const SERVICE_STYLE = {
+    pilates: { color: "var(--service-pilates)", bg: "var(--service-pilates-soft)", ink: "var(--service-pilates-ink)" },
+    pelvica: { color: "var(--service-pelvica)", bg: "var(--service-pelvica-soft)", ink: "var(--service-pelvica-ink)" },
+    avaliacao: { color: "var(--service-avaliacao)", bg: "var(--service-avaliacao-soft)", ink: "var(--service-pilates-ink)" }
+  };
+  const SCHEDULE = [
+    { id: 1, day: 0, start: "07:00", dur: 60, pilar: "Pilates", service: "Pilates aparelhos", professional: "Larissa Ferraz", room: "Estúdio Pilates", clients: ["Marina Paiva", "Clara Duarte", "Nina Fonseca"], capacity: 4, tags: ["AULA EXPERIMENTAL"], note: "Clara veio do funil e fará a primeira aula acompanhada.", waitlist: [] },
+    { id: 2, day: 0, start: "08:00", dur: 60, pilar: "Fisio pélvica", service: "Avaliação pélvica", professional: "Tainara Fracasso", room: "Sala Pélvica", clients: ["Eduarda Bertotti"], capacity: 1, tags: ["AVALIAÇÃO"], note: "Pós-parto de 4 meses. Manter sala reservada.", waitlist: ["Rafaela Nunes"] },
+    { id: 3, day: 0, start: "10:00", dur: 60, pilar: "Pilates", service: "Pilates aparelhos", professional: "Larissa Ferraz", room: "Estúdio Pilates", clients: ["Daniela Marquetti", "Bianca Marchetti", "Sofia Souza", "Helena Tartas"], capacity: 4, tags: [], note: "Turma recorrente do plano Pilates Essencial.", waitlist: ["Aline Costa"] },
+    { id: 4, day: 0, start: "16:00", dur: 60, pilar: "Pilates", service: "Pilates aparelhos", professional: "Bruna Kipper", room: "Estúdio Pilates", clients: ["Camila Antunes", "Júlia Pellanda"], capacity: 4, tags: ["AULA EXPERIMENTAL"], note: "Júlia fará aula experimental antes da proposta de plano.", waitlist: [] },
+    { id: 5, day: 1, start: "09:00", dur: 60, pilar: "Fisio pélvica", service: "Fisio pélvica", professional: "Tainara Fracasso", room: "Sala Pélvica", clients: ["Patrícia Lima"], capacity: 1, tags: [], note: "Retorno com evolução anexada na ficha.", waitlist: [] },
+    { id: 6, day: 1, start: "11:00", dur: 60, pilar: "Pilates", service: "Pilates aparelhos", professional: "Larissa Ferraz", room: "Estúdio Pilates", clients: ["Aline Tessari", "Renata Oliveira", "Vanessa Borba"], capacity: 4, tags: [], note: "Slot com uma vaga livre.", waitlist: [] },
+    { id: 7, day: 2, start: "08:00", dur: 60, pilar: "Pilates", service: "Pilates aparelhos", professional: "Bruna Kipper", room: "Estúdio Pilates", clients: ["Beatriz Almeida", "Letícia Pereira", "Camila Ribeiro"], capacity: 4, tags: ["AULA EXPERIMENTAL"], note: "Beatriz está no primeiro mês do plano.", waitlist: [] },
+    { id: 8, day: 2, start: "14:00", dur: 60, pilar: "Fisio pélvica", service: "Avaliação pélvica", professional: "Tainara Fracasso", room: "Sala Avaliação", clients: ["Carla Vasconcelos"], capacity: 1, tags: ["AVALIAÇÃO"], note: "Lead convertido pelo WhatsApp. Enviar contrato após avaliação.", waitlist: [] },
+    { id: 9, day: 3, start: "07:00", dur: 60, pilar: "Pilates", service: "Pilates aparelhos", professional: "Larissa Ferraz", room: "Estúdio Pilates", clients: ["Mariana Bessa", "Andrea Pellanda", "Sofia Bertolini", "Lúcia Andrade"], capacity: 4, tags: [], note: "Turma cheia. Usar lista de espera para novos pedidos.", waitlist: ["Nathalia Freitas", "Paula Tavares"] },
+    { id: 10, day: 3, start: "13:00", dur: 60, pilar: "Fisio pélvica", service: "Fisio pélvica", professional: "Tainara Fracasso", room: "Sala Pélvica", clients: ["Bianca Tartas"], capacity: 1, tags: [], note: "Manter intervalo antes do próximo atendimento.", waitlist: [] },
+    { id: 11, day: 4, start: "15:00", dur: 60, pilar: "Pilates", service: "Pilates aparelhos", professional: "Bruna Kipper", room: "Estúdio Pilates", clients: ["Aline Costa", "Andrea Bessa"], capacity: 4, tags: ["AULA EXPERIMENTAL"], note: "Andrea pediu lembrete por WhatsApp.", waitlist: [] },
+    { id: 12, day: 5, start: "09:00", dur: 60, pilar: "Fisio pélvica", service: "Avaliação pélvica", professional: "Tainara Fracasso", room: "Sala Pélvica", clients: ["Camila Ribeiro"], capacity: 1, tags: ["AVALIAÇÃO"], note: "Atendimento individual. Preparar ficha de anamnese.", waitlist: [] }
+  ];
+
+  const els = {
+    daysHeader: document.getElementById("daysHeader"),
+    hoursCol: document.getElementById("hoursCol"),
+    dayCols: Array.from(document.querySelectorAll(".day-col")),
+    gridScroll: document.getElementById("gridScroll"),
+    search: document.getElementById("search"),
+    professional: document.getElementById("professional"),
+    room: document.getElementById("room"),
+    pillar: document.getElementById("pillar"),
+    popover: document.getElementById("popover"),
+    modal: document.getElementById("bookingModal"),
+    form: document.getElementById("bookingForm"),
+    status: document.getElementById("bookingStatus"),
+    nextList: document.getElementById("nextList"),
+    summaryTotal: document.getElementById("summaryTotal"),
+    summaryOpen: document.getElementById("summaryOpen"),
+    summaryEval: document.getElementById("summaryEval"),
+    summaryWait: document.getElementById("summaryWait")
+  };
+
+  function parseTime(time) {
+    const [h, m] = time.split(":").map(Number);
+    return { h, m };
+  }
+  function topFor(time) {
+    const { h, m } = parseTime(time);
+    return ((h - HOUR_START) + m / 60) * HOUR_PX;
+  }
+  function endTime(start, dur) {
+    const { h, m } = parseTime(start);
+    const total = h * 60 + m + dur;
+    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  }
+  function serviceKey(item) {
+    if (item.pilar === "Fisio pélvica") return "pelvica";
+    return "pilates";
+  }
+  function initials(name) {
+    return name.split(" ").slice(0, 2).map(part => part[0]).join("").toUpperCase();
+  }
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+  }
+  function matchesFilters(item) {
+    const query = els.search.value.trim().toLowerCase();
+    const text = [item.service, item.pilar, item.professional, item.room, item.note, item.clients.join(" ")].join(" ").toLowerCase();
+    return (!query || text.includes(query)) &&
+      (els.professional.value === "todos" || item.professional === els.professional.value) &&
+      (els.room.value === "todos" || item.room === els.room.value) &&
+      (els.pillar.value === "todos" || item.pilar === els.pillar.value);
+  }
+
+  function renderDays() {
+    const counts = DAYS.map((_, index) => SCHEDULE.filter(item => item.day === index && matchesFilters(item)).length);
+    els.daysHeader.innerHTML = `<div class="dh-spacer"></div>` + DAYS.map((day, index) => `
+      <div class="dh-cell">
+        <span class="dh-dow">${day.dow}</span>
+        <span class="dh-date">${day.date} <small>${day.mon}</small></span>
+        <span class="dh-count">${counts[index]} blocos</span>
+      </div>
+    `).join("");
+  }
+  function renderHours() {
+    let html = "";
+    for (let h = HOUR_START + 1; h <= HOUR_END; h += 1) {
+      html += `<span class="hour-label" style="top:${(h - HOUR_START) * HOUR_PX}px">${String(h).padStart(2, "0")}:00</span>`;
+    }
+    els.hoursCol.innerHTML = html;
+  }
+  function renderFreeSlots() {
+    const slots = [
+      { day: 0, start: "12:00" },
+      { day: 1, start: "14:00" },
+      { day: 2, start: "11:00" },
+      { day: 3, start: "16:00" },
+      { day: 4, start: "09:00" },
+      { day: 5, start: "11:00" }
+    ];
+    slots.forEach(slot => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "free-slot";
+      el.style.top = `${topFor(slot.start)}px`;
+      el.style.height = `${HOUR_PX - 2}px`;
+      el.setAttribute("aria-label", `Novo agendamento ${DAYS[slot.day].dow} ${slot.start}`);
+      el.addEventListener("click", () => openBooking({ day: slot.day, start: slot.start }));
+      els.dayCols[slot.day].appendChild(el);
+    });
+  }
+  function renderEvents() {
+    els.dayCols.forEach(col => col.querySelectorAll(".event,.free-slot").forEach(node => node.remove()));
+    renderFreeSlots();
+    SCHEDULE.filter(matchesFilters).forEach(item => {
+      const style = SERVICE_STYLE[serviceKey(item)];
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "event";
+      el.dataset.id = item.id;
+      el.style.top = `${topFor(item.start)}px`;
+      el.style.height = `${(item.dur / 60) * HOUR_PX - 4}px`;
+      el.style.setProperty("--event-color", style.color);
+      el.style.setProperty("--event-bg", style.bg);
+      el.style.setProperty("--event-ink", style.ink);
+      const capacity = `${item.clients.length}/${item.capacity}`;
+      const tags = item.tags.map(tag => `<span class="tag ${tag === "AVALIAÇÃO" ? "pelvica" : "highlight"}">${escapeHtml(tag)}</span>`).join("");
+      el.innerHTML = `
+        <div class="event-top"><span>${item.start}–${endTime(item.start, item.dur)}</span><span class="capacity">${capacity}</span></div>
+        <div class="event-name">${escapeHtml(item.service)} · ${escapeHtml(item.clients[0])}${item.clients.length > 1 ? ` +${item.clients.length - 1}` : ""}</div>
+        <div class="event-meta">${tags}<span class="tag">${escapeHtml(item.professional.split(" ")[0])}</span></div>
+      `;
+      el.addEventListener("click", event => openPopover(item, el, event));
+      els.dayCols[item.day].appendChild(el);
+    });
+    renderDays();
+    renderPanel();
+  }
+  function renderPanel() {
+    const filtered = SCHEDULE.filter(matchesFilters);
+    const today = SCHEDULE.filter(item => item.day === 0);
+    const openSeats = filtered.filter(item => item.pilar === "Pilates").reduce((total, item) => total + Math.max(0, item.capacity - item.clients.length), 0);
+    const evals = filtered.filter(item => item.tags.includes("AVALIAÇÃO") || item.tags.includes("AULA EXPERIMENTAL")).length;
+    const waiting = filtered.reduce((total, item) => total + item.waitlist.length, 0);
+    els.summaryTotal.textContent = today.length;
+    els.summaryOpen.textContent = openSeats;
+    els.summaryEval.textContent = evals;
+    els.summaryWait.textContent = waiting;
+    els.nextList.innerHTML = filtered.slice(0, 4).map(item => `
+      <div class="next-item">
+        <div class="time-pill">${item.start}<br><small>${DAYS[item.day].dow}</small></div>
+        <div>
+          <div class="next-name">${escapeHtml(item.clients[0])}${item.clients.length > 1 ? ` +${item.clients.length - 1}` : ""}</div>
+          <div class="next-sub">${escapeHtml(item.service)} · ${escapeHtml(item.professional)} · ${item.clients.length}/${item.capacity}</div>
+        </div>
+      </div>
+    `).join("") || `<div class="next-sub">Nenhum horário encontrado para os filtros atuais.</div>`;
+  }
+  function openPopover(item, anchor) {
+    document.querySelectorAll(".event.selected").forEach(node => node.classList.remove("selected"));
+    anchor.classList.add("selected");
+    const rect = anchor.getBoundingClientRect();
+    const popWidth = Math.min(360, window.innerWidth - 32);
+    const popHeight = Math.min(420, window.innerHeight - 32);
+    const popX = Math.max(16, Math.min(window.innerWidth - popWidth - 16, rect.right + 12));
+    const popY = Math.max(16, Math.min(window.innerHeight - popHeight - 16, rect.top - 12));
+    const people = item.clients.map(name => `<span class="tag"><span class="avatar sm ${item.pilar === "Fisio pélvica" ? "pelvica" : ""}">${initials(name)}</span>${escapeHtml(name)}</span>`).join("");
+    const waitlist = item.waitlist.length ? `<div class="waitlist"><strong>Lista de espera:</strong> ${item.waitlist.map(escapeHtml).join(", ")}. Reagendar ou liberar vaga antes de incluir mais uma pessoa.</div>` : "";
+    els.popover.innerHTML = `
+      <div class="pop-head">
+        <div class="pop-kicker"><span>${escapeHtml(item.pilar)} · ${item.clients.length}/${item.capacity}</span><button class="pop-close" type="button" aria-label="Fechar" data-pop-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <h2 class="pop-title">${escapeHtml(item.service)}</h2>
+        <div class="pop-sub">${DAYS[item.day].dow}, ${DAYS[item.day].date} ${DAYS[item.day].mon} · ${item.start}–${endTime(item.start, item.dur)}</div>
+      </div>
+      <div class="pop-body">
+        <div class="pop-row"><span class="label">Clientes</span><span class="value people-list">${people}</span></div>
+        <div class="pop-row"><span class="label">Equipe</span><span class="value">${escapeHtml(item.professional)} · ${escapeHtml(item.room)}</span></div>
+        <div class="pop-row"><span class="label">Serviço</span><span class="value">${item.tags.map(tag => `<span class="tag ${tag === "AVALIAÇÃO" ? "pelvica" : "highlight"}">${escapeHtml(tag)}</span>`).join("")}<span class="tag">${escapeHtml(item.pilar)}</span></span></div>
+        <div class="pop-row"><span class="label">Observação</span><span class="value">${escapeHtml(item.note)}</span></div>
+        ${waitlist}
+      </div>
+      <div class="pop-actions">
+        <button class="ghost-btn" type="button">Reagendar</button>
+        <a class="ghost-btn" href="11 Ficha do cliente.html">Abrir ficha</a>
+        <button class="danger-btn" type="button">Cancelar</button>
+      </div>
+    `;
+    els.popover.style.left = `${popX}px`;
+    els.popover.style.top = `${popY}px`;
+    els.popover.classList.add("open");
+  }
+  function closePopover() {
+    els.popover.classList.remove("open");
+    document.querySelectorAll(".event.selected").forEach(node => node.classList.remove("selected"));
+  }
+  function openBooking(seed = {}) {
+    els.modal.classList.add("open");
+    els.status.textContent = "";
+    if (seed.day !== undefined) document.getElementById("bookingDay").value = String(seed.day);
+    if (seed.start) document.getElementById("bookingTime").value = seed.start;
+    document.getElementById("bookingClient").focus();
+  }
+  function closeBooking() {
+    els.modal.classList.remove("open");
+  }
+  function addBooking(event) {
+    event.preventDefault();
+    const service = document.getElementById("bookingService").value;
+    const isPelvica = service.includes("pélvica");
+    const day = Number(document.getElementById("bookingDay").value);
+    const start = document.getElementById("bookingTime").value;
+    const room = isPelvica ? "Sala Pélvica" : document.getElementById("bookingRoom").value;
+    const professional = isPelvica ? "Tainara Fracasso" : document.getElementById("bookingProfessional").value;
+    const existing = SCHEDULE.find(item => item.day === day && item.start === start && item.room === room);
+    const capacity = isPelvica ? 1 : 4;
+    const client = document.getElementById("bookingClient").value.trim();
+    if (!client) {
+      els.status.textContent = "Informe o nome do cliente para continuar.";
+      return;
+    }
+    if (existing && existing.clients.length >= existing.capacity) {
+      els.status.textContent = `Horário completo. ${client} foi preparado para lista de espera deste slot.`;
+      existing.waitlist.push(client);
+      renderEvents();
+      return;
+    }
+    if (existing && existing.pilar === "Pilates" && !isPelvica) {
+      existing.clients.push(client);
+      if (service.includes("Pilates") && !existing.tags.includes("AULA EXPERIMENTAL")) existing.tags.push("AULA EXPERIMENTAL");
+      els.status.textContent = `${client} incluída no slot de Pilates (${existing.clients.length}/${existing.capacity}).`;
+      renderEvents();
+      return;
+    }
+    SCHEDULE.push({
+      id: Date.now(),
+      day,
+      start,
+      dur: 60,
+      pilar: isPelvica ? "Fisio pélvica" : "Pilates",
+      service,
+      professional,
+      room,
+      clients: [client],
+      capacity,
+      tags: service.includes("Avaliação") ? ["AVALIAÇÃO"] : service.includes("Pilates") ? ["AULA EXPERIMENTAL"] : [],
+      note: document.getElementById("bookingNote").value.trim() || "Agendamento criado pela agenda completa.",
+      waitlist: []
+    });
+    els.status.textContent = `${client} foi agendada para ${DAYS[day].dow}, ${start}.`;
+    renderEvents();
+  }
+
+  renderHours();
+  renderEvents();
+  requestAnimationFrame(() => { els.gridScroll.scrollTop = 40; });
+
+  [els.search, els.professional, els.room, els.pillar].forEach(control => {
+    control.addEventListener("input", renderEvents);
+    control.addEventListener("change", renderEvents);
+  });
+  document.querySelector("[data-open-booking]").addEventListener("click", () => openBooking());
+  document.querySelectorAll("[data-close-booking]").forEach(button => button.addEventListener("click", closeBooking));
+  els.form.addEventListener("submit", addBooking);
+  els.modal.addEventListener("click", event => { if (event.target === els.modal) closeBooking(); });
+  document.addEventListener("click", event => {
+    if (event.target.closest("[data-pop-close]")) closePopover();
+    if (!event.target.closest(".popover") && !event.target.closest(".event")) closePopover();
+  });
+  document.querySelector("[data-menu-open]").addEventListener("click", () => document.body.classList.add("menu-open"));
+  document.querySelector("[data-menu-close]").addEventListener("click", () => document.body.classList.remove("menu-open"));
+  document.querySelector("[data-today]").addEventListener("click", () => { els.pillar.value = "todos"; els.professional.value = "todos"; els.room.value = "todos"; els.search.value = ""; renderEvents(); });
+  document.querySelectorAll(".sb-item").forEach(item => {
+    item.addEventListener("click", event => {
+      if (item.getAttribute("href") && item.getAttribute("href") !== "#") return;
+      event.preventDefault();
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,1181 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis OS · Amanda Ribeiro · Contrato</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  /* ============================================================
+     Corporis OS — Ficha · aba Contrato
+     ============================================================ */
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --surface-raised: var(--bg-card);
+    --surface-sunken: var(--bg-2);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); overflow: hidden; }
+
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh; width: 100vw;
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid; grid-template-rows: auto 1fr auto; min-height: 0;
+  }
+  .sb-logo { padding: 22px 24px 14px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+  .sb-scroll { overflow-y: auto; padding: 4px 16px 12px; min-height: 0; }
+  .sb-scroll::-webkit-scrollbar { width: 8px; }
+  .sb-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .sb-group { margin-top: 14px; }
+  .sb-group:first-child { margin-top: 2px; }
+  .sb-section-label {
+    font-family: var(--font-body); font-size: 10px; letter-spacing: 2.4px;
+    text-transform: uppercase; color: var(--color-bege); font-weight: 500; padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex; align-items: center; gap: 12px; padding: 9px 14px;
+    border-radius: var(--radius-md); color: var(--color-texto-medio);
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 400;
+    text-decoration: none; cursor: pointer; position: relative;
+    transition: background var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex-shrink: 0; }
+  .sb-item:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+  .sb-item.active { background: var(--color-bege-claro); color: var(--color-texto-escuro); font-weight: 500; }
+  .sb-item.active::before {
+    content: ""; position: absolute; left: 0; top: 9px; bottom: 9px;
+    width: 2px; background: var(--color-alaranjado); border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto; background: var(--color-alaranjado); color: #fff;
+    font-size: 10px; font-weight: 500; padding: 1px 7px; border-radius: var(--radius-pill);
+    font-feature-settings: "tnum";
+  }
+  .sb-footer { border-top: 0.6px solid var(--color-cinza); padding: 10px 16px 12px; }
+  .sb-user { display: flex; align-items: center; gap: 12px; padding: 10px; margin-top: 4px; border-radius: var(--radius-md); }
+  .avatar {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: var(--color-texto-escuro);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500; flex-shrink: 0;
+  }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--color-texto-escuro); line-height: 1.2; }
+  .sb-user-role { font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); margin-top: 2px; }
+  .sb-user-action {
+    background: transparent; border: 0; color: var(--color-texto-medio);
+    padding: 6px; border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  /* ===== Main ===== */
+  .main { display: grid; grid-template-rows: var(--topbar-h) 1fr; min-width: 0; overflow: hidden; }
+  .topbar {
+    background: var(--bg-1); border-bottom: 0.6px solid var(--color-cinza);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+  }
+  .crumbs {
+    display: inline-flex; align-items: center; gap: 14px;
+    font-family: var(--font-body); font-size: 13px; color: var(--color-texto-medio);
+  }
+  .crumbs .back {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px 7px 10px;
+    border: 0.6px solid var(--color-cinza); background: var(--surface-raised);
+    color: var(--color-texto-medio); text-decoration: none; border-radius: var(--radius-pill);
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .crumbs .back svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  .crumbs .back:hover { color: var(--color-alaranjado); border-color: var(--color-tangerina); background: var(--color-bege-claro); }
+  .crumbs .sep { color: var(--color-cinza); }
+  .crumbs .here { color: var(--color-texto-escuro); font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza); background: var(--surface-raised);
+    color: var(--color-texto-medio); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    transition: color var(--duration-fast) var(--ease-soft), background var(--duration-fast) var(--ease-soft);
+  }
+  .icon-btn svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .icon-btn:hover { color: var(--color-alaranjado); background: var(--color-bege-claro); }
+  .icon-btn .notif-dot {
+    position: absolute; top: 8px; right: 9px;
+    width: 7px; height: 7px; border-radius: var(--radius-pill);
+    background: var(--color-alaranjado); border: 1.5px solid var(--surface-raised);
+  }
+
+  /* ===== Content layout ===== */
+  .content-wrap { overflow: auto; padding: 24px 32px 48px; min-height: 0; }
+  .content-wrap::-webkit-scrollbar { width: 10px; }
+  .content-wrap::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .two-col {
+    display: grid; grid-template-columns: minmax(0, 1fr) 324px;
+    gap: 26px; max-width: 1320px; margin: 0 auto;
+  }
+
+  /* ===== Client Header ===== */
+  .client-header {
+    background: var(--surface-raised); border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg); padding: 28px 28px 22px;
+    margin-bottom: 22px; box-shadow: var(--shadow-sm);
+  }
+  .ch-top { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: flex-start; }
+  .ch-avatar {
+    width: 76px; height: 76px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: #6B5526;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 400; font-size: 30px;
+    letter-spacing: -0.01em; flex-shrink: 0;
+  }
+  .ch-meta { min-width: 0; }
+  .ch-name {
+    font-family: var(--font-display); font-weight: 400; font-size: 36px;
+    line-height: 1.1; letter-spacing: -0.005em; color: var(--color-texto-escuro);
+    margin: 0 0 10px; text-wrap: pretty;
+  }
+  .ch-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 1.3px; line-height: 1;
+    padding: 6px 12px 6px 10px; border-radius: var(--radius-pill);
+  }
+  .badge .bdot { width: 6px; height: 6px; border-radius: var(--radius-pill); }
+  .badge.tipo { background: var(--color-bege-claro); color: #6B5526; }
+  .badge.tipo .bdot { background: var(--color-bege); }
+  .badge.status-ok { background: rgba(172,192,149,0.20); color: #5F7948; }
+  .badge.status-ok .bdot { background: var(--color-verde); box-shadow: 0 0 0 3px rgba(172,192,149,0.22); }
+  .badge.pilar { background: rgba(240,131,83,0.10); color: #B85A2E; border: 0.6px solid rgba(240,131,83,0.30); }
+  .badge.fisio { background: rgba(172,192,149,0.20); color: #5F7948; border: 0.6px solid rgba(172,192,149,0.40); }
+  .ch-contact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
+  .ch-contact-item {
+    display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px;
+    border: 0.6px solid var(--color-cinza); border-radius: var(--radius-pill); background: var(--bg-1);
+    font-family: "Ubuntu Mono", ui-monospace, monospace; font-size: 12.5px;
+    color: var(--color-texto-medio); font-feature-settings: "tnum";
+  }
+  .ch-contact-item svg { width: 14px; height: 14px; stroke-width: 1.6; color: var(--color-bege); }
+  .ch-actions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    margin-top: 22px; padding-top: 20px; border-top: 0.6px solid var(--color-cinza);
+  }
+  .btn {
+    appearance: none; border: 0.6px solid var(--color-cinza); background: var(--surface-raised);
+    color: var(--color-texto-escuro); border-radius: var(--radius-pill);
+    padding: 9px 16px; font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    transition: all var(--duration-fast) var(--ease-soft); text-decoration: none; white-space: nowrap;
+  }
+  .btn svg { width: 14px; height: 14px; stroke-width: 1.7; }
+  .btn:hover { background: var(--color-bege-claro); border-color: var(--color-tangerina); }
+  .btn.primary { background: var(--color-alaranjado); border-color: var(--color-alaranjado); color: #fff; }
+  .btn.primary:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); }
+  .btn.icon-only { padding: 9px 11px; }
+  .btn.sm { font-size: 12px; padding: 7px 13px; }
+  .btn.sm svg { width: 13px; height: 13px; }
+  .btn.ghost {
+    border-color: transparent; background: transparent;
+    color: var(--color-texto-medio); font-size: 12px; padding: 7px 10px;
+  }
+  .btn.ghost:hover { background: var(--color-bege-claro); border-color: var(--color-cinza); color: var(--color-texto-escuro); }
+  .btn.danger-ghost {
+    border-color: transparent; background: transparent;
+    color: #B85A2E; font-size: 12px; padding: 7px 10px;
+  }
+  .btn.danger-ghost:hover { background: rgba(240,131,83,0.08); color: #8A3C1C; }
+  .ch-actions .spacer { flex: 1; }
+
+  /* ===== Tabs ===== */
+  .tabs-wrap {
+    background: var(--surface-raised); border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .tabs {
+    display: flex; align-items: center; border-bottom: 0.6px solid var(--color-cinza);
+    padding: 0 8px; overflow-x: auto; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    appearance: none; border: 0; background: transparent; padding: 15px 15px 13px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    color: var(--color-texto-medio); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+    transition: color var(--duration-fast) var(--ease-soft), border-color var(--duration-fast) var(--ease-soft);
+    text-decoration: none;
+  }
+  .tab svg { width: 14px; height: 14px; stroke-width: 1.7; flex-shrink: 0; }
+  .tab .count {
+    font-size: 10.5px; color: var(--color-texto-medio);
+    background: var(--surface-sunken); padding: 1px 7px;
+    border-radius: var(--radius-pill); font-feature-settings: "tnum"; font-weight: 400;
+  }
+  .tab:hover { color: var(--color-texto-escuro); }
+  .tab.active { color: var(--color-texto-escuro); border-bottom-color: var(--color-alaranjado); }
+  .tab.active .count { background: rgba(240,131,83,0.12); color: #B85A2E; }
+
+  /* ===== Contract Timeline ===== */
+  @keyframes tl-pulse {
+    0%   { box-shadow: 0 0 0 0   rgba(240,131,83,0.38); }
+    70%  { box-shadow: 0 0 0 10px rgba(240,131,83,0); }
+    100% { box-shadow: 0 0 0 0   rgba(240,131,83,0); }
+  }
+  @keyframes dot-pulse {
+    0%   { box-shadow: 0 0 0 0  rgba(240,131,83,0.5); }
+    70%  { box-shadow: 0 0 0 5px rgba(240,131,83,0); }
+    100% { box-shadow: 0 0 0 0  rgba(240,131,83,0); }
+  }
+
+  .contract-tl {
+    display: flex; align-items: flex-start;
+    padding: 28px 32px 26px; border-bottom: 0.6px solid var(--color-cinza);
+    gap: 0;
+  }
+  .tl-step {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    min-width: 96px;
+  }
+  .tl-node {
+    width: 36px; height: 36px; border-radius: var(--radius-pill);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    position: relative;
+  }
+  .tl-node svg { width: 16px; height: 16px; stroke-width: 1.7; }
+  .tl-node.done {
+    background: var(--color-bege-claro); border: 1.5px solid var(--color-bege); color: #6B5526;
+  }
+  .tl-node.current {
+    background: var(--color-alaranjado); border: 1.5px solid var(--color-alaranjado); color: #fff;
+    animation: tl-pulse 2.6s var(--ease-soft) infinite;
+  }
+  .tl-node.pending {
+    background: var(--bg-1); border: 1.5px dashed var(--color-cinza); color: var(--color-cinza);
+  }
+  .tl-label {
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    color: var(--color-texto-escuro); line-height: 1; text-align: center;
+  }
+  .tl-label.pending { color: var(--color-texto-medio); font-weight: 400; }
+  .tl-when {
+    font-family: "Ubuntu Mono", ui-monospace, monospace; font-size: 10.5px;
+    color: var(--color-texto-medio); font-feature-settings: "tnum"; text-align: center; line-height: 1.4;
+  }
+  .tl-when.pending { color: var(--color-cinza); }
+  .tl-connector {
+    flex: 1; height: 1.5px; margin-top: 17px; align-self: flex-start;
+  }
+  .tl-connector.done  { background: var(--color-bege); }
+  .tl-connector.pending {
+    background: transparent;
+    border-top: 1.5px dashed var(--color-cinza); height: 0;
+  }
+
+  /* ===== Status Banner ===== */
+  .status-banner {
+    display: flex; align-items: flex-start; gap: 18px;
+    margin: 24px 24px 0;
+    background: rgba(240,131,83,0.055); border: 1px solid rgba(240,131,83,0.24);
+    border-radius: var(--radius-lg); padding: 20px 22px;
+  }
+  .sbn-ic {
+    width: 42px; height: 42px; border-radius: var(--radius-md);
+    background: rgba(240,131,83,0.13); color: var(--color-alaranjado);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sbn-ic svg { width: 19px; height: 19px; stroke-width: 1.5; }
+  .sbn-body { flex: 1; min-width: 0; }
+  .sbn-title {
+    font-family: var(--font-body); font-size: 14px; font-weight: 600;
+    color: #8A3C1C; line-height: 1.2; margin-bottom: 5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sbn-title .sbn-live {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase;
+    font-weight: 500; color: #B85A2E;
+    background: rgba(240,131,83,0.12); padding: 3px 9px;
+    border-radius: var(--radius-pill);
+  }
+  .sbn-title .sbn-live .ldot {
+    width: 5px; height: 5px; border-radius: var(--radius-pill);
+    background: var(--color-alaranjado);
+    animation: dot-pulse 2.6s var(--ease-soft) infinite;
+  }
+  .sbn-desc {
+    font-family: var(--font-body); font-size: 12.5px;
+    color: var(--color-texto-medio); line-height: 1.55;
+  }
+  .sbn-desc strong { color: var(--color-texto-escuro); font-weight: 500; }
+  .sbn-expire {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 8px; font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio);
+  }
+  .sbn-expire svg { width: 11px; height: 11px; stroke-width: 1.7; color: var(--color-bege); }
+  .sbn-acts {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0;
+  }
+  .sbn-acts-row { display: flex; align-items: center; gap: 8px; }
+  .btn-zap {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--color-alaranjado); border: 0.6px solid var(--color-alaranjado);
+    color: #fff; border-radius: var(--radius-pill); padding: 9px 16px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    text-decoration: none; cursor: pointer; white-space: nowrap;
+    transition: all var(--duration-fast) var(--ease-soft);
+  }
+  .btn-zap:hover { background: var(--color-tangerina); border-color: var(--color-tangerina); color: #fff; }
+  .btn-zap svg { width: 13px; height: 13px; stroke-width: 1.8; }
+  .sbn-revoke {
+    font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio);
+    background: transparent; border: 0; cursor: pointer; padding: 4px 2px;
+    text-decoration: underline; text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    transition: color var(--duration-fast) var(--ease-soft);
+  }
+  .sbn-revoke:hover { color: #B85A2E; }
+
+  /* ===== Contract Data Card ===== */
+  .contract-data {
+    margin: 20px 24px 0;
+    border: 0.6px solid var(--color-cinza); border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .cdata-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 20px 14px; border-bottom: 0.6px solid var(--color-cinza);
+    background: var(--bg-1);
+  }
+  .cdata-ic {
+    width: 34px; height: 34px; border-radius: var(--radius-md);
+    background: var(--color-bege-claro); color: #6B5526;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .cdata-ic svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  .cdata-title {
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 500;
+    color: var(--color-texto-escuro); flex: 1;
+  }
+  .cdata-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    background: var(--bg-1);
+  }
+  .cdata-field {
+    padding: 15px 20px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    border-right: 0.6px solid var(--color-cinza);
+  }
+  .cdata-field:nth-child(even)  { border-right: 0; }
+  .cdata-field:nth-last-child(-n+2) { border-bottom: 0; }
+  .cdata-field:last-child:nth-child(odd) {
+    border-right: 0; grid-column: 1 / -1;
+  }
+  .cdata-k {
+    display: block; font-family: var(--font-body); font-size: 10px; font-weight: 500;
+    letter-spacing: 1.6px; text-transform: uppercase; color: var(--color-bege); margin-bottom: 6px;
+  }
+  .cdata-v {
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 500;
+    color: var(--color-texto-escuro); line-height: 1.4;
+  }
+  .cdata-v.mono {
+    font-family: "Ubuntu Mono", ui-monospace, monospace;
+    font-feature-settings: "tnum"; font-size: 13px;
+  }
+  .cdata-sub {
+    display: block; font-family: var(--font-body); font-size: 11.5px;
+    font-weight: 400; color: var(--color-texto-medio); margin-top: 2px;
+  }
+  .cdata-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-family: var(--font-body); font-weight: 500;
+    padding: 3px 10px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: #6B5526; margin-top: 4px;
+  }
+  .cdata-chip svg { width: 11px; height: 11px; stroke-width: 1.7; }
+
+  /* ===== Via Assinada (locked) ===== */
+  .via-section {
+    display: flex; align-items: center; gap: 16px;
+    margin: 16px 24px 26px;
+    border: 0.6px dashed var(--color-cinza); border-radius: var(--radius-lg);
+    padding: 18px 22px; opacity: 0.65;
+  }
+  .via-ic {
+    width: 38px; height: 38px; border-radius: var(--radius-md);
+    background: var(--surface-sunken); color: var(--color-cinza);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .via-ic svg { width: 17px; height: 17px; stroke-width: 1.5; }
+  .via-body { flex: 1; min-width: 0; }
+  .via-title {
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    color: var(--color-texto-medio); line-height: 1.3;
+  }
+  .via-sub {
+    font-family: var(--font-body); font-size: 11.5px;
+    color: var(--color-cinza); margin-top: 3px; line-height: 1.45;
+  }
+
+  /* ===== Side column ===== */
+  .side-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .side-card {
+    background: var(--surface-raised); border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg); padding: 22px 22px 20px; box-shadow: var(--shadow-sm);
+  }
+  .side-card h3 {
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    letter-spacing: 1.8px; text-transform: uppercase; color: var(--color-bege);
+    margin: 0 0 18px;
+  }
+
+  /* Signers */
+  .signer-list { display: flex; flex-direction: column; gap: 0; }
+  .signer-row {
+    display: flex; align-items: center; gap: 13px;
+    padding: 12px 0; border-bottom: 0.6px solid var(--color-cinza);
+  }
+  .signer-row:first-child { padding-top: 0; }
+  .signer-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .signer-av {
+    width: 34px; height: 34px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); color: #6B5526; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 11px; font-weight: 500;
+  }
+  .signer-meta { flex: 1; min-width: 0; }
+  .signer-name {
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    color: var(--color-texto-escuro); line-height: 1.3;
+  }
+  .signer-role {
+    font-family: var(--font-body); font-size: 11px; color: var(--color-texto-medio); margin-top: 1px;
+  }
+  .sig-status { flex-shrink: 0; }
+  .sig-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-body); font-size: 10.5px; font-weight: 500;
+    padding: 4px 10px; border-radius: var(--radius-pill);
+  }
+  .sig-badge .sdot { width: 5px; height: 5px; border-radius: var(--radius-pill); }
+  .sig-badge.signed  { background: rgba(172,192,149,0.20); color: #5F7948; }
+  .sig-badge.signed .sdot { background: var(--color-verde); }
+  .sig-badge.waiting { background: rgba(240,131,83,0.10); color: #B85A2E; }
+  .sig-badge.waiting .sdot {
+    background: var(--color-alaranjado);
+    animation: dot-pulse 2.6s var(--ease-soft) infinite;
+  }
+
+  /* History */
+  .hist-list { display: flex; flex-direction: column; }
+  .hist-row {
+    display: flex; align-items: flex-start; gap: 11px;
+    padding: 11px 0; border-bottom: 0.6px solid var(--color-cinza);
+  }
+  .hist-row:first-child { padding-top: 0; }
+  .hist-row:last-child  { border-bottom: 0; padding-bottom: 0; }
+  .hist-dot-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 0; flex-shrink: 0;
+    padding-top: 4px;
+  }
+  .hist-dot {
+    width: 7px; height: 7px; border-radius: var(--radius-pill);
+    background: var(--color-bege-claro); border: 1.5px solid var(--color-bege); flex-shrink: 0;
+  }
+  .hist-body { flex: 1; min-width: 0; }
+  .hist-action {
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    color: var(--color-texto-escuro); line-height: 1.3;
+  }
+  .hist-sub {
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio); margin-top: 2px; line-height: 1.4;
+  }
+  .hist-when {
+    font-family: "Ubuntu Mono", ui-monospace, monospace;
+    font-size: 10.5px; color: var(--color-texto-medio);
+    font-feature-settings: "tnum"; flex-shrink: 0; padding-top: 2px;
+  }
+
+  /* ZapSign integration card */
+  .zap-card {
+    background: var(--surface-raised); border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-lg); padding: 18px 20px; box-shadow: var(--shadow-sm);
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .zap-ic {
+    width: 34px; height: 34px; border-radius: var(--radius-md);
+    background: rgba(240,131,83,0.10); color: #B85A2E;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .zap-ic svg { width: 15px; height: 15px; stroke-width: 1.6; }
+  .zap-body { flex: 1; min-width: 0; }
+  .zap-title {
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+    color: var(--color-texto-escuro); line-height: 1.3; margin-bottom: 4px;
+  }
+  .zap-sub {
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--color-texto-medio); line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="app" data-screen-label="17 Ficha - Contrato">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <div class="sb-scroll">
+      <!-- GESTÃO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Gestão</div>
+        <nav class="sb-nav">
+          <a href="02 Dashboard.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="09 Clientes.html" class="sb-item active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Clientes
+          </a>
+          <a href="06 Agenda.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Agenda
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Vendas
+          </a>
+        </nav>
+      </div>
+
+      <!-- RELACIONAMENTO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Relacionamento</div>
+        <nav class="sb-nav">
+          <a href="03 Inbox WhatsApp.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+              <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            </svg>
+            Inbox
+            <span class="sb-badge">7</span>
+          </a>
+          <a href="04 Funil.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Funil
+          </a>
+          <a href="07 Agente de IA.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/>
+              <circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/>
+              <path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/>
+            </svg>
+            Agente de IA
+          </a>
+        </nav>
+      </div>
+
+      <!-- FINANCEIRO -->
+      <div class="sb-group">
+        <div class="sb-section-label">Financeiro</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Lançamentos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            DRE
+          </a>
+        </nav>
+      </div>
+
+      <!-- CADASTROS -->
+      <div class="sb-group">
+        <div class="sb-section-label">Cadastros</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Planos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Modelos de contrato
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+            Serviços
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            Profissionais
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+              <path d="M9 21v-4h6v4"/>
+            </svg>
+            Salas
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="sb-footer">
+      <nav class="sb-nav">
+        <a href="08 Configurações.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </nav>
+      <div class="sb-user">
+        <div class="avatar">LF</div>
+        <div class="sb-user-meta">
+          <span class="sb-user-name">Larissa Ferraz</span>
+          <span class="sb-user-role">Gestão · Corporis</span>
+        </div>
+        <button class="sb-user-action" aria-label="Mais opções">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="crumbs">
+        <a href="11 Ficha do cliente.html" class="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Voltar à ficha
+        </a>
+        <span class="sep">·</span>
+        <a href="09 Clientes.html" style="color:var(--color-texto-medio);text-decoration:none;">Clientes</a>
+        <span class="sep">›</span>
+        <a href="11 Ficha do cliente.html" style="color:var(--color-texto-medio);text-decoration:none;">Amanda Ribeiro</a>
+        <span class="sep">›</span>
+        <span class="here">Contrato</span>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" aria-label="Notificações">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="notif-dot"></span>
+        </button>
+        <button class="icon-btn" aria-label="Ajuda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content-wrap">
+      <div class="two-col">
+
+        <!-- ===== COLUNA PRINCIPAL ===== -->
+        <section class="main-col">
+
+          <!-- Header do cliente -->
+          <header class="client-header">
+            <div class="ch-top">
+              <div class="ch-avatar">AR</div>
+              <div class="ch-meta">
+                <h1 class="ch-name">Amanda Ribeiro</h1>
+                <div class="ch-badges">
+                  <span class="badge tipo"><span class="bdot"></span>Paciente</span>
+                  <span class="badge status-ok"><span class="bdot"></span>Ativa</span>
+                  <span class="badge pilar">Pilates</span>
+                  <span class="badge fisio">Fisio Pélvica</span>
+                </div>
+                <div class="ch-contact">
+                  <span class="ch-contact-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    (49) 99812-4407
+                  </span>
+                  <span class="ch-contact-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="4" width="20" height="16" rx="2"/>
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
+                    amanda.ribeiro@gmail.com
+                  </span>
+                  <span class="ch-contact-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    Chapecó · SC
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="ch-actions">
+              <button class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>
+                </svg>
+                Editar
+              </button>
+              <a href="06 Agenda.html" class="btn primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  <line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/>
+                </svg>
+                Novo agendamento
+              </a>
+              <span class="spacer"></span>
+              <a href="03 Inbox WhatsApp.html" class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+                Mensagem
+              </a>
+              <button class="btn icon-only" aria-label="Mais opções">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <!-- Tabs -->
+          <div class="tabs-wrap">
+            <nav class="tabs" role="tablist">
+              <a href="11 Ficha do cliente.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                Visão geral
+              </a>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                Dados pessoais
+              </button>
+              <a href="12 Ficha - Plano ativo.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                  <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+                Plano ativo
+              </a>
+              <a href="13 Ficha - Financeiro.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                Financeiro
+              </a>
+              <a href="14 Ficha - Anamnese.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 11H3v10h6V11zm6-8H9v18h6V3zm6 4h-6v14h6V7z"/>
+                </svg>
+                Anamnese
+              </a>
+              <button class="tab" role="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                Prontuário
+              </button>
+              <a href="15 Ficha - Evoluções.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
+                Evoluções
+                <span class="count">9</span>
+              </a>
+              <a href="16 Ficha - Documentos.html" class="tab" role="tab" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Documentos
+                <span class="count">4</span>
+              </a>
+              <button class="tab active" role="tab" aria-selected="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/>
+                </svg>
+                Contrato
+              </button>
+            </nav>
+
+            <!-- ===== CONTRATO PANE ===== -->
+            <div role="tabpanel">
+
+              <!-- TIMELINE -->
+              <div class="contract-tl">
+
+                <!-- Passo 1: Rascunho -->
+                <div class="tl-step">
+                  <div class="tl-node done">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <span class="tl-label">Rascunho</span>
+                  <span class="tl-when">14 jun · 09:35</span>
+                </div>
+
+                <!-- Linha 1 -->
+                <div class="tl-connector done"></div>
+
+                <!-- Passo 2: Enviado -->
+                <div class="tl-step">
+                  <div class="tl-node current" aria-label="Estado atual">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </div>
+                  <span class="tl-label">Enviado</span>
+                  <span class="tl-when">14 jun · 09:42</span>
+                </div>
+
+                <!-- Linha 2 -->
+                <div class="tl-connector pending"></div>
+
+                <!-- Passo 3: Assinado -->
+                <div class="tl-step">
+                  <div class="tl-node pending">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 20h9"/>
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                  </div>
+                  <span class="tl-label pending">Assinado</span>
+                  <span class="tl-when pending">—</span>
+                </div>
+
+              </div>
+              <!-- /TIMELINE -->
+
+              <!-- STATUS BANNER -->
+              <div class="status-banner" role="status">
+                <div class="sbn-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <div class="sbn-body">
+                  <div class="sbn-title">
+                    Aguardando assinatura da cliente
+                    <span class="sbn-live"><span class="ldot"></span>em aberto</span>
+                  </div>
+                  <p class="sbn-desc">
+                    Enviado em <strong>14 jun 2026 às 09:42</strong> por e-mail e WhatsApp via ZapSign
+                    para <strong>amanda.ribeiro@gmail.com</strong> e <strong>(49) 99812-4407</strong>.
+                  </p>
+                  <span class="sbn-expire">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    Link expira em 30 dias · <strong>14 jul 2026</strong>
+                  </span>
+                </div>
+                <div class="sbn-acts">
+                  <div class="sbn-acts-row">
+                    <a href="#" class="btn-zap">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                      </svg>
+                      Ver no ZapSign
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                        <polyline points="15 3 21 3 21 9"/>
+                        <line x1="10" y1="14" x2="21" y2="3"/>
+                      </svg>
+                    </a>
+                    <button class="btn sm">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="1 4 1 10 7 10"/>
+                        <path d="M3.51 15a9 9 0 1 0 .49-3.6"/>
+                      </svg>
+                      Reenviar link
+                    </button>
+                  </div>
+                  <button class="sbn-revoke">Revogar envio</button>
+                </div>
+              </div>
+              <!-- /STATUS BANNER -->
+
+              <!-- DADOS DO CONTRATO -->
+              <div class="contract-data">
+                <div class="cdata-head">
+                  <div class="cdata-ic">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                  </div>
+                  <span class="cdata-title">Dados do Contrato</span>
+                  <button class="btn sm">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    Pré-visualizar
+                  </button>
+                </div>
+                <div class="cdata-grid">
+
+                  <div class="cdata-field">
+                    <span class="cdata-k">Modelo usado</span>
+                    <span class="cdata-v">Contrato PSV — Pilates + Fisio Pélvica
+                      <span class="cdata-sub">v2.1 · Atualizado em 03 abr 2026</span>
+                    </span>
+                  </div>
+
+                  <div class="cdata-field">
+                    <span class="cdata-k">Plano</span>
+                    <span class="cdata-v">Premium
+                      <span class="cdata-sub">2× por semana · Pilates + Fisio Pélvica</span>
+                    </span>
+                  </div>
+
+                  <div class="cdata-field">
+                    <span class="cdata-k">Valor mensal</span>
+                    <span class="cdata-v mono">R$ 680,00
+                      <span class="cdata-sub">Vencimento todo dia 14</span>
+                    </span>
+                  </div>
+
+                  <div class="cdata-field">
+                    <span class="cdata-k">Vigência</span>
+                    <span class="cdata-v mono">14 jun 2026 → 14 jun 2027
+                      <span class="cdata-sub">12 meses</span>
+                    </span>
+                  </div>
+
+                  <div class="cdata-field">
+                    <span class="cdata-k">Partes contratantes</span>
+                    <span class="cdata-v">Amanda Ribeiro (contratante)
+                      <span class="cdata-sub">Corporis Clínica de Saúde Ltda (contratada)</span>
+                    </span>
+                  </div>
+
+                  <div class="cdata-field">
+                    <span class="cdata-k">Gerado em</span>
+                    <span class="cdata-v mono">14 jun 2026 · 09:35
+                      <span class="cdata-sub">por Larissa Ferraz</span>
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+              <!-- /DADOS DO CONTRATO -->
+
+              <!-- VIA ASSINADA (locked) -->
+              <div class="via-section" aria-disabled="true">
+                <div class="via-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </div>
+                <div class="via-body">
+                  <div class="via-title">Via assinada pelas partes</div>
+                  <div class="via-sub">Disponível para download após conclusão da assinatura por todos os signatários.</div>
+                </div>
+              </div>
+              <!-- /VIA ASSINADA -->
+
+            </div>
+            <!-- /CONTRATO PANE -->
+
+          </div>
+          <!-- /tabs-wrap -->
+
+        </section>
+        <!-- /main-col -->
+
+        <!-- ===== COLUNA LATERAL ===== -->
+        <aside class="side-col">
+
+          <!-- Assinantes -->
+          <div class="side-card">
+            <h3>Assinantes</h3>
+            <div class="signer-list">
+
+              <div class="signer-row">
+                <div class="signer-av">AR</div>
+                <div class="signer-meta">
+                  <div class="signer-name">Amanda Ribeiro</div>
+                  <div class="signer-role">Contratante · cliente</div>
+                </div>
+                <div class="sig-status">
+                  <span class="sig-badge waiting">
+                    <span class="sdot"></span>Aguardando
+                  </span>
+                </div>
+              </div>
+
+              <div class="signer-row">
+                <div class="signer-av">LF</div>
+                <div class="signer-meta">
+                  <div class="signer-name">Larissa Ferraz</div>
+                  <div class="signer-role">Contratada · gestão</div>
+                </div>
+                <div class="sig-status">
+                  <span class="sig-badge signed">
+                    <span class="sdot"></span>Assinado
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <!-- /Assinantes -->
+
+          <!-- Histórico -->
+          <div class="side-card">
+            <h3>Histórico</h3>
+            <div class="hist-list">
+
+              <div class="hist-row">
+                <div class="hist-dot-wrap"><div class="hist-dot"></div></div>
+                <div class="hist-body">
+                  <div class="hist-action">Contrato enviado</div>
+                  <div class="hist-sub">E-mail + WhatsApp · via ZapSign</div>
+                </div>
+                <span class="hist-when">09:42</span>
+              </div>
+
+              <div class="hist-row">
+                <div class="hist-dot-wrap"><div class="hist-dot"></div></div>
+                <div class="hist-body">
+                  <div class="hist-action">Assinado pela gestão</div>
+                  <div class="hist-sub">Larissa Ferraz</div>
+                </div>
+                <span class="hist-when">09:38</span>
+              </div>
+
+              <div class="hist-row">
+                <div class="hist-dot-wrap"><div class="hist-dot"></div></div>
+                <div class="hist-body">
+                  <div class="hist-action">Contrato gerado</div>
+                  <div class="hist-sub">Modelo PSV — v2.1</div>
+                </div>
+                <span class="hist-when">09:35</span>
+              </div>
+
+              <div class="hist-row">
+                <div class="hist-dot-wrap"><div class="hist-dot" style="background:var(--surface-sunken);border-color:var(--color-cinza);"></div></div>
+                <div class="hist-body">
+                  <div class="hist-action">Rascunho iniciado</div>
+                  <div class="hist-sub">Plano Premium selecionado</div>
+                </div>
+                <span class="hist-when">09:31</span>
+              </div>
+
+            </div>
+          </div>
+          <!-- /Histórico -->
+
+          <!-- ZapSign -->
+          <div class="zap-card">
+            <div class="zap-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </div>
+            <div class="zap-body">
+              <div class="zap-title">Assinatura via ZapSign</div>
+              <div class="zap-sub">Contrato ID #ZS-2026-04817 · autenticação por CPF e selfie.</div>
+            </div>
+          </div>
+          <!-- /ZapSign -->
+
+        </aside>
+        <!-- /side-col -->
+
+      </div>
+      <!-- /two-col -->
+    </div>
+    <!-- /content-wrap -->
+
+  </div>
+  <!-- /main -->
+
+</div>
+<!-- /app -->
+
+</body>
+</html>

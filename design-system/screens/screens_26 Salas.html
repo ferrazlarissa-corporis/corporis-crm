@@ -1,0 +1,1679 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Corporis OS · Salas</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  :root {
+    --sidebar-w: 264px;
+    --topbar-h: 64px;
+    --surface-raised: var(--bg-card);
+    --surface-soft: var(--bg-2);
+    --content-max: 1320px;
+    --accent-pilates: var(--color-alaranjado);
+    --accent-pelvica: var(--color-verde);
+    --accent-avaliacao: var(--color-bege);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg-1);
+    color: var(--color-texto-escuro);
+    overflow: hidden;
+  }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  svg { stroke-width: 1.5; }
+
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .sidebar {
+    background: var(--surface-raised);
+    border-right: 0.6px solid var(--color-cinza);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 0;
+    z-index: 20;
+  }
+  .sb-logo { padding: 22px 24px 14px; }
+  .sb-logo img { width: 132px; height: auto; display: block; }
+  .sb-scroll { overflow-y: auto; min-height: 0; padding: 4px 16px 12px; }
+  .sb-scroll::-webkit-scrollbar { width: 8px; }
+  .sb-scroll::-webkit-scrollbar-thumb { background: var(--color-cinza); border-radius: var(--radius-pill); }
+  .sb-group { margin-top: 14px; }
+  .sb-group:first-child { margin-top: 2px; }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+    padding: 0 14px 8px;
+  }
+  .sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    color: var(--color-texto-medio);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 400;
+    text-decoration: none;
+    position: relative;
+    transition: background var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft);
+  }
+  .sb-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .sb-item:hover,
+  .sb-item.active {
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+  }
+  .sb-item.active { font-weight: 500; }
+  .sb-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 2px;
+    background: var(--color-alaranjado);
+    border-radius: 2px;
+  }
+  .sb-badge {
+    margin-left: auto;
+    background: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+  }
+  .sb-footer {
+    border-top: 0.6px solid var(--color-cinza);
+    padding: 10px 16px 12px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    margin-top: 4px;
+    border-radius: var(--radius-md);
+  }
+  .sb-user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .sb-user-name { font-size: 13px; font-weight: 500; line-height: 1.2; color: var(--color-texto-escuro); }
+  .sb-user-role { font-size: 11px; color: var(--color-texto-medio); line-height: 1.3; margin-top: 2px; }
+  .sb-user-action {
+    background: transparent;
+    border: 0;
+    color: var(--color-texto-medio);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-user-action svg { width: 16px; height: 16px; }
+  .sb-user-action:hover { background: var(--color-bege-claro); color: var(--color-texto-escuro); }
+
+  .main {
+    display: grid;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .topbar {
+    background: var(--bg-1);
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 0 32px;
+  }
+  .topbar-left { display: flex; align-items: baseline; gap: 16px; min-width: 0; }
+  .topbar-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+    letter-spacing: -0.005em;
+  }
+  .topbar-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .topbar-crumb .sep {
+    width: 3px;
+    height: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--color-cinza);
+  }
+  .topbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .menu-btn { display: none; }
+
+  .btn {
+    min-height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--surface-raised);
+    color: var(--color-texto-medio);
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background var(--duration-fast) var(--ease-soft), border-color var(--duration-fast) var(--ease-soft), color var(--duration-fast) var(--ease-soft), transform var(--duration-fast) var(--ease-soft);
+    white-space: nowrap;
+  }
+  .btn svg { width: 15px; height: 15px; }
+  .btn:hover { transform: translateY(-1px); border-color: var(--color-bege); color: var(--color-texto-escuro); }
+  .btn.primary {
+    background: var(--color-alaranjado);
+    border-color: var(--color-alaranjado);
+    color: var(--color-fundo-claro);
+  }
+  .btn.subtle { background: var(--bg-2); color: var(--color-texto-escuro); }
+  .btn.icon { width: 38px; padding: 0; }
+
+  .scroll { overflow: auto; min-height: 0; }
+  .content {
+    width: min(100%, var(--content-max));
+    margin: 0 auto;
+    padding: 32px;
+  }
+  .page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  .page-head h2 {
+    max-width: 860px;
+    margin-top: 6px;
+    font-family: var(--font-display);
+    font-size: clamp(30px, 4vw, 46px);
+    line-height: 1.1;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+  }
+  .page-head p {
+    max-width: 760px;
+    margin-top: 12px;
+    color: var(--color-texto-medio);
+    font-size: 15px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--color-bege);
+    font-weight: 500;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-card,
+  .filter-card,
+  .room-card,
+  .side-panel,
+  .empty-state {
+    background: var(--bg-card);
+    border: 0.6px solid var(--color-cinza);
+    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-lg);
+  }
+  .summary-card {
+    padding: 18px;
+    min-height: 132px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .summary-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .summary-label {
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+  }
+  .summary-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bege-claro);
+    color: var(--color-texto-escuro);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .summary-icon svg { width: 16px; height: 16px; }
+  .summary-value {
+    margin-top: 14px;
+    font-family: var(--font-display);
+    font-size: 34px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+  }
+  .summary-note { margin-top: 8px; color: var(--color-texto-medio); font-size: 13px; }
+
+  .filter-card {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  .filter-row {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.2fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr) auto;
+    gap: 16px;
+    align-items: end;
+  }
+  .field label {
+    display: block;
+    color: var(--color-texto-medio);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .input-shell {
+    min-height: 40px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    color: var(--color-texto-medio);
+  }
+  .input-shell svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .input-shell input,
+  .input-shell select {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--color-texto-escuro);
+    font-size: 14px;
+  }
+  .segmented {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-2);
+    border: 0.6px solid var(--color-cinza);
+  }
+  .segmented button {
+    border: 0;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+  }
+  .segmented button.active {
+    background: var(--bg-card);
+    color: var(--color-texto-escuro);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 24px;
+    align-items: start;
+  }
+  .catalog-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+  .catalog-head h3,
+  .side-panel h3,
+  .empty-state h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 24px;
+    line-height: 1.2;
+    color: var(--color-texto-escuro);
+  }
+  .catalog-head p,
+  .side-panel p,
+  .empty-state p {
+    margin-top: 6px;
+    color: var(--color-texto-medio);
+    font-size: 14px;
+  }
+  .room-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .room-card {
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .room-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 18px;
+    bottom: 18px;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: var(--color-alaranjado);
+  }
+  .room-card.has-pelvica::before { background: var(--color-verde); }
+  .room-card.avaliacao-only::before { background: var(--color-bege); }
+  .room-card.inativa { opacity: 0.72; }
+  .room-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .room-name h3 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    line-height: 1.1;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+  }
+  .room-id {
+    margin-top: 6px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+  }
+  .status-pill,
+  .pillar-pill,
+  .equipment-chip,
+  .capacity-pill,
+  .mini-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    border: 0.6px solid var(--color-cinza);
+    color: var(--color-texto-medio);
+    background: var(--bg-card);
+    white-space: nowrap;
+  }
+  .status-ativa {
+    color: var(--color-texto-escuro);
+    background: color-mix(in srgb, var(--color-alaranjado) 16%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--color-alaranjado) 38%, var(--color-cinza));
+  }
+  .status-manutencao {
+    color: var(--color-texto-escuro);
+    background: var(--color-bege-claro);
+    border-color: var(--color-bege);
+  }
+  .status-inativa {
+    color: var(--color-texto-medio);
+    background: var(--bg-2);
+  }
+  .room-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .stat-box {
+    background: var(--bg-2);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    min-height: 72px;
+  }
+  .stat-box span {
+    display: block;
+    color: var(--color-texto-medio);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .stat-box strong {
+    display: block;
+    margin-top: 8px;
+    font-family: var(--font-display);
+    font-size: 26px;
+    line-height: 1;
+    color: var(--color-texto-escuro);
+    font-weight: 400;
+  }
+  .pill-list,
+  .equipment-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .pillar-pilates {
+    color: var(--color-texto-escuro);
+    background: color-mix(in srgb, var(--color-alaranjado) 14%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--color-alaranjado) 36%, var(--color-cinza));
+  }
+  .pillar-pelvica {
+    color: var(--color-texto-escuro);
+    background: color-mix(in srgb, var(--color-verde) 44%, var(--bg-card));
+    border-color: var(--color-verde);
+  }
+  .pillar-avaliacao {
+    color: var(--color-texto-escuro);
+    background: color-mix(in srgb, var(--color-bege) 22%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--color-bege) 46%, var(--color-cinza));
+  }
+  .equipment-chip {
+    background: var(--bg-2);
+    color: var(--color-texto-escuro);
+  }
+  .card-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 0.6px solid var(--color-cinza);
+  }
+  .mini-btn {
+    min-height: 32px;
+    border: 0.6px solid var(--color-cinza);
+    background: var(--bg-card);
+    color: var(--color-texto-medio);
+    border-radius: var(--radius-pill);
+    padding: 0 10px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mini-btn svg { width: 14px; height: 14px; }
+  .mini-btn:hover {
+    color: var(--color-texto-escuro);
+    border-color: var(--color-bege);
+    background: var(--color-bege-claro);
+  }
+
+  .side-panel {
+    padding: 20px;
+    position: sticky;
+    top: 24px;
+  }
+  .side-panel .panel-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .panel-item {
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    background: var(--bg-2);
+  }
+  .panel-item strong {
+    display: block;
+    color: var(--color-texto-escuro);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .panel-item span {
+    display: block;
+    margin-top: 4px;
+    color: var(--color-texto-medio);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .empty-state {
+    display: none;
+    padding: 32px;
+    text-align: center;
+  }
+  .empty-state.visible {
+    display: grid;
+    place-items: center;
+    gap: 8px;
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-espresso) 26%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-soft);
+    z-index: 40;
+  }
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(520px, 100vw);
+    height: 100vh;
+    background: var(--bg-card);
+    border-left: 0.6px solid var(--color-cinza);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(100%);
+    transition: transform var(--duration-base) var(--ease-out);
+    z-index: 50;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+  body.drawer-open .backdrop { opacity: 1; pointer-events: auto; }
+  body.drawer-open .drawer { transform: translateX(0); }
+  .drawer-head {
+    padding: 24px;
+    border-bottom: 0.6px solid var(--color-cinza);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .drawer-head h2 {
+    margin-top: 6px;
+    font-family: var(--font-display);
+    font-size: 30px;
+    line-height: 1.1;
+    font-weight: 400;
+    color: var(--color-texto-escuro);
+  }
+  .close-btn {
+    width: 36px;
+    height: 36px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-pill);
+    background: var(--bg-card);
+    color: var(--color-texto-medio);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .close-btn svg { width: 16px; height: 16px; }
+  .drawer-body { overflow: auto; padding: 24px; }
+  .drawer-foot {
+    border-top: 0.6px solid var(--color-cinza);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: var(--bg-card);
+  }
+  .form-grid {
+    display: grid;
+    gap: 16px;
+  }
+  .form-grid.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .check-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .check-pill input { position: absolute; opacity: 0; pointer-events: none; }
+  .check-pill span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: var(--radius-pill);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--bg-card);
+    color: var(--color-texto-medio);
+    font-size: 13px;
+  }
+  .check-pill input:checked + span {
+    color: var(--color-texto-escuro);
+    background: var(--color-bege-claro);
+    border-color: var(--color-bege);
+  }
+  .equipment-editor {
+    display: grid;
+    gap: 10px;
+  }
+  .chip-board {
+    min-height: 44px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    border-radius: var(--radius-md);
+    border: 0.6px solid var(--color-cinza);
+    background: var(--bg-2);
+  }
+  .editable-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    border-radius: var(--radius-pill);
+    padding: 0 8px 0 10px;
+    background: var(--bg-card);
+    border: 0.6px solid var(--color-cinza);
+    color: var(--color-texto-escuro);
+    font-size: 12px;
+  }
+  .editable-chip button {
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--bg-2);
+    color: var(--color-texto-medio);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .editable-chip button svg { width: 12px; height: 12px; }
+  .inline-add {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+  .detail-list {
+    display: grid;
+    gap: 10px;
+  }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px;
+    border: 0.6px solid var(--color-cinza);
+    border-radius: var(--radius-md);
+    background: var(--bg-2);
+  }
+  .detail-row span {
+    color: var(--color-texto-medio);
+    font-size: 12px;
+  }
+  .detail-row strong {
+    color: var(--color-texto-escuro);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+  }
+  .toast {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    max-width: min(360px, calc(100vw - 48px));
+    background: var(--color-espresso);
+    color: var(--color-fundo-claro);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 12px 14px;
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-soft), transform var(--duration-base) var(--ease-soft);
+    z-index: 80;
+  }
+  .toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 1180px) {
+    .workspace { grid-template-columns: 1fr; }
+    .side-panel { position: static; }
+  }
+  @media (max-width: 980px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: min(var(--sidebar-w), 88vw);
+      transform: translateX(-100%);
+      transition: transform var(--duration-base) var(--ease-out);
+      box-shadow: var(--shadow-lg);
+    }
+    body.menu-open .sidebar { transform: translateX(0); }
+    body.menu-open .backdrop { opacity: 1; pointer-events: auto; }
+    .menu-btn { display: inline-flex; }
+    .topbar { padding: 0 16px; }
+    .topbar-crumb { display: none; }
+    .topbar-right .btn:not(.primary) { display: none; }
+    .content { padding: 24px 16px; }
+    .page-head { align-items: stretch; flex-direction: column; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .filter-row { grid-template-columns: 1fr; }
+    .room-grid { grid-template-columns: 1fr; }
+    .form-grid.two { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .topbar-title { font-size: 24px; }
+    .page-head h2 { font-size: 32px; }
+    .drawer { width: 100vw; }
+    .drawer-foot { flex-direction: column-reverse; }
+    .drawer-foot .btn { width: 100%; }
+    .room-stats { grid-template-columns: 1fr; }
+    .inline-add { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app" data-screen-label="26 Salas">
+  <aside class="sidebar" aria-label="Navegação">
+    <div class="sb-logo">
+      <img src="assets/logo-cores.png" alt="Corporis"/>
+    </div>
+
+    <div class="sb-scroll">
+      <div class="sb-group">
+        <div class="sb-section-label">Gestão</div>
+        <nav class="sb-nav">
+          <a href="02 Dashboard.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="09 Clientes.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Clientes
+          </a>
+          <a href="06 Agenda.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Agenda
+          </a>
+          <a href="23 Vendas.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Vendas
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Relacionamento</div>
+        <nav class="sb-nav">
+          <a href="03 Inbox WhatsApp.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+              <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            </svg>
+            Inbox
+            <span class="sb-badge">7</span>
+          </a>
+          <a href="04 Funil.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Funil
+          </a>
+          <a href="07 Agente de IA.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 0 1 3 3v1h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1v1a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-6 0v-1H8a3 3 0 0 1-3-3v-1H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h1V9a3 3 0 0 1 3-3h1V5a3 3 0 0 1 3-3z"/>
+              <circle cx="9.5" cy="11.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1.2" fill="currentColor"/>
+              <path d="M9.5 15.5c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1"/>
+            </svg>
+            Agente de IA
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Financeiro</div>
+        <nav class="sb-nav">
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Lançamentos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            DRE
+          </a>
+        </nav>
+      </div>
+
+      <div class="sb-group">
+        <div class="sb-section-label">Cadastros</div>
+        <nav class="sb-nav">
+          <a href="21 Planos.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Planos
+          </a>
+          <a href="#" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Modelos de contrato
+          </a>
+          <a href="24 Serviços.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+            Serviços
+          </a>
+          <a href="25 Profissionais.html" class="sb-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            Profissionais
+          </a>
+          <a href="#" class="sb-item active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+              <path d="M9 21v-4h6v4"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/>
+            </svg>
+            Salas
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="sb-footer">
+      <nav class="sb-nav">
+        <a href="08 Configurações.html" class="sb-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Configurações
+        </a>
+      </nav>
+      <div class="sb-user">
+        <div class="avatar">LF</div>
+        <div class="sb-user-meta">
+          <span class="sb-user-name">Larissa Ferraz</span>
+          <span class="sb-user-role">Gestão · Corporis</span>
+        </div>
+        <button class="sb-user-action" aria-label="Mais opções">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn icon menu-btn" type="button" data-menu-open aria-label="Abrir navegação">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+          </svg>
+        </button>
+        <h1 class="topbar-title">Salas</h1>
+        <span class="topbar-crumb">
+          <span>Cadastros</span>
+          <span class="sep"></span>
+          <span>/cadastros/salas</span>
+        </span>
+      </div>
+      <div class="topbar-right">
+        <a class="btn" href="06 Agenda.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Agenda
+        </a>
+        <button class="btn primary" type="button" data-new-room>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M12 8v8"/><path d="M8 12h8"/>
+          </svg>
+          Nova sala
+        </button>
+      </div>
+    </header>
+
+    <div class="scroll">
+      <div class="content">
+        <section class="page-head" aria-labelledby="page-title">
+          <div>
+            <div class="eyebrow">Capacidade física</div>
+            <h2 id="page-title">Cadastre salas, equipamentos e pilares compatíveis.</h2>
+            <p>A capacidade é fixa por sala. A agenda usa este cadastro para respeitar o limite físico de cada espaço, separando Pilates, Fisio pélvica e Avaliação.</p>
+          </div>
+          <button class="btn primary" type="button" data-new-room>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M12 8v8"/><path d="M8 12h8"/>
+            </svg>
+            Nova sala
+          </button>
+        </section>
+
+        <section class="summary-grid" aria-label="Resumo de salas">
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-label">Salas ativas</span>
+              <span class="summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+                </svg>
+              </span>
+            </div>
+            <div>
+              <div class="summary-value" id="activeCount">0</div>
+              <div class="summary-note" id="activeNote">Dentro do recorte atual</div>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-label">Capacidade total</span>
+              <span class="summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                </svg>
+              </span>
+            </div>
+            <div>
+              <div class="summary-value" id="capacityCount">0</div>
+              <div class="summary-note">Limite simultâneo das salas ativas</div>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-label">Equipamentos mapeados</span>
+              <span class="summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0-1.4 0L6.3 13.3a1 1 0 0 0 0 1.4l3 3a1 1 0 0 0 1.4 0l7-7a1 1 0 0 0 0-1.4z"/><path d="m7 17-4 4"/><path d="m14 4 6-2"/><path d="m20 2 2 2"/>
+                </svg>
+              </span>
+            </div>
+            <div>
+              <div class="summary-value" id="equipmentCount">0</div>
+              <div class="summary-note">Chips livres no cadastro das salas</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="filter-card" aria-label="Filtros de salas">
+          <div class="filter-row">
+            <div class="field">
+              <label for="searchInput">Buscar sala</label>
+              <div class="input-shell">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input id="searchInput" type="search" placeholder="Nome, equipamento ou pilar"/>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="pillarFilter">Pilar</label>
+              <div class="input-shell">
+                <select id="pillarFilter">
+                  <option value="todos">Todos os pilares</option>
+                  <option value="pilates">Pilates</option>
+                  <option value="pelvica">Fisio pélvica</option>
+                  <option value="avaliacao">Avaliação</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Status</label>
+              <div class="segmented" id="statusTabs" role="tablist" aria-label="Status da sala">
+                <button class="active" type="button" data-status="todos">Todas</button>
+                <button type="button" data-status="ativa">Ativas</button>
+                <button type="button" data-status="manutencao">Manutenção</button>
+                <button type="button" data-status="inativa">Inativas</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <button class="btn subtle" type="button" id="clearFilters">Limpar filtros</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace" aria-label="Cadastro de salas">
+          <div>
+            <div class="catalog-head">
+              <div>
+                <h3>Salas cadastradas</h3>
+                <p id="resultMeta">0 salas</p>
+              </div>
+              <button class="btn primary" type="button" data-new-room>Nova sala</button>
+            </div>
+
+            <section class="room-grid" id="roomGrid" aria-live="polite"></section>
+
+            <section class="empty-state" id="emptyState" aria-live="polite">
+              <span class="summary-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+              </span>
+              <h3>Nenhuma sala encontrada.</h3>
+              <p>Ajuste os filtros ou cadastre uma sala para liberar capacidade na agenda.</p>
+              <button class="btn primary" type="button" data-new-room>Nova sala</button>
+            </section>
+          </div>
+
+          <aside class="side-panel" aria-label="Regras de capacidade">
+            <div class="eyebrow">Regras da agenda</div>
+            <h3>Capacidade fixa</h3>
+            <p>A sala define o limite físico. O serviço define a capacidade por slot e a agenda usa o menor valor entre os dois.</p>
+            <div class="panel-list" id="rulesPanel"></div>
+          </aside>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="backdrop" data-close-layer></div>
+
+<aside class="drawer" aria-label="Painel de sala" aria-hidden="true">
+  <div class="drawer-head">
+    <div>
+      <div class="eyebrow" id="drawerEyebrow">Cadastro</div>
+      <h2 id="drawerTitle">Nova sala</h2>
+    </div>
+    <button class="close-btn" type="button" data-close-drawer aria-label="Fechar painel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-foot" id="drawerFoot"></div>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite">Atualizado</div>
+
+<script>
+  const rooms = [
+    {
+      id: "SAL-01",
+      name: "Estúdio Pilates 01",
+      capacity: 4,
+      equipment: ["Reformer", "Cadillac", "Chair", "Barrel"],
+      pillars: ["pilates", "avaliacao"],
+      status: "ativa",
+      floor: "Térreo",
+      notes: "Sala principal para turmas pequenas e avaliações funcionais."
+    },
+    {
+      id: "SAL-02",
+      name: "Sala Pélvica",
+      capacity: 1,
+      equipment: ["Maca elétrica", "Biofeedback", "Bola suíça", "Espelho clínico"],
+      pillars: ["pelvica", "avaliacao"],
+      status: "ativa",
+      floor: "Térreo",
+      notes: "Atendimento individual com privacidade e equipamentos específicos."
+    },
+    {
+      id: "SAL-03",
+      name: "Estúdio Pilates 02",
+      capacity: 4,
+      equipment: ["Reformer", "Torre", "Faixas elásticas", "Círculo mágico"],
+      pillars: ["pilates"],
+      status: "ativa",
+      floor: "Piso superior",
+      notes: "Uso recorrente para planos de Pilates em grupo."
+    },
+    {
+      id: "SAL-04",
+      name: "Avaliação e triagem",
+      capacity: 1,
+      equipment: ["Maca", "Goniômetro", "Dinamômetro", "Computador"],
+      pillars: ["avaliacao"],
+      status: "manutencao",
+      floor: "Térreo",
+      notes: "Reservada para avaliações iniciais e reavaliações de plano."
+    },
+    {
+      id: "SAL-05",
+      name: "Sala Híbrida",
+      capacity: 2,
+      equipment: ["Maca", "Bolas", "Discos proprioceptivos"],
+      pillars: ["pilates", "pelvica"],
+      status: "inativa",
+      floor: "Piso superior",
+      notes: "Espaço de apoio usado quando a operação precisa de flexibilidade."
+    }
+  ];
+
+  const state = {
+    query: "",
+    pillar: "todos",
+    status: "todos",
+    selectedId: null,
+    mode: "create",
+    draftEquipment: []
+  };
+
+  const els = {
+    grid: document.getElementById("roomGrid"),
+    empty: document.getElementById("emptyState"),
+    search: document.getElementById("searchInput"),
+    pillar: document.getElementById("pillarFilter"),
+    statusTabs: document.getElementById("statusTabs"),
+    clear: document.getElementById("clearFilters"),
+    resultMeta: document.getElementById("resultMeta"),
+    activeCount: document.getElementById("activeCount"),
+    activeNote: document.getElementById("activeNote"),
+    capacityCount: document.getElementById("capacityCount"),
+    equipmentCount: document.getElementById("equipmentCount"),
+    rulesPanel: document.getElementById("rulesPanel"),
+    drawer: document.querySelector(".drawer"),
+    drawerEyebrow: document.getElementById("drawerEyebrow"),
+    drawerTitle: document.getElementById("drawerTitle"),
+    drawerBody: document.getElementById("drawerBody"),
+    drawerFoot: document.getElementById("drawerFoot"),
+    toast: document.getElementById("toast")
+  };
+
+  function normalizeText(value) {
+    return String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&apos;"
+    }[char]));
+  }
+
+  function pillarLabel(pillar) {
+    return {
+      pilates: "Pilates",
+      pelvica: "Fisio pélvica",
+      avaliacao: "Avaliação"
+    }[pillar] || pillar;
+  }
+
+  function statusLabel(status) {
+    return {
+      ativa: "Ativa",
+      manutencao: "Manutenção",
+      inativa: "Inativa"
+    }[status] || status;
+  }
+
+  function filteredRooms() {
+    const query = normalizeText(state.query);
+    return rooms.filter((room) => {
+      const haystack = normalizeText(`${room.name} ${room.id} ${room.floor} ${room.notes} ${room.equipment.join(" ")} ${room.pillars.map(pillarLabel).join(" ")}`);
+      if (query && !haystack.includes(query)) return false;
+      if (state.pillar !== "todos" && !room.pillars.includes(state.pillar)) return false;
+      if (state.status !== "todos" && room.status !== state.status) return false;
+      return true;
+    });
+  }
+
+  function roomActions(room) {
+    return `
+      <button class="mini-btn" type="button" data-action="edit" data-id="${room.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+        Editar
+      </button>
+      <button class="mini-btn" type="button" data-action="agenda" data-id="${room.id}">Ver agenda</button>
+      <button class="mini-btn" type="button" data-action="block" data-id="${room.id}">Bloquear</button>
+      <button class="mini-btn" type="button" data-action="toggle" data-id="${room.id}">${room.status === "inativa" ? "Ativar" : "Inativar"}</button>
+    `;
+  }
+
+  function roomClass(room) {
+    if (room.pillars.length === 1 && room.pillars[0] === "avaliacao") return "avaliacao-only";
+    if (room.pillars.includes("pelvica")) return "has-pelvica";
+    return "";
+  }
+
+  function renderCards(items) {
+    els.grid.innerHTML = items.map((room) => `
+      <article class="room-card ${roomClass(room)} ${room.status}" data-room-id="${room.id}">
+        <div class="room-top">
+          <div class="room-name">
+            <h3>${escapeHtml(room.name)}</h3>
+            <div class="room-id">${escapeHtml(room.id)} · ${escapeHtml(room.floor)}</div>
+          </div>
+          <span class="status-pill status-${room.status}">${statusLabel(room.status)}</span>
+        </div>
+
+        <div class="room-stats" aria-label="Dados da sala">
+          <div class="stat-box">
+            <span>Capacidade</span>
+            <strong>${room.capacity}</strong>
+          </div>
+          <div class="stat-box">
+            <span>Equipamentos</span>
+            <strong>${room.equipment.length}</strong>
+          </div>
+        </div>
+
+        <div class="pill-list" aria-label="Pilares compatíveis">
+          ${room.pillars.map((pillar) => `<span class="pillar-pill pillar-${pillar}">${pillarLabel(pillar)}</span>`).join("")}
+        </div>
+
+        <div class="equipment-list" aria-label="Equipamentos">
+          ${room.equipment.map((item) => `<span class="equipment-chip">${escapeHtml(item)}</span>`).join("")}
+        </div>
+
+        <p class="summary-note">${escapeHtml(room.notes)}</p>
+        <div class="card-foot">${roomActions(room)}</div>
+      </article>
+    `).join("");
+  }
+
+  function renderSummary(items) {
+    const active = items.filter((room) => room.status === "ativa");
+    const capacity = active.reduce((total, room) => total + room.capacity, 0);
+    const equipment = new Set(items.flatMap((room) => room.equipment.map((item) => normalizeText(item))));
+    els.activeCount.textContent = active.length;
+    els.activeNote.textContent = `${items.length} sala${items.length === 1 ? "" : "s"} no recorte`;
+    els.capacityCount.textContent = capacity;
+    els.equipmentCount.textContent = equipment.size;
+    els.resultMeta.textContent = `${items.length} sala${items.length === 1 ? "" : "s"} encontradas`;
+  }
+
+  function renderRulesPanel(items) {
+    const active = items.filter((room) => room.status === "ativa");
+    const pilatesCapacity = active.filter((room) => room.pillars.includes("pilates")).reduce((total, room) => total + room.capacity, 0);
+    const pelvicaCapacity = active.filter((room) => room.pillars.includes("pelvica")).reduce((total, room) => total + room.capacity, 0);
+    const avaliacaoCapacity = active.filter((room) => room.pillars.includes("avaliacao")).reduce((total, room) => total + room.capacity, 0);
+    els.rulesPanel.innerHTML = `
+      <div class="panel-item">
+        <strong>Pilates</strong>
+        <span>${pilatesCapacity} lugares físicos ativos. O serviço continua limitando cada slot a até 4 pessoas.</span>
+      </div>
+      <div class="panel-item">
+        <strong>Fisio pélvica</strong>
+        <span>${pelvicaCapacity} lugar${pelvicaCapacity === 1 ? "" : "es"} físico${pelvicaCapacity === 1 ? "" : "s"} ativo${pelvicaCapacity === 1 ? "" : "s"} para atendimento individual.</span>
+      </div>
+      <div class="panel-item">
+        <strong>Avaliação</strong>
+        <span>${avaliacaoCapacity} lugar${avaliacaoCapacity === 1 ? "" : "es"} para triagens e reavaliações vinculadas aos planos.</span>
+      </div>
+    `;
+  }
+
+  function render() {
+    const items = filteredRooms();
+    renderCards(items);
+    renderSummary(items);
+    renderRulesPanel(items);
+    els.empty.classList.toggle("visible", items.length === 0);
+    els.grid.hidden = items.length === 0;
+  }
+
+  function openDrawer(mode, id) {
+    state.mode = mode;
+    state.selectedId = id || null;
+    const room = rooms.find((item) => item.id === id);
+
+    if (mode === "agenda") return renderAgendaDrawer(room);
+    if (mode === "block") return renderBlockDrawer(room);
+
+    state.draftEquipment = room ? [...room.equipment] : ["Maca", "Bola suíça"];
+    els.drawerEyebrow.textContent = mode === "edit" ? "Editar cadastro" : "Cadastro";
+    els.drawerTitle.textContent = mode === "edit" ? "Editar sala" : "Nova sala";
+    els.drawerBody.innerHTML = roomForm(room);
+    els.drawerFoot.innerHTML = `
+      <button class="btn" type="button" data-close-drawer>Cancelar</button>
+      <button class="btn primary" type="button" id="saveRoom">Salvar sala</button>
+    `;
+    bindEquipmentEditor();
+    document.body.classList.add("drawer-open");
+    els.drawer.setAttribute("aria-hidden", "false");
+    document.getElementById("saveRoom").addEventListener("click", saveRoom);
+  }
+
+  function roomForm(room) {
+    const selectedPillars = room ? room.pillars : ["pilates"];
+    return `
+      <div class="form-grid">
+        <div class="field">
+          <label for="roomName">Nome da sala</label>
+          <div class="input-shell">
+            <input id="roomName" type="text" value="${escapeHtml(room?.name || "")}" placeholder="Ex.: Estúdio Pilates 03"/>
+          </div>
+        </div>
+
+        <div class="form-grid two">
+          <div class="field">
+            <label for="roomCapacity">Capacidade fixa</label>
+            <div class="input-shell">
+              <input id="roomCapacity" type="number" min="1" max="8" value="${room?.capacity || 1}"/>
+            </div>
+          </div>
+          <div class="field">
+            <label for="roomStatus">Status</label>
+            <div class="input-shell">
+              <select id="roomStatus">
+                <option value="ativa" ${room?.status === "ativa" ? "selected" : ""}>Ativa</option>
+                <option value="manutencao" ${room?.status === "manutencao" ? "selected" : ""}>Manutenção</option>
+                <option value="inativa" ${room?.status === "inativa" ? "selected" : ""}>Inativa</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="roomFloor">Localização</label>
+          <div class="input-shell">
+            <input id="roomFloor" type="text" value="${escapeHtml(room?.floor || "Térreo")}" placeholder="Ex.: Térreo"/>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Pilares compatíveis</label>
+          <div class="check-row">
+            ${["pilates", "pelvica", "avaliacao"].map((pillar) => `
+              <label class="check-pill">
+                <input type="checkbox" name="roomPillars" value="${pillar}" ${selectedPillars.includes(pillar) ? "checked" : ""}/>
+                <span>${pillarLabel(pillar)}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="field equipment-editor">
+          <label>Equipamentos</label>
+          <div class="chip-board" id="equipmentBoard"></div>
+          <div class="inline-add">
+            <div class="input-shell">
+              <input id="equipmentInput" type="text" placeholder="Adicionar equipamento"/>
+            </div>
+            <button class="btn subtle" type="button" id="addEquipment">Adicionar</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="roomNotes">Observação operacional</label>
+          <div class="input-shell">
+            <input id="roomNotes" type="text" value="${escapeHtml(room?.notes || "")}" placeholder="Uso principal da sala"/>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindEquipmentEditor() {
+    renderEquipmentBoard();
+    document.getElementById("addEquipment").addEventListener("click", addEquipment);
+    document.getElementById("equipmentInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addEquipment();
+      }
+    });
+  }
+
+  function renderEquipmentBoard() {
+    const board = document.getElementById("equipmentBoard");
+    if (!board) return;
+    board.innerHTML = state.draftEquipment.map((item, index) => `
+      <span class="editable-chip">
+        ${escapeHtml(item)}
+        <button type="button" data-remove-equipment="${index}" aria-label="Remover ${escapeHtml(item)}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </span>
+    `).join("");
+    board.querySelectorAll("[data-remove-equipment]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.draftEquipment.splice(Number(button.dataset.removeEquipment), 1);
+        renderEquipmentBoard();
+      });
+    });
+  }
+
+  function addEquipment() {
+    const input = document.getElementById("equipmentInput");
+    const value = input.value.trim();
+    if (!value) return;
+    state.draftEquipment.push(value);
+    input.value = "";
+    renderEquipmentBoard();
+  }
+
+  function saveRoom() {
+    const name = document.getElementById("roomName").value.trim() || "Sala sem nome";
+    const capacity = Math.max(1, Number(document.getElementById("roomCapacity").value) || 1);
+    const status = document.getElementById("roomStatus").value;
+    const floor = document.getElementById("roomFloor").value.trim() || "Térreo";
+    const notes = document.getElementById("roomNotes").value.trim() || "Sala cadastrada para uso na agenda.";
+    const pillars = Array.from(document.querySelectorAll("input[name='roomPillars']:checked")).map((input) => input.value);
+    const nextRoom = {
+      id: state.selectedId || `SAL-${String(rooms.length + 1).padStart(2, "0")}`,
+      name,
+      capacity,
+      equipment: state.draftEquipment.length ? [...state.draftEquipment] : ["Sem equipamento informado"],
+      pillars: pillars.length ? pillars : ["avaliacao"],
+      status,
+      floor,
+      notes
+    };
+
+    if (state.mode === "edit" && state.selectedId) {
+      const index = rooms.findIndex((room) => room.id === state.selectedId);
+      rooms[index] = nextRoom;
+      showToast("Sala atualizada.");
+    } else {
+      rooms.unshift(nextRoom);
+      showToast("Sala cadastrada.");
+    }
+    closeDrawer();
+    render();
+  }
+
+  function renderAgendaDrawer(room) {
+    if (!room) return;
+    els.drawerEyebrow.textContent = "Agenda da sala";
+    els.drawerTitle.textContent = room.name;
+    els.drawerBody.innerHTML = `
+      <div class="detail-list">
+        <div class="detail-row"><span>Capacidade física</span><strong>${room.capacity} pessoa${room.capacity === 1 ? "" : "s"}</strong></div>
+        <div class="detail-row"><span>Pilares compatíveis</span><strong>${room.pillars.map(pillarLabel).join(", ")}</strong></div>
+        <div class="detail-row"><span>Status</span><strong>${statusLabel(room.status)}</strong></div>
+        <div class="detail-row"><span>Agenda</span><strong>Ver grade completa em Agenda</strong></div>
+      </div>
+      <p class="summary-note">A lista de salas não mostra ocupação por escolha operacional. Esta ação leva a equipe ao recorte de agenda da sala selecionada.</p>
+    `;
+    els.drawerFoot.innerHTML = `
+      <button class="btn" type="button" data-close-drawer>Fechar</button>
+      <a class="btn primary" href="06 Agenda.html">Abrir agenda</a>
+    `;
+    document.body.classList.add("drawer-open");
+    els.drawer.setAttribute("aria-hidden", "false");
+  }
+
+  function renderBlockDrawer(room) {
+    if (!room) return;
+    els.drawerEyebrow.textContent = "Bloqueio de horário";
+    els.drawerTitle.textContent = room.name;
+    els.drawerBody.innerHTML = `
+      <div class="form-grid">
+        <div class="form-grid two">
+          <div class="field">
+            <label for="blockDate">Data</label>
+            <div class="input-shell"><input id="blockDate" type="date"/></div>
+          </div>
+          <div class="field">
+            <label for="blockShift">Período</label>
+            <div class="input-shell">
+              <select id="blockShift">
+                <option>Manhã</option>
+                <option>Tarde</option>
+                <option>Noite</option>
+                <option>Dia inteiro</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="blockReason">Motivo</label>
+          <div class="input-shell"><input id="blockReason" type="text" placeholder="Ex.: manutenção preventiva"/></div>
+        </div>
+        <div class="panel-item">
+          <strong>Impacto</strong>
+          <span>O bloqueio impede novos agendamentos nesta sala no período selecionado. Atendimentos já marcados devem ser reagendados na agenda.</span>
+        </div>
+      </div>
+    `;
+    els.drawerFoot.innerHTML = `
+      <button class="btn" type="button" data-close-drawer>Cancelar</button>
+      <button class="btn primary" type="button" id="saveBlock">Salvar bloqueio</button>
+    `;
+    document.body.classList.add("drawer-open");
+    els.drawer.setAttribute("aria-hidden", "false");
+    document.getElementById("saveBlock").addEventListener("click", () => {
+      showToast("Bloqueio registrado.");
+      closeDrawer();
+    });
+  }
+
+  function toggleRoom(id) {
+    const room = rooms.find((item) => item.id === id);
+    if (!room) return;
+    room.status = room.status === "inativa" ? "ativa" : "inativa";
+    showToast(room.status === "ativa" ? "Sala ativada." : "Sala inativada.");
+    render();
+  }
+
+  function closeDrawer() {
+    document.body.classList.remove("drawer-open");
+    els.drawer.setAttribute("aria-hidden", "true");
+  }
+
+  function showToast(message) {
+    els.toast.textContent = message;
+    els.toast.classList.add("visible");
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => els.toast.classList.remove("visible"), 2200);
+  }
+
+  els.search.addEventListener("input", (event) => {
+    state.query = event.target.value;
+    render();
+  });
+  els.pillar.addEventListener("change", (event) => {
+    state.pillar = event.target.value;
+    render();
+  });
+  els.statusTabs.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-status]");
+    if (!button) return;
+    state.status = button.dataset.status;
+    els.statusTabs.querySelectorAll("button").forEach((item) => item.classList.toggle("active", item === button));
+    render();
+  });
+  els.clear.addEventListener("click", () => {
+    state.query = "";
+    state.pillar = "todos";
+    state.status = "todos";
+    els.search.value = "";
+    els.pillar.value = "todos";
+    els.statusTabs.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.status === "todos"));
+    render();
+  });
+  document.addEventListener("click", (event) => {
+    const newButton = event.target.closest("[data-new-room]");
+    if (newButton) openDrawer("create");
+
+    const action = event.target.closest("[data-action]");
+    if (action) {
+      const id = action.dataset.id;
+      if (action.dataset.action === "edit") openDrawer("edit", id);
+      if (action.dataset.action === "agenda") openDrawer("agenda", id);
+      if (action.dataset.action === "block") openDrawer("block", id);
+      if (action.dataset.action === "toggle") toggleRoom(id);
+    }
+
+    if (event.target.closest("[data-close-drawer]")) closeDrawer();
+    if (event.target.closest("[data-menu-open]")) document.body.classList.add("menu-open");
+    if (event.target.matches("[data-close-layer]")) {
+      document.body.classList.remove("menu-open");
+      closeDrawer();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      document.body.classList.remove("menu-open");
+      closeDrawer();
+    }
+  });
+
+  render();
+</script>
+</body>
+</html>
