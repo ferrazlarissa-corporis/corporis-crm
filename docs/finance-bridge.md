@@ -37,7 +37,14 @@ alter table public.transactions add constraint transactions_source_check
 ```
 
 > Confirmar os valores já aceitos antes de recriar o check (não remover os existentes).
-> Garantir índice único `(organization_id, source, external_id)` para a idempotência.
+
+Índice único (NÃO-parcial — o upsert `ON CONFLICT` exige índice completo; NULLs em
+`external_id` não colidem por padrão, então não quebra transações existentes):
+
+```sql
+create unique index if not exists transactions_org_source_external_uidx
+  on public.transactions (organization_id, source, external_id);
+```
 
 ### 2. Variáveis de ambiente (`.env.local` do OS + Vercel)
 
