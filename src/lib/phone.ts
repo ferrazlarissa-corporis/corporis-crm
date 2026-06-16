@@ -47,3 +47,35 @@ export function formatBrazilPhoneInput(input: unknown): string {
   const normalized = normalizeBrazilPhone(input);
   return normalized.ok ? normalized.e164 : String(input ?? "");
 }
+
+export function brazilPhoneIdentityVariants(input: unknown): string[] {
+  const normalized = normalizeBrazilPhone(input);
+  const base = normalized.ok ? normalized.e164 : String(input ?? "").trim();
+  const variants = new Set<string>();
+  if (base) variants.add(base);
+
+  if (!normalized.ok) return [...variants];
+
+  const { nationalDigits } = normalized;
+  const ddd = nationalDigits.slice(0, 2);
+  const subscriber = nationalDigits.slice(2);
+
+  if (nationalDigits.length === 11 && subscriber.startsWith("9")) {
+    variants.add(`+${BR_COUNTRY_CODE}${ddd}${subscriber.slice(1)}`);
+  }
+
+  if (nationalDigits.length === 10) {
+    variants.add(`+${BR_COUNTRY_CODE}${ddd}9${subscriber}`);
+  }
+
+  return [...variants];
+}
+
+export function isPhoneInBypassList(phone: string, bypassList: string[]): boolean {
+  const phoneVariants = brazilPhoneIdentityVariants(phone);
+  const bypassVariants = new Set(
+    bypassList.flatMap((item) => brazilPhoneIdentityVariants(item))
+  );
+
+  return phoneVariants.some((variant) => bypassVariants.has(variant));
+}

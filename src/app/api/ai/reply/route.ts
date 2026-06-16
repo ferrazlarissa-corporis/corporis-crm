@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendTextMessage, sendPresence } from "@/lib/evolution/client";
 import { AGENT_TOOLS, HANDOFF_RULE_AGENDAMENTO, executeTool, type ToolInput } from "@/lib/ai/tools";
 import { resolveModel } from "@/lib/ai/model";
+import { isPhoneInBypassList } from "@/lib/phone";
 import type { Json } from "@/types/database";
 
 // Separador que o modelo usa para quebrar a resposta em mensagens curtas (bursts).
@@ -630,7 +631,7 @@ export async function POST(request: NextRequest) {
   const bypassList = Array.isArray(config?.numeros_bypass)
     ? (config.numeros_bypass as string[])
     : [];
-  const isBypassed = bypassList.includes(lead.telefone);
+  const isBypassed = isPhoneInBypassList(lead.telefone, bypassList);
 
   if (!isBypassed) {
     if (!config?.ativo) {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { jidToE164, extractMessageText, isContactSaved, getContactSavedStatus, fetchMediaBase64 } from "@/lib/evolution/client";
 import { transcribeAudio } from "@/lib/ai/whisper";
+import { isPhoneInBypassList } from "@/lib/phone";
 
 // ─── Payload schema ───────────────────────────────────────────────────────────
 
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
   const bypass = Array.isArray(agentConf?.numeros_bypass)
     ? (agentConf.numeros_bypass as string[])
     : [];
-  const isBypassed = bypass.includes(telefone);
+  const isBypassed = isPhoneInBypassList(telefone, bypass);
   // Bypass numbers re-enter the funnel (as a fresh lead) whenever they send the reset command
   const shouldRecreateLeadOnReset = isResetCommand && isBypassed;
 
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "outbound_without_existing_lead" });
     }
 
-    if (!shouldRecreateLeadOnReset) {
+    if (!isBypassed && !shouldRecreateLeadOnReset) {
       const contactSaved = await getContactSavedStatus(remoteJid);
       if (contactSaved !== false) {
         return NextResponse.json({
