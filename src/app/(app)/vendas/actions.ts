@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActiveStaff } from "@/lib/auth/staff";
+import { postAccrual } from "@/lib/finance/post-income";
+import type { Pilar } from "@/types/database";
 
 export type VendaResult = { success: true; id?: string } | { success: false; error: string };
 
@@ -106,6 +108,32 @@ export async function criarVenda(input: AdesaoInput): Promise<VendaResult> {
   });
 
   if (error) return { success: false, error: error.message };
+
+  // Ponte Finance: reconhece (accrual) o 1º lançamento criado pela RPC. Não bloqueia a venda.
+  try {
+    const db = auth.supabase;
+    const [{ data: pessoa }, { data: lanc }] = await Promise.all([
+      db.schema("core").from("pessoa").select("nome, pilar_principal").eq("id", parsed.data.pessoa_id).maybeSingle(),
+      db.schema("financeiro").from("lancamento")
+        .select("id, competencia, vencimento, valor, descricao")
+        .eq("pessoa_id", parsed.data.pessoa_id)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    if (pessoa && lanc) {
+      await postAccrual({
+        lancamentoId: lanc.id,
+        competencia: lanc.competencia,
+        vencimento: lanc.vencimento,
+        valor: lanc.valor,
+        pessoaNome: pessoa.nome,
+        pilar: (pessoa.pilar_principal as Pilar | null) ?? null,
+        descricao: lanc.descricao,
+      });
+    }
+  } catch {
+    // posting é best-effort; falha aqui não invalida a adesão já persistida
+  }
+
   revalidatePath("/vendas");
   revalidatePath("/clientes");
   return { success: true, id: typeof data === "string" ? data : undefined };

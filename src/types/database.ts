@@ -742,6 +742,11 @@ export interface Database {
         };
         Update: Partial<Database["financeiro"]["Tables"]["lancamento"]["Insert"]>;
       };
+      finance_map: {
+        Row: { pilar: Pilar; chart_code: string; created_at: string };
+        Insert: { pilar: Pilar; chart_code: string; created_at?: string };
+        Update: Partial<Database["financeiro"]["Tables"]["finance_map"]["Insert"]>;
+      };
     };
     Views: {
       resumo_mensal: {

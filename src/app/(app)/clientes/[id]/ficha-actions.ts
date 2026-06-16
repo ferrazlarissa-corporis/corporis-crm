@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActiveStaff } from "@/lib/auth/staff";
 import type { ActiveStaff } from "@/lib/auth/staff";
+import { settleIncome } from "@/lib/finance/post-income";
 
 export type FichaResult = { success: true; id?: string } | { success: false; error: string };
 
@@ -28,10 +29,14 @@ export async function marcarLancamentoRecebido(id: string, pessoaId: string): Pr
   const auth = await requireActiveStaff();
   if (!auth.success) return { success: false, error: auth.error };
 
-  // NOTE: a ponte de posting ao Corporis Finance (Fase 6) liquida a tx aqui.
+  const recebidoAt = new Date().toISOString();
   const { error } = await auth.supabase.schema("financeiro").from("lancamento")
-    .update({ status: "recebido", recebido_at: new Date().toISOString() }).eq("id", id);
+    .update({ status: "recebido", recebido_at: recebidoAt }).eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  // Ponte Finance: liquida a tx correspondente (best-effort, não bloqueia a baixa).
+  try { await settleIncome(id, recebidoAt); } catch { /* no-op se ponte off */ }
+
   revalidatePath(`/clientes/${pessoaId}`);
   return { success: true, id };
 }
