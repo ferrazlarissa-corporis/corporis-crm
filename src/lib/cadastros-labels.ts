@@ -1,16 +1,24 @@
 import type { Pilar } from "@/types/database";
 
+// "pilar" passou a significar ÁREA (balde financeiro/operacional). Gestante é flag à parte.
 export const PILAR_LABEL: Record<Pilar, string> = {
   pilates: "Pilates",
-  pilates_gestante: "Pilates gestante",
   fisio_pelvica: "Fisio pélvica",
+  acupuntura: "Acupuntura",
 };
 
 export const PILAR_OPTIONS: { value: Pilar; label: string }[] = [
   { value: "pilates", label: "Pilates" },
-  { value: "pilates_gestante", label: "Pilates gestante" },
   { value: "fisio_pelvica", label: "Fisio pélvica" },
+  { value: "acupuntura", label: "Acupuntura" },
 ];
+
+/** Cor de agenda sugerida por área (editável por serviço). Verde restrito a fisio pélvica. */
+export const PILAR_COR_PADRAO: Record<Pilar, CorToken> = {
+  pilates: "alaranjado",
+  fisio_pelvica: "verde",
+  acupuntura: "bege",
+};
 
 export type CorToken = "alaranjado" | "tangerina" | "bege" | "bege_claro" | "verde";
 

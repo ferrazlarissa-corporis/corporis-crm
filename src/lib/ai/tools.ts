@@ -31,8 +31,8 @@ export const AGENT_TOOLS: Tool[] = [
       properties: {
         tipo: {
           type: "string",
-          enum: ["avaliacao_pilates", "avaliacao_gestante", "avaliacao_fisio_pelvica"],
-          description: "Tipo de avaliação de acordo com o interesse da aluna.",
+          enum: ["avaliacao_pilates", "avaliacao_fisio_pelvica", "avaliacao_acupuntura"],
+          description: "Tipo de avaliação de acordo com a área de interesse da aluna.",
         },
         dias: {
           type: "number",
@@ -50,7 +50,7 @@ export const AGENT_TOOLS: Tool[] = [
       properties: {
         inicio:       { type: "string", description: "Data/hora de início em ISO 8601." },
         fim:          { type: "string", description: "Data/hora de fim em ISO 8601." },
-        tipo:         { type: "string", enum: ["avaliacao_pilates", "avaliacao_gestante", "avaliacao_fisio_pelvica"] },
+        tipo:         { type: "string", enum: ["avaliacao_pilates", "avaliacao_fisio_pelvica", "avaliacao_acupuntura"] },
         observacoes:  { type: "string", description: "Contexto obrigatório do agendamento." },
       },
       required: ["inicio", "fim", "tipo", "observacoes"],
@@ -58,11 +58,12 @@ export const AGENT_TOOLS: Tool[] = [
   },
   {
     name: "atualizar_interesse",
-    description: "Registra o interesse da aluna (pilates, gestante, fisio pélvica) com base na conversa.",
+    description: "Registra a área de interesse da aluna (pilates, fisio pélvica, acupuntura) e se ela é gestante. Gestante é um marcador à parte que cruza com qualquer área.",
     input_schema: {
       type: "object" as const,
       properties: {
-        interesse: { type: "string", enum: ["pilates", "pilates_gestante", "fisio_pelvica", "indefinido"] },
+        interesse: { type: "string", enum: ["pilates", "fisio_pelvica", "acupuntura", "indefinido"] },
+        gestante: { type: "boolean", description: "true se a aluna está gestante (ex.: Gestar em movimento, Fisio pélvica gestante, Mamãe ativa)." },
       },
       required: ["interesse"],
     },
@@ -229,20 +230,21 @@ export async function executeTool(
       }
 
       case "atualizar_interesse": {
-        const { interesse } = input as { interesse: LeadInterest };
+        const { interesse, gestante } = input as { interesse: LeadInterest; gestante?: boolean };
         const lead_id = ctx.leadId;
         const { data: current } = await db.from("leads").select("estagio").eq("id", lead_id).single();
         const advance = current?.estagio === "novo" ? { estagio: "qualificacao" as const } : {};
-        await db.from("leads").update({ interesse, ...advance }).eq("id", lead_id);
+        const gestantePatch = typeof gestante === "boolean" ? { gestante } : {};
+        await db.from("leads").update({ interesse, ...gestantePatch, ...advance }).eq("id", lead_id);
         if (advance.estagio) {
           await db.from("activities").insert({
             lead_id,
             tipo: "mudanca_estagio",
             descricao: "Lead avançou para Em qualificação (interesse identificado)",
-            meta: { de: "novo", para: "qualificacao", interesse },
+            meta: { de: "novo", para: "qualificacao", interesse, gestante: gestante ?? null },
           });
         }
-        return JSON.stringify({ success: true, interesse });
+        return JSON.stringify({ success: true, interesse, gestante: gestante ?? null });
       }
 
       case "registrar_score": {

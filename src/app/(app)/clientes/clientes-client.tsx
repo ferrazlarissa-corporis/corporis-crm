@@ -22,8 +22,7 @@ function initials(nome: string) {
   return nome.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 function tipoBadge(tipo: string, pilar: Pilar | null): string {
-  if (pilar === "pilates_gestante") return "Gestante";
-  if (tipo === "paciente" || pilar === "fisio_pelvica") return "Paciente";
+  if (tipo === "paciente" || pilar === "fisio_pelvica" || pilar === "acupuntura") return "Paciente";
   return "Aluna";
 }
 
@@ -77,10 +76,10 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
         <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente por nome" className="h-10 max-w-xs" />
         <select value={pilar} onChange={(e) => setPilar(e.target.value as "" | Pilar)}
           className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-sm text-text-primary">
-          <option value="">Todos os pilares</option>
+          <option value="">Todas as áreas</option>
           <option value="pilates">Pilates</option>
-          <option value="pilates_gestante">Pilates gestante</option>
           <option value="fisio_pelvica">Fisio pélvica</option>
+          <option value="acupuntura">Acupuntura</option>
         </select>
         <div className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">
           {(["todos", "cliente_ativo", "inativo"] as StatusFilter[]).map((s) => (

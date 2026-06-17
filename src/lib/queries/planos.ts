@@ -8,7 +8,7 @@ export type PlanoRow = Omit<PlanoRaw, "servicos"> & { servicos: string[] };
 
 export type PlanoStats = {
   total: number;
-  recorrentesAtivos: number;
+  fixosAtivos: number;
   ticketMedio: number;
 };
 
@@ -30,11 +30,11 @@ export async function getPlanos(): Promise<PlanoRow[]> {
 
 export function getPlanoStats(planos: PlanoRow[]): PlanoStats {
   const ativos = planos.filter((p) => p.ativo);
-  const recorrentesAtivos = ativos.filter((p) => p.tipo === "recorrente").length;
+  const fixosAtivos = ativos.filter((p) => p.tipo === "fixo").length;
   // Ticket médio = média mensal normalizada dos planos ativos.
   const mensais = ativos.map((p) => p.valor / PERIODICIDADE_MESES[p.periodicidade]);
   const ticketMedio = mensais.length ? mensais.reduce((a, b) => a + b, 0) / mensais.length : 0;
-  return { total: planos.length, recorrentesAtivos, ticketMedio };
+  return { total: planos.length, fixosAtivos, ticketMedio };
 }
 
 export type ServicoOption = { id: string; nome: string; pilar: Pilar };

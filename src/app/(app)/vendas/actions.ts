@@ -12,9 +12,9 @@ function firstError(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Revise os dados do formulário.";
 }
 
-const PILAR = z.enum(["pilates", "pilates_gestante", "fisio_pelvica"]);
+const PILAR = z.enum(["pilates", "fisio_pelvica", "acupuntura"]);
 const PERIODICIDADE = z.enum(["mensal", "trimestral", "semestral", "anual", "avulso"]);
-const PLANO_TIPO = z.enum(["recorrente", "personalizado"]);
+const PLANO_TIPO = z.enum(["fixo", "personalizado", "avulso"]);
 
 // ─── Planos (vendas.plano) ──────────────────────────────────────────────────────
 
@@ -77,15 +77,28 @@ export async function togglePlanoAtivo(id: string, ativo: boolean): Promise<Vend
 
 // ─── Adesão / nova venda (vendas.criar_adesao RPC) ──────────────────────────────
 
-const adesaoSchema = z.object({
-  pessoa_id: z.string().uuid(),
-  plano_id: z.string().uuid(),
-  valor: z.coerce.number().min(0).max(1_000_000),
-  desconto: z.coerce.number().min(0).max(1_000_000).default(0),
-  dia_vencimento: z.coerce.number().int().min(1).max(28),
-  inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data de início inválida."),
-  modelo_contrato_id: z.string().uuid().nullable().default(null),
-});
+const adesaoSchema = z
+  .object({
+    pessoa_id: z.string().uuid(),
+    plano_id: z.string().uuid(),
+    valor: z.coerce.number().min(0).max(1_000_000),
+    desconto: z.coerce.number().min(0).max(1_000_000).default(0),
+    dia_vencimento: z.coerce.number().int().min(1).max(28),
+    inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data de início inválida."),
+    modelo_contrato_id: z.string().uuid().nullable().default(null),
+    tipo: PLANO_TIPO,
+    periodicidade: PERIODICIDADE.nullable().default(null),
+    sessoes_semana: z.coerce.number().int().min(0).max(14).nullable().default(null),
+    total_sessoes: z.coerce.number().int().min(1).max(500).nullable().default(null),
+  })
+  .refine((d) => d.tipo !== "fixo" || d.periodicidade != null, {
+    message: "Selecione a periodicidade do plano fixo.",
+    path: ["periodicidade"],
+  })
+  .refine((d) => d.tipo !== "personalizado" || (d.total_sessoes != null && d.total_sessoes >= 1), {
+    message: "Informe o número de sessões do plano personalizado.",
+    path: ["total_sessoes"],
+  });
 
 export type AdesaoInput = z.infer<typeof adesaoSchema>;
 
@@ -105,6 +118,10 @@ export async function criarVenda(input: AdesaoInput): Promise<VendaResult> {
     p_inicio: parsed.data.inicio,
     p_modelo_contrato_id: parsed.data.modelo_contrato_id,
     p_vendedor_id: auth.profile.id,
+    p_tipo: parsed.data.tipo,
+    p_periodicidade: parsed.data.periodicidade,
+    p_sessoes_semana: parsed.data.sessoes_semana,
+    p_total_sessoes: parsed.data.total_sessoes,
   });
 
   if (error) return { success: false, error: error.message };

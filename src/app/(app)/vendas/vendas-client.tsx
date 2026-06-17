@@ -25,6 +25,7 @@ const STATUS_STYLE: Record<MatriculaStatus, string> = {
   ativa: "bg-[var(--color-verde)]/15 text-[var(--color-verde)]",
   pausada: "bg-accent-soft text-text-secondary",
   cancelada: "bg-error/10 text-error",
+  concluida: "bg-accent-soft text-text-primary",
 };
 
 function fmtDate(d: string | null) {
@@ -80,7 +81,7 @@ export function VendasClient({ matriculas, stats }: { matriculas: MatriculaRow[]
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-8 py-4">
         <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por cliente" className="h-10 max-w-xs" />
         <div className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">
-          {(["todas", "ativa", "pausada", "cancelada"] as StatusFilter[]).map((s) => (
+          {(["todas", "ativa", "pausada", "concluida", "cancelada"] as StatusFilter[]).map((s) => (
             <button key={s} type="button" onClick={() => setStatus(s)}
               className={cn("rounded-[var(--radius-pill)] px-3 py-1 text-xs font-medium capitalize transition-colors",
                 status === s ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:text-text-primary")}>

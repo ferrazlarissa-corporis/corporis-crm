@@ -43,14 +43,14 @@ const ORIGIN_ICONS: Record<LeadOrigin, React.FC<React.SVGProps<SVGSVGElement>>> 
 
 const TIPO_LABEL: Record<AppointmentType, string> = {
   avaliacao_pilates: "Pilates terapêutico",
-  avaliacao_gestante: "Pilates gestante",
   avaliacao_fisio_pelvica: "Fisioterapia pélvica",
+  avaliacao_acupuntura: "Acupuntura",
 };
 
 const TIPO_KIND: Record<AppointmentType, string> = {
   avaliacao_pilates: "pilates",
-  avaliacao_gestante: "gestante",
   avaliacao_fisio_pelvica: "pelvica",
+  avaliacao_acupuntura: "acupuntura",
 };
 
 function CardAction({ children, href = "#" }: { children: React.ReactNode; href?: string }) {

@@ -26,8 +26,8 @@ export type LeadOrigin =
 
 export type LeadInterest =
   | "pilates"
-  | "pilates_gestante"
   | "fisio_pelvica"
+  | "acupuntura"
   | "indefinido";
 
 export type ConversationMode = "ia" | "humano";
@@ -40,7 +40,7 @@ export type MessageType = "texto" | "imagem" | "audio" | "documento" | "template
 export type AppointmentType =
   | "avaliacao_pilates"
   | "avaliacao_fisio_pelvica"
-  | "avaliacao_gestante";
+  | "avaliacao_acupuntura";
 
 export type AppointmentStatus =
   | "agendado"
@@ -65,11 +65,11 @@ export type TemplateCategory = "lembrete" | "confirmacao" | "reativacao" | "boas
 
 export type PessoaTipo = "aluna" | "paciente" | "ambos";
 export type PessoaStatus = "lead" | "cliente_ativo" | "inativo";
-export type Pilar = "pilates" | "pilates_gestante" | "fisio_pelvica";
+export type Pilar = "pilates" | "fisio_pelvica" | "acupuntura";
 export type AgendaCategoria = "avaliacao" | "sessao" | "experimental";
-export type PlanoTipo = "recorrente" | "personalizado";
+export type PlanoTipo = "fixo" | "personalizado" | "avulso";
 export type Periodicidade = "mensal" | "trimestral" | "semestral" | "anual" | "avulso";
-export type MatriculaStatus = "ativa" | "pausada" | "cancelada";
+export type MatriculaStatus = "ativa" | "pausada" | "cancelada" | "concluida";
 export type ContratoStatus = "rascunho" | "enviado" | "assinado" | "cancelado";
 export type LancamentoStatus = "a_receber" | "recebido" | "atrasado";
 export type DocumentoTipo = "exame" | "atestado" | "laudo" | "outro";
@@ -111,6 +111,7 @@ export interface Database {
           estagio: LeadStage;
           origem: LeadOrigin;
           interesse: LeadInterest;
+          gestante: boolean;
           motivo_perda: string | null;
           score_qualificacao: number | null;
           responsavel_id: string | null;
@@ -128,6 +129,7 @@ export interface Database {
           estagio?: LeadStage;
           origem?: LeadOrigin;
           interesse?: LeadInterest;
+          gestante?: boolean;
           motivo_perda?: string | null;
           score_qualificacao?: number | null;
           responsavel_id?: string | null;
@@ -476,6 +478,7 @@ export interface Database {
           id: string;
           nome: string;
           pilar: Pilar;
+          gestante: boolean;
           duracao_min: number;
           capacidade_slot: number;
           cor_token: string;
@@ -487,6 +490,7 @@ export interface Database {
           id?: string;
           nome: string;
           pilar: Pilar;
+          gestante?: boolean;
           duracao_min?: number;
           capacidade_slot?: number;
           cor_token?: string;
@@ -618,6 +622,12 @@ export interface Database {
           renovacao: string | null;
           dia_vencimento: number | null;
           status: MatriculaStatus;
+          tipo: PlanoTipo;
+          periodicidade: Periodicidade | null;
+          valor: number | null;
+          sessoes_semana: number | null;
+          total_sessoes: number | null;
+          fim: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -630,6 +640,12 @@ export interface Database {
           renovacao?: string | null;
           dia_vencimento?: number | null;
           status?: MatriculaStatus;
+          tipo?: PlanoTipo;
+          periodicidade?: Periodicidade | null;
+          valor?: number | null;
+          sessoes_semana?: number | null;
+          total_sessoes?: number | null;
+          fim?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -702,6 +718,10 @@ export interface Database {
           p_inicio: string;
           p_modelo_contrato_id: string | null;
           p_vendedor_id: string | null;
+          p_tipo: PlanoTipo;
+          p_periodicidade: Periodicidade | null;
+          p_sessoes_semana: number | null;
+          p_total_sessoes: number | null;
         };
         Returns: string;
       };

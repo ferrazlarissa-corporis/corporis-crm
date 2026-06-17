@@ -23,22 +23,31 @@ export async function GET(request: NextRequest) {
 
   const { data: matriculas } = await supabase
     .schema("vendas").from("matricula")
-    .select("id, pessoa_id, inicio, dia_vencimento, plano:plano_id(nome, valor, periodicidade)")
+    .select("id, pessoa_id, inicio, dia_vencimento, tipo, periodicidade, valor, fim, plano:plano_id(nome)")
     .eq("status", "ativa");
 
   let created = 0;
   for (const m of matriculas ?? []) {
-    const plano = (Array.isArray(m.plano) ? m.plano[0] : m.plano) as
-      | { nome: string; valor: number; periodicidade: Periodicidade }
-      | null;
+    const plano = (Array.isArray(m.plano) ? m.plano[0] : m.plano) as { nome: string } | null;
     if (!plano) continue;
+
+    // Só planos fixos recorrem mês a mês. Personalizado/avulso = cobrança única na adesão.
+    if (m.tipo !== "fixo" || !m.periodicidade) continue;
+    const periodicidade = m.periodicidade as Periodicidade;
+    const valor = m.valor ?? 0;
+
+    // Encerrou o compromisso? Para de cobrar e conclui a matrícula.
+    if (m.fim && competencia > m.fim) {
+      await supabase.schema("vendas").from("matricula").update({ status: "concluida" }).eq("id", m.id);
+      continue;
+    }
 
     // Cobra neste mês? (meses desde o início divisível pela periodicidade)
     const inicio = new Date(m.inicio);
     const mesesDesdeInicio = (ano - inicio.getFullYear()) * 12 + (mes - inicio.getMonth());
     if (mesesDesdeInicio < 0) continue;
-    const periodo = PERIODICIDADE_MESES[plano.periodicidade];
-    if (plano.periodicidade !== "avulso" && mesesDesdeInicio % periodo !== 0) continue;
+    const periodo = PERIODICIDADE_MESES[periodicidade];
+    if (mesesDesdeInicio % periodo !== 0) continue;
     // O 1º lançamento já foi criado na adesão (mês de início).
     if (mesesDesdeInicio === 0) continue;
 
@@ -58,7 +67,7 @@ export async function GET(request: NextRequest) {
         matricula_id: m.id,
         competencia,
         descricao: `Mensalidade ${plano.nome}`,
-        valor: plano.valor,
+        valor,
         vencimento,
         status: "a_receber",
       })

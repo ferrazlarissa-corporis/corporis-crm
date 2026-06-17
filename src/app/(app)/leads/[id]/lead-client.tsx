@@ -53,17 +53,17 @@ const STAGE_STYLE: Record<LeadStage, { bg: string; color: string; border: string
 };
 
 const INTEREST_LABEL: Record<LeadInterest, string> = {
-  pilates:          "Pilates",
-  pilates_gestante: "Pilates gestante",
-  fisio_pelvica:    "Fisioterapia pélvica",
-  indefinido:       "Interesse indefinido",
+  pilates:       "Pilates",
+  fisio_pelvica: "Fisioterapia pélvica",
+  acupuntura:    "Acupuntura",
+  indefinido:    "Interesse indefinido",
 };
 
 const INTEREST_STYLE: Record<LeadInterest, { bg: string; color: string }> = {
-  pilates:          { bg: "rgba(240,131,83,0.12)",  color: "#B85A2E" },
-  pilates_gestante: { bg: "rgba(172,192,149,0.22)", color: "#5F7948" },
-  fisio_pelvica:    { bg: "rgba(210,176,110,0.22)", color: "#7A5E1F" },
-  indefinido:       { bg: "rgba(211,210,205,0.18)", color: "var(--color-texto-medio)" },
+  pilates:       { bg: "rgba(240,131,83,0.12)",  color: "#B85A2E" },
+  fisio_pelvica: { bg: "rgba(210,176,110,0.22)", color: "#7A5E1F" },
+  acupuntura:    { bg: "rgba(211,196,170,0.30)", color: "#6B5526" },
+  indefinido:    { bg: "rgba(211,210,205,0.18)", color: "var(--color-texto-medio)" },
 };
 
 const ORIGIN_LABEL: Record<LeadOrigin, string> = {
@@ -72,8 +72,8 @@ const ORIGIN_LABEL: Record<LeadOrigin, string> = {
 
 const TIPO_LABEL: Record<AppointmentType, string> = {
   avaliacao_pilates:     "Avaliação Pilates",
-  avaliacao_gestante:    "Avaliação Gestante",
   avaliacao_fisio_pelvica: "Avaliação Fisio Pélvica",
+  avaliacao_acupuntura:  "Avaliação Acupuntura",
 };
 
 // ─── Timeline helpers ────────────────────────────────────────────────────────

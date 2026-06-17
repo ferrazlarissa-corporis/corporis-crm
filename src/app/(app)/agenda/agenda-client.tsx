@@ -27,8 +27,8 @@ type ViewMode = "day" | "week";
 
 const FALLBACK_COR: Record<AppointmentType, CorToken> = {
   avaliacao_pilates: "alaranjado",
-  avaliacao_gestante: "bege",
   avaliacao_fisio_pelvica: "verde",
+  avaliacao_acupuntura: "bege",
 };
 
 function colorVar(e: AgendaEvent): string {
@@ -191,10 +191,10 @@ export default function AgendaClient({ initialEvents, options, nowIso, clinicHou
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente ou serviço" className="h-9 max-w-xs" />
           <select value={pilar} onChange={(e) => setPilar(e.target.value as "" | Pilar)} className="h-9 rounded-[var(--radius-md)] border border-border bg-card px-3 text-sm text-text-primary">
-            <option value="">Todos os pilares</option>
+            <option value="">Todas as áreas</option>
             <option value="pilates">Pilates</option>
-            <option value="pilates_gestante">Pilates gestante</option>
             <option value="fisio_pelvica">Fisio pélvica</option>
+            <option value="acupuntura">Acupuntura</option>
           </select>
           <select value={salaId} onChange={(e) => setSalaId(e.target.value)} className="h-9 rounded-[var(--radius-md)] border border-border bg-card px-3 text-sm text-text-primary">
             <option value="">Todas as salas</option>

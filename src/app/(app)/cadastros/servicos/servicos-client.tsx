@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import {
   COR_OPTIONS,
   COR_VAR,
+  PILAR_COR_PADRAO,
   PILAR_LABEL,
   PILAR_OPTIONS,
   type CorToken,
@@ -28,10 +29,12 @@ import {
 } from "../actions";
 
 type StatusFilter = "todos" | "ativos" | "inativos";
+type GestanteFilter = "todas" | "gestante" | "nao_gestante";
 
 const EMPTY_FORM: ServicoInput = {
   nome: "",
   pilar: "pilates",
+  gestante: false,
   duracao_min: 50,
   capacidade_slot: 4,
   cor_token: "alaranjado",
@@ -42,6 +45,7 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
   const router = useRouter();
   const [busca, setBusca] = useState("");
   const [pilar, setPilar] = useState<"" | Pilar>("");
+  const [gestanteFilter, setGestanteFilter] = useState<GestanteFilter>("todas");
   const [status, setStatus] = useState<StatusFilter>("todos");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ServicoRow | null>(null);
@@ -53,12 +57,14 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
     const q = busca.trim().toLowerCase();
     return servicos.filter((s) => {
       if (pilar && s.pilar !== pilar) return false;
+      if (gestanteFilter === "gestante" && !s.gestante) return false;
+      if (gestanteFilter === "nao_gestante" && s.gestante) return false;
       if (status === "ativos" && !s.ativo) return false;
       if (status === "inativos" && s.ativo) return false;
       if (q && !s.nome.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [servicos, busca, pilar, status]);
+  }, [servicos, busca, pilar, gestanteFilter, status]);
 
   function openCreate() {
     setEditing(null);
@@ -72,6 +78,7 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
     setForm({
       nome: s.nome,
       pilar: s.pilar,
+      gestante: s.gestante,
       duracao_min: s.duracao_min,
       capacidade_slot: s.capacidade_slot,
       cor_token: (s.cor_token as CorToken) ?? "alaranjado",
@@ -112,7 +119,7 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
     });
   }
 
-  const filtersActive = busca !== "" || pilar !== "" || status !== "todos";
+  const filtersActive = busca !== "" || pilar !== "" || gestanteFilter !== "todas" || status !== "todos";
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -170,10 +177,19 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
           onChange={(e) => setPilar(e.target.value as "" | Pilar)}
           className="h-10 w-44"
         >
-          <option value="">Todos os pilares</option>
+          <option value="">Todas as áreas</option>
           {PILAR_OPTIONS.map((p) => (
             <option key={p.value} value={p.value}>{p.label}</option>
           ))}
+        </Select>
+        <Select
+          value={gestanteFilter}
+          onChange={(e) => setGestanteFilter(e.target.value as GestanteFilter)}
+          className="h-10 w-44"
+        >
+          <option value="todas">Gestante e não-gestante</option>
+          <option value="gestante">Só gestante</option>
+          <option value="nao_gestante">Só não-gestante</option>
         </Select>
         <div className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">
           {(["todos", "ativos", "inativos"] as StatusFilter[]).map((s) => (
@@ -193,7 +209,7 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
         {filtersActive ? (
           <button
             type="button"
-            onClick={() => { setBusca(""); setPilar(""); setStatus("todos"); }}
+            onClick={() => { setBusca(""); setPilar(""); setGestanteFilter("todas"); setStatus("todos"); }}
             className="text-xs text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
           >
             Limpar filtros
@@ -230,6 +246,11 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
                     <span className="crm-label text-[10px] tracking-[1.5px] text-text-secondary">
                       {PILAR_LABEL[s.pilar]}
                     </span>
+                    {s.gestante ? (
+                      <span className="rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-text-secondary">
+                        Gestante
+                      </span>
+                    ) : null}
                   </div>
                   <span
                     className={cn(
@@ -306,10 +327,13 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
           </FormField>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="Pilar">
+            <FormField label="Área">
               <Select
                 value={form.pilar}
-                onChange={(e) => setForm({ ...form, pilar: e.target.value as Pilar })}
+                onChange={(e) => {
+                  const pilar = e.target.value as Pilar;
+                  setForm({ ...form, pilar, cor_token: PILAR_COR_PADRAO[pilar] });
+                }}
               >
                 {PILAR_OPTIONS.map((p) => (
                   <option key={p.value} value={p.value}>{p.label}</option>
@@ -326,6 +350,21 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
               />
             </FormField>
           </div>
+
+          <FormField label="Atendimento gestante">
+            <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-border px-3 py-2.5 hover:bg-accent-soft">
+              <input
+                type="checkbox"
+                checked={form.gestante}
+                onChange={(e) => setForm({ ...form, gestante: e.target.checked })}
+                className="h-4 w-4 accent-[var(--color-alaranjado)]"
+              />
+              <span className="text-sm text-text-primary">Serviço voltado a gestantes</span>
+            </label>
+            <p className="mt-1.5 text-xs text-text-secondary">
+              Marque para Gestar em movimento, Fisio pélvica gestante e afins. Filtra de forma cruzada com a área.
+            </p>
+          </FormField>
 
           <FormField label="Capacidade por slot (pessoas)">
             <Input

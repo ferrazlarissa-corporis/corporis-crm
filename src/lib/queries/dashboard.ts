@@ -64,8 +64,8 @@ const ORIGIN_META: Record<LeadOrigin, { label: string; color: string }> = {
 
 const TIPO_LABEL: Record<AppointmentType, string> = {
   avaliacao_pilates: "Pilates terapêutico",
-  avaliacao_gestante: "Pilates gestante",
   avaliacao_fisio_pelvica: "Fisioterapia pélvica",
+  avaliacao_acupuntura: "Acupuntura",
 };
 
 export async function getDashboardStats() {

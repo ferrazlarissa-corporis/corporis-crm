@@ -46,7 +46,8 @@ const createLeadSchema = z.object({
   email:        z.string().email().optional().or(z.literal("")),
   estagio:      z.enum(LEAD_STAGE_VALUES).default("novo"),
   origem:       z.enum(["whatsapp","instagram","indicacao","google","outro"]).default("whatsapp"),
-  interesse:    z.enum(["pilates","pilates_gestante","fisio_pelvica","indefinido"]).default("indefinido"),
+  interesse:    z.enum(["pilates","fisio_pelvica","acupuntura","indefinido"]).default("indefinido"),
+  gestante:     z.boolean().default(false),
   data_entrada: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
@@ -241,7 +242,8 @@ const updateLeadDataSchema = z.object({
   id:        z.string().uuid(),
   nome:      z.string().min(2).optional(),
   email:     z.string().email().optional().or(z.literal("")),
-  interesse: z.enum(["pilates","pilates_gestante","fisio_pelvica","indefinido"]).optional(),
+  interesse: z.enum(["pilates","fisio_pelvica","acupuntura","indefinido"]).optional(),
+  gestante: z.boolean().optional(),
   responsavel_id: z.string().uuid().optional().nullable(),
 });
 
@@ -257,6 +259,7 @@ export async function updateLeadData(input: z.infer<typeof updateLeadDataSchema>
   if (fields.nome)      updatePayload.nome = fields.nome;
   if (fields.email)     updatePayload.email = fields.email || null;
   if (fields.interesse) updatePayload.interesse = fields.interesse;
+  if ("gestante" in fields) updatePayload.gestante = fields.gestante;
   if ("responsavel_id" in fields) updatePayload.responsavel_id = fields.responsavel_id;
 
   const { error } = await db.from("leads").update(updatePayload).eq("id", id);

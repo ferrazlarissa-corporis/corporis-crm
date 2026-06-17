@@ -12,12 +12,13 @@ function firstError(error: z.ZodError): string {
 
 // ─── Serviços (core.servico) ────────────────────────────────────────────────────
 
-const PILAR = z.enum(["pilates", "pilates_gestante", "fisio_pelvica"]);
+const PILAR = z.enum(["pilates", "fisio_pelvica", "acupuntura"]);
 const COR_TOKEN = z.enum(["alaranjado", "tangerina", "bege", "bege_claro", "verde"]);
 
 const servicoSchema = z.object({
   nome: z.string().trim().min(2).max(120),
   pilar: PILAR,
+  gestante: z.boolean().default(false),
   duracao_min: z.coerce.number().int().min(10).max(240),
   capacidade_slot: z.coerce.number().int().min(1).max(8),
   cor_token: COR_TOKEN,

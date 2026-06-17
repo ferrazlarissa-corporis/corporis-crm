@@ -151,7 +151,7 @@ export function ProfissionaisClient({ profissionais, stats }: { profissionais: P
           onChange={(e) => setPilar(e.target.value as "" | Pilar)}
           className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-sm text-text-primary"
         >
-          <option value="">Todos os pilares</option>
+          <option value="">Todas as áreas</option>
           {PILAR_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
         <div className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">

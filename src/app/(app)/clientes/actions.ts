@@ -10,7 +10,7 @@ function firstError(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Revise os dados do cadastro.";
 }
 
-const PILAR = z.enum(["pilates", "pilates_gestante", "fisio_pelvica"]);
+const PILAR = z.enum(["pilates", "fisio_pelvica", "acupuntura"]);
 const TIPO = z.enum(["aluna", "paciente", "ambos"]);
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().or(z.literal("")).transform((v) => v || null);

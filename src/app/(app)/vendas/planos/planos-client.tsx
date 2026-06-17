@@ -15,6 +15,7 @@ import {
   PERIODICIDADE_LABEL,
   PERIODICIDADE_OPTIONS,
   PLANO_TIPO_LABEL,
+  PLANO_TIPO_OPTIONS,
   formatBRL,
 } from "@/lib/vendas-labels";
 import type { PlanoRow, PlanoStats, ServicoOption } from "@/lib/queries/planos";
@@ -34,9 +35,20 @@ type FormState = {
 };
 
 const EMPTY: FormState = {
-  nome: "", tipo: "recorrente", valor: "", periodicidade: "mensal",
+  nome: "", tipo: "fixo", valor: "", periodicidade: "mensal",
   sessoes_semana: "", pilar: "", servicos: [], ativo: true,
 };
+
+// Periodicidades válidas para plano fixo (a matriz comercial não usa anual/avulso).
+const PERIODICIDADE_FIXO = PERIODICIDADE_OPTIONS.filter(
+  (o) => o.value !== "anual" && o.value !== "avulso",
+);
+
+function valorLabel(tipo: PlanoTipo): string {
+  if (tipo === "avulso") return "Valor por sessão (R$)";
+  if (tipo === "personalizado") return "Valor de referência (R$)";
+  return "Valor mensal (R$)";
+}
 
 export function PlanosClient({
   planos,
@@ -111,6 +123,15 @@ export function PlanosClient({
   function toggleServico(id: string) {
     setForm((f) => ({ ...f, servicos: f.servicos.includes(id) ? f.servicos.filter((x) => x !== id) : [...f.servicos, id] }));
   }
+  function setTipo(t: PlanoTipo) {
+    setForm((f) => ({
+      ...f,
+      tipo: t,
+      // Avulso fixa periodicidade; fixo não aceita "avulso"; sessões só fazem sentido no fixo.
+      periodicidade: t === "avulso" ? "avulso" : t === "fixo" && f.periodicidade === "avulso" ? "mensal" : f.periodicidade,
+      sessoes_semana: t === "fixo" ? f.sessoes_semana : "",
+    }));
+  }
 
   const filtersActive = busca !== "" || status !== "todos";
 
@@ -136,7 +157,7 @@ export function PlanosClient({
 
         <div className="mt-6 grid grid-cols-3 gap-4">
           <StatCard label="Planos no catálogo" value={stats.total} hint="incluindo inativos" icon={<Package className="h-5 w-5" strokeWidth={1.5} />} />
-          <StatCard label="Recorrentes ativos" value={stats.recorrentesAtivos} hint="planos de mensalidade vigentes" icon={<Repeat className="h-5 w-5" strokeWidth={1.5} />} />
+          <StatCard label="Planos fixos ativos" value={stats.fixosAtivos} hint="planos de mensalidade vigentes" icon={<Repeat className="h-5 w-5" strokeWidth={1.5} />} />
           <StatCard label="Ticket médio" value={formatBRL(stats.ticketMedio)} hint="média mensal normalizada" icon={<Wallet className="h-5 w-5" strokeWidth={1.5} />} />
         </div>
       </header>
@@ -188,7 +209,13 @@ export function PlanosClient({
 
                 <div className="mt-3 flex items-baseline gap-2">
                   <span className="font-display text-[28px] leading-none text-text-primary">{formatBRL(p.valor)}</span>
-                  <span className="text-xs text-text-secondary">{PERIODICIDADE_LABEL[p.periodicidade].toLowerCase()}</span>
+                  <span className="text-xs text-text-secondary">
+                    {p.tipo === "fixo"
+                      ? PERIODICIDADE_LABEL[p.periodicidade].toLowerCase()
+                      : p.tipo === "avulso"
+                        ? "por sessão"
+                        : "referência"}
+                  </span>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2">
@@ -242,26 +269,34 @@ export function PlanosClient({
 
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Tipo">
-              <Select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as PlanoTipo })}>
-                <option value="recorrente">Recorrente</option>
-                <option value="personalizado">Personalizado</option>
+              <Select value={form.tipo} onChange={(e) => setTipo(e.target.value as PlanoTipo)}>
+                {PLANO_TIPO_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </Select>
             </FormField>
-            <FormField label="Periodicidade">
-              <Select value={form.periodicidade} onChange={(e) => setForm({ ...form, periodicidade: e.target.value as Periodicidade })}>
-                {PERIODICIDADE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </Select>
-            </FormField>
+            {form.tipo === "fixo" ? (
+              <FormField label="Periodicidade">
+                <Select value={form.periodicidade} onChange={(e) => setForm({ ...form, periodicidade: e.target.value as Periodicidade })}>
+                  {PERIODICIDADE_FIXO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </Select>
+              </FormField>
+            ) : <div />}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="Valor (R$)">
+            <FormField label={valorLabel(form.tipo)}>
               <Input type="number" min={0} step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="420,00" />
             </FormField>
-            <FormField label="Sessões por semana">
-              <Input type="number" min={0} max={14} value={form.sessoes_semana} onChange={(e) => setForm({ ...form, sessoes_semana: e.target.value })} placeholder="2" />
-            </FormField>
+            {form.tipo === "fixo" ? (
+              <FormField label="Sessões por semana">
+                <Input type="number" min={0} max={14} value={form.sessoes_semana} onChange={(e) => setForm({ ...form, sessoes_semana: e.target.value })} placeholder="2" />
+              </FormField>
+            ) : <div />}
           </div>
+          {form.tipo === "personalizado" ? (
+            <p className="-mt-2 text-xs text-text-secondary">
+              Plano personalizado: o número de sessões e o valor final são definidos por cliente na adesão.
+            </p>
+          ) : null}
 
           <FormField label="Pilar principal">
             <Select value={form.pilar} onChange={(e) => setForm({ ...form, pilar: e.target.value as "" | Pilar })}>

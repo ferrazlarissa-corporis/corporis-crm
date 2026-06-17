@@ -38,7 +38,7 @@ import type { AppointmentType, LeadStage } from "@/types/database";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Interest = "pilates" | "gestante" | "pelvica";
+type Interest = "pilates" | "pelvica" | "acupuntura";
 type Origin = "whatsapp" | "instagram" | "indicacao" | "google" | "site";
 type LastKind = "msg_ia" | "msg_hum" | "call" | "booked" | "no_show";
 type StageId =
@@ -96,14 +96,14 @@ const STAGE_GOALS: Record<StageId, string> = {
 
 const INTEREST_LABEL: Record<Interest, string> = {
   pilates: "Pilates",
-  gestante: "Pilates gestante",
   pelvica: "Fisio pélvica",
+  acupuntura: "Acupuntura",
 };
 
 const INTEREST_STYLE: Record<Interest, { bg: string; color: string }> = {
-  pilates:  { bg: "rgba(240,131,83,0.12)",  color: "#B85A2E" },
-  gestante: { bg: "rgba(172,192,149,0.22)", color: "#5F7948" },
-  pelvica:  { bg: "rgba(210,176,110,0.22)", color: "#7A5E1F" },
+  pilates:    { bg: "rgba(240,131,83,0.12)",  color: "#B85A2E" },
+  pelvica:    { bg: "rgba(210,176,110,0.22)", color: "#7A5E1F" },
+  acupuntura: { bg: "rgba(211,196,170,0.30)", color: "#6B5526" },
 };
 
 const ORIGIN_LABEL: Record<Origin, string> = {
@@ -143,14 +143,14 @@ const APPOINTMENT_MINUTE_OPTIONS = ["00", "30"];
 
 const APPOINTMENT_TYPE_BY_INTEREST: Record<Interest, AppointmentType> = {
   pilates: "avaliacao_pilates",
-  gestante: "avaliacao_gestante",
   pelvica: "avaliacao_fisio_pelvica",
+  acupuntura: "avaliacao_acupuntura",
 };
 
 const APPOINTMENT_TYPE_LABEL: Record<AppointmentType, string> = {
   avaliacao_pilates: "Avaliação Pilates",
-  avaliacao_gestante: "Avaliação Gestante",
   avaliacao_fisio_pelvica: "Avaliação Fisio Pélvica",
+  avaliacao_acupuntura: "Avaliação Acupuntura",
 };
 
 const OWNER_PALETTE = [
@@ -172,9 +172,9 @@ function mapFunilLead(fl: FunilLead): Lead {
     avaliacao_agendada: "agendada",
   };
   const interestMap: Partial<Record<string, Interest>> = {
-    pilates_gestante: "gestante",
-    fisio_pelvica:    "pelvica",
-    indefinido:       "pilates",
+    fisio_pelvica: "pelvica",
+    acupuntura:    "acupuntura",
+    indefinido:    "pilates",
   };
 
   const owner: LeadOwner = fl.responsavel
@@ -381,7 +381,7 @@ function KanbanCardTight({ lead, stageColor }: { lead: Lead; stageColor: string 
             {lead.name}
           </div>
           <div style={{ fontFamily: "var(--font-body)", fontSize: "10.5px", color: "var(--color-texto-medio)" }}>
-            {lead.interest === "pilates" ? "Pilates" : lead.interest === "gestante" ? "Gestante" : "Pélvica"}{" "}
+            {INTEREST_LABEL[lead.interest]}{" "}
             · {ORIGIN_LABEL[lead.origin]}
           </div>
         </div>
@@ -793,7 +793,7 @@ function NewLeadModal({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
             {[
               { name: "origem", label: "Origem", options: [["whatsapp","WhatsApp"],["instagram","Instagram"],["indicacao","Indicação"],["google","Google"],["outro","Outro"]] },
-              { name: "interesse", label: "Interesse", options: [["indefinido","Indefinido"],["pilates","Pilates"],["pilates_gestante","Pilates gestante"],["fisio_pelvica","Fisio pélvica"]] },
+              { name: "interesse", label: "Interesse", options: [["indefinido","Indefinido"],["pilates","Pilates"],["fisio_pelvica","Fisio pélvica"],["acupuntura","Acupuntura"]] },
             ].map(({ name, label, options }) => (
               <div key={name}>
                 <label style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: "6px" }}>{label}</label>

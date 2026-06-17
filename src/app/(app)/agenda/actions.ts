@@ -12,7 +12,7 @@ const createAppointmentSchema = z.object({
   lead_id: z.string().uuid(),
   inicio: z.string().datetime({ offset: true }),
   fim: z.string().datetime({ offset: true }),
-  tipo: z.enum(["avaliacao_pilates", "avaliacao_fisio_pelvica", "avaliacao_gestante"]),
+  tipo: z.enum(["avaliacao_pilates", "avaliacao_fisio_pelvica", "avaliacao_acupuntura"]),
   profissional_id: z.string().uuid().optional().nullable(),
   observacoes: z.string().trim().min(1, "Registre uma observação antes de confirmar o agendamento."),
 });
@@ -165,8 +165,8 @@ export async function getLeadsForSelect(): Promise<LeadSelectOption[]> {
 
 const PILAR_TO_TIPO: Record<Pilar, AppointmentType> = {
   pilates: "avaliacao_pilates",
-  pilates_gestante: "avaliacao_gestante",
   fisio_pelvica: "avaliacao_fisio_pelvica",
+  acupuntura: "avaliacao_acupuntura",
 };
 
 const criarAgendamentoSchema = z.object({

@@ -54,7 +54,7 @@ function buildSystemPrompt(
   faq: Json,
   regrasHandoff: Json,
   exemplos: Json,
-  lead: { nome: string; interesse: string; estagio: string; score_qualificacao: number | null }
+  lead: { nome: string; interesse: string; gestante: boolean; estagio: string; score_qualificacao: number | null }
 ): string {
   const boasPraticasStr = Array.isArray(boasPraticas) && boasPraticas.length > 0
     ? "\n\n## Boas práticas de tom e marca\n" + (boasPraticas as { title?: string; detail?: string }[])
@@ -96,7 +96,8 @@ function buildSystemPrompt(
 
 ## Contexto da aluna
 - Nome: ${lead.nome}
-- Interesse: ${lead.interesse}
+- Interesse (área): ${lead.interesse}
+- Gestante: ${lead.gestante ? "sim" : "não identificado"}
 - Estágio no funil: ${lead.estagio}
 - Score de qualificação: ${lead.score_qualificacao ?? "não avaliado"}
 
@@ -116,7 +117,7 @@ function buildSystemPrompt(
 - Evite emojis em excesso (no máximo um, e só quando soar natural).
 
 ## Qualificação proativa (obrigatório)
-- Assim que identificar o interesse da aluna (pilates, gestante, fisio pélvica), use IMEDIATAMENTE a tool **atualizar_interesse** — mesmo que ela não tenha pedido para agendar ainda.
+- Assim que identificar a área de interesse da aluna (pilates, fisio pélvica ou acupuntura), use IMEDIATAMENTE a tool **atualizar_interesse** — mesmo que ela não tenha pedido para agendar ainda. Se perceber que ela é gestante, marque também o campo gestante=true (gestante cruza com qualquer área: Gestar em movimento, Fisio pélvica gestante, Mamãe ativa).
 - Após 2 ou mais trocas de mensagens, use a tool **registrar_score** com uma nota de 0–100 e uma justificativa breve. Critérios: clareza do interesse (0–30), urgência/motivação (0–30), disponibilidade de agenda (0–20), perfil de aluna (0–20). Atualize o score se a conversa trouxer informação relevante nova.
 - Sempre que descobrir algo sobre a queixa/incômodo, objetivo, histórico, restrições/pontos de atenção, disponibilidade ou motivação da aluna, use a tool **registrar_contexto_avaliacao** para registrar — envie só os campos que descobriu. Isso prepara a fisioterapeuta para a avaliação. Atualize conforme a conversa evolui.
 - Essas ações são silenciosas: execute-as sempre que houver informação suficiente, sem mencionar ao lead.
@@ -483,7 +484,7 @@ function mentionsThirdTrimester(text: string): boolean {
 
 function buildGestanteValuesContextNote(
   messages: ConversationMessageRow[],
-  lead: { interesse: string }
+  lead: { interesse: string; gestante?: boolean }
 ): string | null {
   const lastUserIndex = messages.findLastIndex((message) => message.direcao === "entrada");
   if (lastUserIndex < 0) return null;
@@ -495,10 +496,10 @@ function buildGestanteValuesContextNote(
     .slice(Math.max(0, lastUserIndex - 12), lastUserIndex + 1)
     .map((message) => message.conteudo)
     .join(" ");
-  const isExplicitGestanteFlow = lead.interesse === "pilates_gestante" || mentionsExplicitGestanteContext(recentText);
+  const isExplicitGestanteFlow = lead.gestante === true || mentionsExplicitGestanteContext(recentText);
   if (!isExplicitGestanteFlow && isFisioPelvicaFlowText(recentText, lead)) return null;
 
-  const isGestanteFlow = lead.interesse === "pilates_gestante" || mentionsGestanteContext(recentText);
+  const isGestanteFlow = lead.gestante === true || mentionsGestanteContext(recentText);
   if (!isGestanteFlow) return null;
 
   const thirdTrimesterLine = mentionsThirdTrimester(recentText)
@@ -611,7 +612,7 @@ export async function POST(request: NextRequest) {
   // Load conversation + lead (needed before bypass/ativo checks)
   const { data: conv } = await db
     .from("conversations")
-    .select("id, modo, leads!inner(id, nome, telefone, interesse, estagio, score_qualificacao)")
+    .select("id, modo, leads!inner(id, nome, telefone, interesse, gestante, estagio, score_qualificacao)")
     .eq("id", conversation_id)
     .single();
 
@@ -624,7 +625,7 @@ export async function POST(request: NextRequest) {
 
   const lead = leadRow as {
     id: string; nome: string; telefone: string;
-    interesse: string; estagio: string; score_qualificacao: number | null;
+    interesse: string; gestante: boolean; estagio: string; score_qualificacao: number | null;
   };
 
   // Numbers in bypass list always get Clara — ignore ativo and business hours

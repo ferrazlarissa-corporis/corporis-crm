@@ -21,7 +21,7 @@ export type ProfissionalStats = {
 
 function toPilares(value: unknown): Pilar[] {
   return Array.isArray(value)
-    ? value.filter((v): v is Pilar => v === "pilates" || v === "pilates_gestante" || v === "fisio_pelvica")
+    ? value.filter((v): v is Pilar => v === "pilates" || v === "fisio_pelvica" || v === "acupuntura")
     : [];
 }
 

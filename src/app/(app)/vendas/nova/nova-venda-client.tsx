@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,34 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PILAR_LABEL } from "@/lib/cadastros-labels";
-import { PERIODICIDADE_LABEL, PLANO_TIPO_LABEL, formatBRL } from "@/lib/vendas-labels";
+import {
+  PERIODICIDADE_LABEL,
+  PERIODICIDADE_MESES,
+  PERIODICIDADE_OPTIONS,
+  PLANO_TIPO_LABEL,
+  formatBRL,
+  pilatesPreco,
+} from "@/lib/vendas-labels";
 import type { PessoaListItem } from "@/lib/queries/pessoa";
 import type { PlanoRow } from "@/lib/queries/planos";
-import type { Pilar } from "@/types/database";
+import type { Periodicidade, Pilar, PlanoTipo } from "@/types/database";
 import { criarVenda } from "../actions";
+
+// Periodicidades válidas para plano fixo (sem anual/avulso).
+const PERIODICIDADE_FIXO = PERIODICIDADE_OPTIONS.filter(
+  (o) => o.value !== "anual" && o.value !== "avulso",
+);
+
+/** Soma meses a uma data ISO (yyyy-mm-dd), devolvendo ISO. */
+function addMonthsISO(iso: string, months: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatDateBR(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("pt-BR");
+}
 
 type Modelo = { id: string; nome: string; pilares: Pilar[]; planos: string[] };
 
@@ -41,6 +64,9 @@ export function NovaVendaClient({
   const [desconto, setDesconto] = useState("0");
   const [diaVencimento, setDiaVencimento] = useState("10");
   const [inicio, setInicio] = useState(today());
+  const [periodicidade, setPeriodicidade] = useState<Periodicidade>("mensal");
+  const [sessoesSemana, setSessoesSemana] = useState("");
+  const [totalSessoes, setTotalSessoes] = useState("");
   const [forma, setForma] = useState(FORMAS[0]);
   const [parcelas, setParcelas] = useState("6");
   const [modeloId, setModeloId] = useState<string | null>(null);
@@ -51,6 +77,16 @@ export function NovaVendaClient({
   const pessoa = useMemo(() => pessoas.find((p) => p.id === pessoaId) ?? null, [pessoas, pessoaId]);
   const plano = useMemo(() => planos.find((p) => p.id === planoId) ?? null, [planos, planoId]);
   const totalLiquido = Math.max(0, (Number(valor) || 0) - (Number(desconto) || 0));
+  const tipo: PlanoTipo = plano?.tipo ?? "fixo";
+  const fim = tipo === "fixo" ? addMonthsISO(inicio, PERIODICIDADE_MESES[periodicidade]) : null;
+
+  // Pilates fixo: pré-preenche o valor pela tabela de preços (frequência × periodicidade).
+  // Roda ao trocar periodicidade/frequência/plano; o valor segue editável manualmente depois.
+  useEffect(() => {
+    if (tipo !== "fixo" || plano?.pilar !== "pilates") return;
+    const preco = pilatesPreco(periodicidade, Number(sessoesSemana));
+    if (preco != null) setValor(String(preco));
+  }, [tipo, plano?.pilar, periodicidade, sessoesSemana]);
 
   const pessoasFiltradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -73,12 +109,20 @@ export function NovaVendaClient({
   function selectPlano(p: PlanoRow) {
     setPlanoId(p.id);
     setValor(String(p.valor));
+    // Pré-preenche os termos com os defaults do plano (catálogo genérico — editáveis).
+    setPeriodicidade(p.periodicidade === "anual" || p.periodicidade === "avulso" ? "mensal" : p.periodicidade);
+    setSessoesSemana(p.sessoes_semana != null ? String(p.sessoes_semana) : "");
+    setTotalSessoes("");
   }
 
   function canContinue(): boolean {
     if (step === 1) return Boolean(pessoaId);
     if (step === 2) return Boolean(planoId);
-    if (step === 3) return Number(valor) >= 0 && Number(diaVencimento) >= 1 && Number(diaVencimento) <= 28 && Boolean(inicio);
+    if (step === 3) {
+      const base = Number(valor) >= 0 && Number(diaVencimento) >= 1 && Number(diaVencimento) <= 28 && Boolean(inicio);
+      if (tipo === "personalizado") return base && Number(totalSessoes) >= 1;
+      return base;
+    }
     return true;
   }
 
@@ -94,6 +138,10 @@ export function NovaVendaClient({
         dia_vencimento: Number(diaVencimento),
         inicio,
         modelo_contrato_id: modeloId,
+        tipo,
+        periodicidade: tipo === "fixo" ? periodicidade : null,
+        sessoes_semana: tipo === "fixo" && sessoesSemana !== "" ? Number(sessoesSemana) : null,
+        total_sessoes: tipo !== "fixo" && totalSessoes !== "" ? Number(totalSessoes) : null,
       });
       if (!r.success) { setError(r.error); return; }
       router.push("/vendas");
@@ -128,10 +176,14 @@ export function NovaVendaClient({
             {step === 2 ? <Step2 planos={planos} planoId={planoId} onSelect={selectPlano} /> : null}
             {step === 3 ? (
               <Step3
+                tipo={tipo} fim={fim}
                 valor={valor} setValor={setValor}
                 desconto={desconto} setDesconto={setDesconto}
                 diaVencimento={diaVencimento} setDiaVencimento={setDiaVencimento}
                 inicio={inicio} setInicio={setInicio}
+                periodicidade={periodicidade} setPeriodicidade={setPeriodicidade}
+                sessoesSemana={sessoesSemana} setSessoesSemana={setSessoesSemana}
+                totalSessoes={totalSessoes} setTotalSessoes={setTotalSessoes}
                 forma={forma} setForma={setForma}
                 parcelas={parcelas} setParcelas={setParcelas}
               />
@@ -192,8 +244,13 @@ export function NovaVendaClient({
                 <>
                   <p className="text-sm text-text-primary">{plano.nome}</p>
                   <p className="text-xs text-text-secondary">
-                    {PLANO_TIPO_LABEL[plano.tipo]} · {PERIODICIDADE_LABEL[plano.periodicidade]}
+                    {PLANO_TIPO_LABEL[tipo]}
+                    {tipo === "fixo" ? ` · ${PERIODICIDADE_LABEL[periodicidade]}` : ""}
+                    {tipo !== "fixo" && totalSessoes ? ` · ${totalSessoes} sessões` : ""}
                   </p>
+                  {tipo === "fixo" && fim ? (
+                    <p className="text-xs text-text-secondary">Vigência até {formatDateBR(fim)}</p>
+                  ) : null}
                 </>
               ) : <p className="text-xs text-text-secondary">Nenhum plano selecionado</p>}
             </SummaryBlock>
@@ -202,7 +259,9 @@ export function NovaVendaClient({
               {plano ? (
                 <>
                   <p className="text-sm text-text-primary">{formatBRL(Number(valor) || 0)} · vencimento dia {diaVencimento}</p>
-                  <p className="text-xs text-text-secondary">{parcelas} parcelas · {forma}</p>
+                  <p className="text-xs text-text-secondary">
+                    {tipo === "fixo" ? `${parcelas} parcelas · ${forma}` : forma}
+                  </p>
                 </>
               ) : <p className="text-xs text-text-secondary">Defina as condições</p>}
             </SummaryBlock>
@@ -291,20 +350,54 @@ function Step2({ planos, planoId, onSelect }: { planos: PlanoRow[]; planoId: str
 }
 
 function Step3(props: {
+  tipo: PlanoTipo; fim: string | null;
   valor: string; setValor: (v: string) => void;
   desconto: string; setDesconto: (v: string) => void;
   diaVencimento: string; setDiaVencimento: (v: string) => void;
   inicio: string; setInicio: (v: string) => void;
+  periodicidade: Periodicidade; setPeriodicidade: (v: Periodicidade) => void;
+  sessoesSemana: string; setSessoesSemana: (v: string) => void;
+  totalSessoes: string; setTotalSessoes: (v: string) => void;
   forma: string; setForma: (v: string) => void;
   parcelas: string; setParcelas: (v: string) => void;
 }) {
+  const { tipo } = props;
+  const valorLabel =
+    tipo === "avulso" ? "Valor por sessão (R$)" : tipo === "personalizado" ? "Valor do pacote (R$)" : "Valor mensal (R$)";
+  const ajuda =
+    tipo === "fixo"
+      ? "Plano fixo: cobrança mensal recorrente até o término calculado abaixo."
+      : tipo === "personalizado"
+        ? "Plano personalizado: cobrança única do pacote de sessões contratado."
+        : "Sessão avulsa: cobrança única, sem recorrência.";
+
   return (
     <div>
       <h1 className="font-display text-[28px] leading-tight text-text-primary">Ajuste as condições comerciais com clareza.</h1>
-      <p className="mt-2 text-sm text-text-secondary">Valor, desconto, vencimento e parcelas alimentam os lançamentos a receber.</p>
+      <p className="mt-2 text-sm text-text-secondary">{ajuda}</p>
 
-      <div className="mt-6 grid grid-cols-2 gap-4">
-        <Labeled label="Valor do plano (R$)">
+      {tipo === "fixo" ? (
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          <Labeled label="Periodicidade">
+            <Select value={props.periodicidade} onChange={(e) => props.setPeriodicidade(e.target.value as Periodicidade)}>
+              {PERIODICIDADE_FIXO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </Select>
+          </Labeled>
+          <Labeled label="Sessões por semana">
+            <Input type="number" min={0} max={14} value={props.sessoesSemana} onChange={(e) => props.setSessoesSemana(e.target.value)} placeholder="2" />
+          </Labeled>
+        </div>
+      ) : tipo === "personalizado" ? (
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          <Labeled label="Total de sessões">
+            <Input type="number" min={1} max={500} value={props.totalSessoes} onChange={(e) => props.setTotalSessoes(e.target.value)} placeholder="12" />
+          </Labeled>
+          <div />
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <Labeled label={valorLabel}>
           <Input type="number" min={0} step="0.01" value={props.valor} onChange={(e) => props.setValor(e.target.value)} />
         </Labeled>
         <Labeled label="Desconto (R$)">
@@ -321,14 +414,23 @@ function Step3(props: {
             {FORMAS.map((f) => <option key={f} value={f}>{f}</option>)}
           </Select>
         </Labeled>
-        <Labeled label="Número de parcelas">
-          <Input type="number" min={1} max={48} value={props.parcelas} onChange={(e) => props.setParcelas(e.target.value)} />
-        </Labeled>
+        {tipo === "fixo" ? (
+          <Labeled label="Número de parcelas">
+            <Input type="number" min={1} max={48} value={props.parcelas} onChange={(e) => props.setParcelas(e.target.value)} />
+          </Labeled>
+        ) : <div />}
       </div>
-      <p className="mt-3 text-xs text-text-secondary">
-        Forma de pagamento e parcelas são informativas nesta fase (sem gateway). O 1º lançamento a receber
-        é criado na competência do início.
-      </p>
+
+      {tipo === "fixo" && props.fim ? (
+        <p className="mt-3 text-xs text-text-secondary">
+          Término calculado: <span className="text-text-primary">{formatDateBR(props.fim)}</span>. A cobrança mensal
+          encerra automaticamente nessa data.
+        </p>
+      ) : (
+        <p className="mt-3 text-xs text-text-secondary">
+          Forma de pagamento é informativa nesta fase (sem gateway). O lançamento a receber é criado na competência do início.
+        </p>
+      )}
     </div>
   );
 }
