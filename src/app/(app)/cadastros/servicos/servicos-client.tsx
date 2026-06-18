@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { StatCard } from "@/components/corporis/stat-card";
-import { PilarBadge, colorVarForToken } from "@/components/corporis/taxonomy-badges";
+import { PilarBadge, colorVarForToken, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import {
   COR_OPTIONS,
@@ -236,7 +236,11 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((s) => (
-              <Card key={s.id} className={cn("flex flex-col p-5", !s.ativo && "opacity-70")}>
+              <Card key={s.id} className={cn("relative flex flex-col overflow-hidden p-5 pt-6", !s.ativo && "opacity-70")}>
+                <span
+                  className="absolute inset-x-0 top-0 h-1.5"
+                  style={taxonomyAccentStyle(s.cor_token, PILAR_COR_PADRAO[s.pilar])}
+                />
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span

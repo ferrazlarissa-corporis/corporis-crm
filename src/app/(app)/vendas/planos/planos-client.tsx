@@ -10,7 +10,6 @@ import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { StatCard } from "@/components/corporis/stat-card";
 import {
-  PilarBadge,
   ServicoBadge,
   colorTokenForPlano,
   colorTokenForServico,
@@ -234,9 +233,8 @@ export function PlanosClient({
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="mt-4">
                     <Field label="Sessões" value={p.sessoes_semana != null ? `${p.sessoes_semana} por semana` : "—"} />
-                    <Field label="Pilar" value={p.pilar ? <PilarBadge pilar={p.pilar} /> : "—"} />
                   </div>
 
                   {p.servicos.length > 0 ? (

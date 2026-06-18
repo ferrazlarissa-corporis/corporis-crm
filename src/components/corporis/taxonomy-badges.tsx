@@ -6,9 +6,14 @@ import {
   PILAR_LABEL,
   type CorToken,
 } from "@/lib/cadastros-labels";
-import type { Pilar } from "@/types/database";
+import type { Periodicidade, Pilar, PlanoTipo } from "@/types/database";
 
 const COR_TOKENS = new Set<CorToken>(["alaranjado", "tangerina", "bege", "bege_claro", "verde"]);
+const PLANO_PILATES_PERIODICIDADE_COR: Partial<Record<Periodicidade, CorToken>> = {
+  mensal: "alaranjado",
+  trimestral: "tangerina",
+  semestral: "bege",
+};
 
 type ServicoColorSource = {
   cor_token?: string | null;
@@ -18,6 +23,8 @@ type ServicoColorSource = {
 
 type PlanoColorSource = {
   pilar?: Pilar | null;
+  periodicidade?: Periodicidade | null;
+  tipo?: PlanoTipo | null;
   servicosMeta?: ServicoColorSource[];
 };
 
@@ -40,6 +47,10 @@ export function colorTokenForServico(servico: ServicoColorSource | null | undefi
 }
 
 export function colorTokenForPlano(plano: PlanoColorSource): CorToken {
+  const isPilates = plano.pilar === "pilates" || Boolean(plano.servicosMeta?.some((s) => s.pilar === "pilates"));
+  const periodicidadeToken = plano.periodicidade ? PLANO_PILATES_PERIODICIDADE_COR[plano.periodicidade] : null;
+  if (plano.tipo === "fixo" && isPilates && periodicidadeToken) return periodicidadeToken;
+
   const firstServico = plano.servicosMeta?.[0] ?? null;
   return firstServico ? colorTokenForServico(firstServico, plano.pilar) : colorTokenForPilar(plano.pilar);
 }

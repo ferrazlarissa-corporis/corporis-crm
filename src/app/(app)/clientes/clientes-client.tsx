@@ -153,7 +153,6 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
                           <p className="text-text-primary">{c.planoNome}</p>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             {c.planoPeriodicidade ? <span className="text-xs text-text-secondary">{PERIODICIDADE_LABEL[c.planoPeriodicidade]}</span> : null}
-                            {c.planoPilar ? <PilarBadge pilar={c.planoPilar} /> : null}
                           </div>
                         </>
                       ) : <span className="text-text-secondary">Sem plano ativo</span>}

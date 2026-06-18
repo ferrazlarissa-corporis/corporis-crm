@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/corporis/stat-card";
-import { PilarBadge, colorTokenForPilar, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
+import { PilarBadge } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import {
   MATRICULA_STATUS_LABEL,
@@ -141,18 +141,7 @@ export function VendasClient({ matriculas, stats }: { matriculas: MatriculaRow[]
                       </div>
                     </td>
                     <td className="px-4 py-3 text-text-primary">
-                      {m.plano ? (
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-8 w-1 rounded-[var(--radius-pill)]"
-                            style={taxonomyAccentStyle(colorTokenForPilar(m.plano.pilar))}
-                          />
-                          <div>
-                            <p>{m.plano.nome}</p>
-                            {m.plano.pilar ? <div className="mt-1"><PilarBadge pilar={m.plano.pilar} /></div> : null}
-                          </div>
-                        </div>
-                      ) : "—"}
+                      {m.plano?.nome ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-text-secondary">
                       {m.plano ? PERIODICIDADE_LABEL[m.plano.periodicidade] : "—"}

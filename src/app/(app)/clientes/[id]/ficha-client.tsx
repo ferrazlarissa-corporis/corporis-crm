@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PilarBadge, colorTokenForPilar, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
+import { PilarBadge, colorTokenForPlano, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
 import { PERIODICIDADE_LABEL, formatBRL, MATRICULA_STATUS_LABEL } from "@/lib/vendas-labels";
@@ -154,7 +154,7 @@ function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
         <Card className="relative overflow-hidden p-5 pt-6">
           <span
             className="absolute inset-x-0 top-0 h-1"
-            style={taxonomyAccentStyle(colorTokenForPilar(ficha.matricula?.plano?.pilar))}
+            style={taxonomyAccentStyle(ficha.matricula?.plano ? colorTokenForPlano(ficha.matricula.plano) : "bege")}
           />
           <SectionTitle>Plano ativo</SectionTitle>
           {ficha.matricula?.plano ? (
@@ -164,9 +164,6 @@ function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
                 <p className="text-xs text-text-secondary">
                   {PERIODICIDADE_LABEL[ficha.matricula.plano.periodicidade]} · início {fmt(ficha.matricula.inicio)}
                 </p>
-                {ficha.matricula.plano.pilar ? (
-                  <div className="mt-2"><PilarBadge pilar={ficha.matricula.plano.pilar} /></div>
-                ) : null}
               </div>
               <p className="font-display text-2xl text-text-primary">{formatBRL(ficha.matricula.plano.valor)}</p>
             </div>
@@ -376,7 +373,7 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
       <Card className="relative overflow-hidden p-6 pt-7">
         <span
           className="absolute inset-x-0 top-0 h-1.5"
-          style={taxonomyAccentStyle(colorTokenForPilar(m.plano.pilar))}
+          style={taxonomyAccentStyle(colorTokenForPlano(m.plano))}
         />
         <div className="flex items-baseline justify-between">
           <div>
@@ -391,7 +388,6 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
           <Mini label="Renovação" value={m.renovacao ? fmt(m.renovacao) : "Automática"} />
           <Mini label="Vencimento" value={m.dia_vencimento ? `dia ${m.dia_vencimento}` : "—"} />
           <Mini label="Frequência" value={m.plano.sessoes_semana ? `${m.plano.sessoes_semana}x/semana` : "—"} />
-          <Mini label="Pilar" value={m.plano.pilar ? <PilarBadge pilar={m.plano.pilar} /> : "—"} />
         </div>
 
         <div className="mt-6 flex gap-3 border-t border-border pt-4">

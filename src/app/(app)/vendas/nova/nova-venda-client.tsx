@@ -86,14 +86,19 @@ export function NovaVendaClient({
   const tipo: PlanoTipo = plano?.tipo ?? "fixo";
   const fim = tipo === "fixo" ? addMonthsISO(inicio, PERIODICIDADE_MESES[periodicidade]) : null;
   const planoToken = plano ? colorTokenForPlano(plano) : null;
+  const planoPilares = useMemo(() => {
+    if (!plano) return [];
+    return Array.from(new Set([plano.pilar, ...plano.servicosMeta.map((s) => s.pilar)].filter(Boolean) as Pilar[]));
+  }, [plano]);
+  const planoEhPilates = planoPilares.includes("pilates");
 
   // Pilates fixo: pré-preenche o valor pela tabela de preços (frequência × periodicidade).
   // Roda ao trocar periodicidade/frequência/plano; o valor segue editável manualmente depois.
   useEffect(() => {
-    if (tipo !== "fixo" || plano?.pilar !== "pilates") return;
+    if (tipo !== "fixo" || !planoEhPilates) return;
     const preco = pilatesPreco(periodicidade, Number(sessoesSemana));
     if (preco != null) setValor(String(preco));
-  }, [tipo, plano?.pilar, periodicidade, sessoesSemana]);
+  }, [tipo, planoEhPilates, periodicidade, sessoesSemana]);
 
   const pessoasFiltradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -108,10 +113,10 @@ export function NovaVendaClient({
     return modelos.filter(
       (m) =>
         m.planos.includes(plano.id) ||
-        (plano.pilar && m.pilares.includes(plano.pilar)) ||
+        planoPilares.some((pilar) => m.pilares.includes(pilar)) ||
         (m.planos.length === 0 && m.pilares.length === 0),
     );
-  }, [modelos, plano]);
+  }, [modelos, plano, planoPilares]);
 
   function selectPlano(p: PlanoRow) {
     setPlanoId(p.id);
@@ -257,7 +262,6 @@ export function NovaVendaClient({
                     >
                       {PLANO_TIPO_LABEL[tipo]}
                     </span>
-                    {plano.pilar ? <PilarBadge pilar={plano.pilar} /> : null}
                   </div>
                   <p className="mt-1 text-xs text-text-secondary">
                     {tipo === "fixo" ? PERIODICIDADE_LABEL[periodicidade] : ""}
@@ -370,7 +374,6 @@ function Step2({ planos, planoId, onSelect }: { planos: PlanoRow[]; planoId: str
                 {p.sessoes_semana != null ? ` · ${p.sessoes_semana}x/semana` : ""}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {p.pilar ? <PilarBadge pilar={p.pilar} /> : null}
                 {p.servicosMeta.slice(0, 3).map((s) => (
                   <ServicoBadge key={s.id} nome={s.nome} corToken={s.cor_token} pilar={s.pilar} />
                 ))}
@@ -486,12 +489,7 @@ function Step4({
         <RevRow label="Cliente" value={pessoa?.nome ?? "—"} />
         <RevRow
           label="Plano"
-          value={plano ? (
-            <span className="inline-flex flex-wrap justify-end gap-1.5">
-              <span>{plano.nome}</span>
-              {plano.pilar ? <PilarBadge pilar={plano.pilar} /> : null}
-            </span>
-          ) : "—"}
+          value={plano?.nome ?? "—"}
         />
         <RevRow label="Condição" value={`${formatBRL(liquido)} · vencimento dia ${diaVencimento} · início ${inicio}`} />
       </div>

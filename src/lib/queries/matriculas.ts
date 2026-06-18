@@ -9,7 +9,7 @@ export type MatriculaRow = {
   status: MatriculaStatus;
   updated_at: string;
   pessoa: { id: string; nome: string; pilar_principal: Pilar | null } | null;
-  plano: { nome: string; valor: number; periodicidade: Periodicidade; pilar: Pilar | null } | null;
+  plano: { nome: string; valor: number; periodicidade: Periodicidade } | null;
   proximaCobranca: string | null;
 };
 
@@ -22,7 +22,7 @@ export type MatriculaStats = {
 const SELECT =
   "id, inicio, dia_vencimento, status, updated_at, " +
   "pessoa:pessoa_id(id, nome, pilar_principal), " +
-  "plano:plano_id(nome, valor, periodicidade, pilar)";
+  "plano:plano_id(nome, valor, periodicidade)";
 
 function one<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
