@@ -1,4 +1,4 @@
-import { getPessoas } from "@/lib/queries/pessoa";
+import { getPessoasParaVenda } from "@/lib/queries/pessoa";
 import { getPlanos } from "@/lib/queries/planos";
 import { getContratoModelos } from "@/lib/queries/contrato-modelos";
 import { NovaVendaClient } from "./nova-venda-client";
@@ -7,7 +7,7 @@ export const metadata = { title: "Nova venda · Corporis" };
 
 export default async function NovaVendaPage() {
   const [pessoas, planos, modelos] = await Promise.all([
-    getPessoas(),
+    getPessoasParaVenda(),
     getPlanos(),
     getContratoModelos(),
   ]);

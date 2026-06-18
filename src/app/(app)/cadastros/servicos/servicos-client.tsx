@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { StatCard } from "@/components/corporis/stat-card";
-import { PilarBadge, colorVarForToken, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
+import { GestanteBadge, PilarBadge, colorVarForToken, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import {
   COR_OPTIONS,
@@ -248,11 +248,7 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
                       style={{ background: colorVarForToken(s.cor_token, PILAR_COR_PADRAO[s.pilar]) }}
                     />
                     <PilarBadge pilar={s.pilar} />
-                    {s.gestante ? (
-                      <span className="rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-text-secondary">
-                        Gestante
-                      </span>
-                    ) : null}
+                    {s.gestante ? <GestanteBadge /> : null}
                   </div>
                   <span
                     className={cn(

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { AlertTriangle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,12 +45,42 @@ function formatDateBR(iso: string): string {
 }
 
 type Modelo = { id: string; nome: string; pilares: Pilar[]; planos: string[] };
+type PessoaStatusFilter = "ativas" | "inativas" | "todas";
 
-const FORMAS = ["Pix recorrente", "Cartão recorrente", "Boleto", "Dinheiro"];
+const FORMA_CREDITO_TOTAL = "Crédito total do plano";
+const FORMAS = ["Pix recorrente", "Cartão recorrente", FORMA_CREDITO_TOTAL, "Boleto", "Dinheiro"];
 const STEPS = ["Cliente", "Plano", "Condições", "Revisão"];
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function descontoPercentual(desconto: string): number {
+  const parsed = Number(desconto);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(Math.max(parsed, 0), 100);
+}
+
+function valorDesconto(valor: string, desconto: string): number {
+  return (Number(valor) || 0) * (descontoPercentual(desconto) / 100);
+}
+
+function valorLiquido(valor: string, desconto: string): number {
+  return Math.max(0, (Number(valor) || 0) - valorDesconto(valor, desconto));
+}
+
+function valorTotalPlano(tipo: PlanoTipo, periodicidade: Periodicidade, valor: string, desconto: string): number {
+  const liquido = valorLiquido(valor, desconto);
+  return tipo === "fixo" ? liquido * PERIODICIDADE_MESES[periodicidade] : liquido;
+}
+
+function parcelasDoPlano(tipo: PlanoTipo, periodicidade: Periodicidade, forma: string): number {
+  if (forma === FORMA_CREDITO_TOTAL || tipo !== "fixo") return 1;
+  return PERIODICIDADE_MESES[periodicidade];
+}
+
+function parcelasLabel(parcelas: number): string {
+  return `${parcelas} ${parcelas === 1 ? "parcela" : "parcelas"}`;
 }
 
 export function NovaVendaClient({
@@ -74,17 +104,21 @@ export function NovaVendaClient({
   const [sessoesSemana, setSessoesSemana] = useState("");
   const [totalSessoes, setTotalSessoes] = useState("");
   const [forma, setForma] = useState(FORMAS[0]);
-  const [parcelas, setParcelas] = useState("6");
   const [modeloId, setModeloId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  const [pessoaStatus, setPessoaStatus] = useState<PessoaStatusFilter>("ativas");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const pessoa = useMemo(() => pessoas.find((p) => p.id === pessoaId) ?? null, [pessoas, pessoaId]);
   const plano = useMemo(() => planos.find((p) => p.id === planoId) ?? null, [planos, planoId]);
-  const totalLiquido = Math.max(0, (Number(valor) || 0) - (Number(desconto) || 0));
   const tipo: PlanoTipo = plano?.tipo ?? "fixo";
   const fim = tipo === "fixo" ? addMonthsISO(inicio, PERIODICIDADE_MESES[periodicidade]) : null;
+  const liquidoMensal = valorLiquido(valor, desconto);
+  const totalPlano = valorTotalPlano(tipo, periodicidade, valor, desconto);
+  const totalLiquido = forma === FORMA_CREDITO_TOTAL ? totalPlano : liquidoMensal;
+  const descontoNominal = valorDesconto(valor, desconto);
+  const numeroParcelas = parcelasDoPlano(tipo, periodicidade, forma);
   const planoToken = plano ? colorTokenForPlano(plano) : null;
   const planoPilares = useMemo(() => {
     if (!plano) return [];
@@ -102,11 +136,14 @@ export function NovaVendaClient({
 
   const pessoasFiltradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    if (!q) return pessoas.slice(0, 30);
-    return pessoas.filter(
-      (p) => p.nome.toLowerCase().includes(q) || (p.telefone ?? "").includes(q),
-    ).slice(0, 30);
-  }, [pessoas, busca]);
+    return pessoas.filter((p) => {
+      const ativa = p.status === "cliente_ativo" || p.leadConvertido;
+      if (pessoaStatus === "ativas" && !ativa) return false;
+      if (pessoaStatus === "inativas" && p.status !== "inativo") return false;
+      if (!q) return true;
+      return p.nome.toLowerCase().includes(q) || (p.telefone ?? "").includes(q);
+    }).slice(0, 30);
+  }, [pessoas, busca, pessoaStatus]);
 
   const modelosCompativeis = useMemo(() => {
     if (!plano) return modelos;
@@ -131,7 +168,9 @@ export function NovaVendaClient({
     if (step === 1) return Boolean(pessoaId);
     if (step === 2) return Boolean(planoId);
     if (step === 3) {
-      const base = Number(valor) >= 0 && Number(diaVencimento) >= 1 && Number(diaVencimento) <= 28 && Boolean(inicio);
+      const descontoPct = Number(desconto);
+      const descontoValido = Number.isFinite(descontoPct) && descontoPct >= 0 && descontoPct <= 100;
+      const base = Number(valor) >= 0 && descontoValido && Number(diaVencimento) >= 1 && Number(diaVencimento) <= 28 && Boolean(inicio);
       if (tipo === "personalizado") return base && Number(totalSessoes) >= 1;
       return base;
     }
@@ -146,7 +185,7 @@ export function NovaVendaClient({
         pessoa_id: pessoaId,
         plano_id: planoId,
         valor: Number(valor),
-        desconto: Number(desconto) || 0,
+        desconto: descontoNominal,
         dia_vencimento: Number(diaVencimento),
         inicio,
         modelo_contrato_id: modeloId,
@@ -183,6 +222,8 @@ export function NovaVendaClient({
                 onSelect={setPessoaId}
                 busca={busca}
                 setBusca={setBusca}
+                status={pessoaStatus}
+                setStatus={setPessoaStatus}
               />
             ) : null}
             {step === 2 ? <Step2 planos={planos} planoId={planoId} onSelect={selectPlano} /> : null}
@@ -197,13 +238,14 @@ export function NovaVendaClient({
                 sessoesSemana={sessoesSemana} setSessoesSemana={setSessoesSemana}
                 totalSessoes={totalSessoes} setTotalSessoes={setTotalSessoes}
                 forma={forma} setForma={setForma}
-                parcelas={parcelas} setParcelas={setParcelas}
               />
             ) : null}
             {step === 4 ? (
               <Step4
                 pessoa={pessoa} plano={plano}
                 valor={valor} desconto={desconto} diaVencimento={diaVencimento} inicio={inicio}
+                forma={forma} periodicidade={periodicidade}
+                numeroParcelas={numeroParcelas}
                 modelos={modelosCompativeis} modeloId={modeloId} setModeloId={setModeloId}
               />
             ) : null}
@@ -277,9 +319,15 @@ export function NovaVendaClient({
             <SummaryBlock label="Financeiro">
               {plano ? (
                 <>
-                  <p className="text-sm text-text-primary">{formatBRL(Number(valor) || 0)} · vencimento dia {diaVencimento}</p>
+                  <p className="text-sm text-text-primary">
+                    {formatBRL(totalLiquido)} · {forma === FORMA_CREDITO_TOTAL ? "crédito" : `vencimento dia ${diaVencimento}`}
+                  </p>
                   <p className="text-xs text-text-secondary">
-                    {tipo === "fixo" ? `${parcelas} parcelas · ${forma}` : forma}
+                    {forma === FORMA_CREDITO_TOTAL
+                      ? `${parcelasLabel(numeroParcelas)} · ${forma} · ${formatBRL(totalPlano)}`
+                      : tipo === "fixo"
+                        ? `${parcelasLabel(numeroParcelas)} · ${forma}`
+                        : forma}
                   </p>
                 </>
               ) : <p className="text-xs text-text-secondary">Defina as condições</p>}
@@ -299,10 +347,11 @@ export function NovaVendaClient({
 // ─── Steps ──────────────────────────────────────────────────────────────────────
 
 function Step1({
-  pessoas, pessoaId, onSelect, busca, setBusca,
+  pessoas, pessoaId, onSelect, busca, setBusca, status, setStatus,
 }: {
   pessoas: PessoaListItem[]; pessoaId: string | null; onSelect: (id: string) => void;
   busca: string; setBusca: (v: string) => void;
+  status: PessoaStatusFilter; setStatus: (v: PessoaStatusFilter) => void;
 }) {
   return (
     <div>
@@ -314,6 +363,31 @@ function Step1({
         <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome ou telefone" className="pl-9" />
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">
+          {([
+            ["ativas", "Ativas"],
+            ["inativas", "Inativas"],
+            ["todas", "Todas"],
+          ] as [PessoaStatusFilter, string][]).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setStatus(value)}
+              className={cn(
+                "rounded-[var(--radius-pill)] px-3 py-1 text-xs font-medium transition-colors",
+                status === value ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:text-text-primary",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-text-secondary">
+          {pessoas.length} {pessoas.length === 1 ? "cliente" : "clientes"}
+        </span>
+      </div>
+
       <div className="mt-4 flex max-h-[46vh] flex-col gap-2 overflow-y-auto crm-scrollbar pr-1">
         {pessoas.length === 0 ? (
           <p className="py-8 text-center text-sm text-text-secondary">Nenhuma cliente encontrada.</p>
@@ -322,14 +396,25 @@ function Step1({
             className={cn("flex items-center justify-between gap-3 rounded-[var(--radius-md)] border px-4 py-3 text-left transition-colors",
               pessoaId === p.id ? "border-primary bg-accent-soft" : "border-border hover:bg-accent-soft")}>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-text-primary">{p.nome}</p>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="truncate text-sm font-medium text-text-primary">{p.nome}</p>
+                {p.precisaAtencao ? (
+                  <AlertTriangle
+                    className="h-3.5 w-3.5 shrink-0 text-[var(--color-tangerina)]"
+                    strokeWidth={1.8}
+                    aria-label="Pendência"
+                  >
+                    <title>Falta vender plano ou completar cadastro</title>
+                  </AlertTriangle>
+                ) : null}
+              </div>
               <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-text-secondary">
                 <span>{p.telefone ?? "sem telefone"}</span>
                 {p.pilar_principal ? <PilarBadge pilar={p.pilar_principal} /> : null}
               </div>
             </div>
             <span className="shrink-0 rounded-[var(--radius-pill)] bg-card px-2.5 py-0.5 text-[11px] text-text-secondary">
-              {p.status === "cliente_ativo" ? "Cliente ativa" : p.status === "lead" ? "Lead" : "Inativa"}
+              {p.status === "cliente_ativo" ? "Cliente ativa" : p.leadConvertido ? "Lead convertido" : "Inativa"}
             </span>
           </button>
         ))}
@@ -361,13 +446,23 @@ function Step2({ planos, planoId, onSelect }: { planos: PlanoRow[]; planoId: str
             >
               <span className="absolute inset-y-0 left-0 w-1" style={taxonomyAccentStyle(token)} />
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-text-primary">{p.nome}</p>
-                <span
-                  className="shrink-0 rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-text-primary"
-                  style={taxonomyBadgeStyle(token)}
-                >
-                  {PLANO_TIPO_LABEL[p.tipo]}
-                </span>
+                <p className="min-w-0 truncate text-sm font-medium text-text-primary">{p.nome}</p>
+                <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                  <span
+                    className="rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-text-primary"
+                    style={taxonomyBadgeStyle(token)}
+                  >
+                    {PLANO_TIPO_LABEL[p.tipo]}
+                  </span>
+                  {p.tipo === "fixo" ? (
+                    <span
+                      className="rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-text-primary"
+                      style={taxonomyBadgeStyle(token)}
+                    >
+                      {PERIODICIDADE_LABEL[p.periodicidade]}
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <p className="mt-1 text-xs text-text-secondary">
                 {formatBRL(p.valor)} · {PERIODICIDADE_LABEL[p.periodicidade]}
@@ -396,9 +491,10 @@ function Step3(props: {
   sessoesSemana: string; setSessoesSemana: (v: string) => void;
   totalSessoes: string; setTotalSessoes: (v: string) => void;
   forma: string; setForma: (v: string) => void;
-  parcelas: string; setParcelas: (v: string) => void;
 }) {
   const { tipo } = props;
+  const totalPlano = valorTotalPlano(tipo, props.periodicidade, props.valor, props.desconto);
+  const numeroParcelas = parcelasDoPlano(tipo, props.periodicidade, props.forma);
   const valorLabel =
     tipo === "avulso" ? "Valor por sessão (R$)" : tipo === "personalizado" ? "Valor do pacote (R$)" : "Valor mensal (R$)";
   const ajuda =
@@ -437,8 +533,8 @@ function Step3(props: {
         <Labeled label={valorLabel}>
           <Input type="number" min={0} step="0.01" value={props.valor} onChange={(e) => props.setValor(e.target.value)} />
         </Labeled>
-        <Labeled label="Desconto (R$)">
-          <Input type="number" min={0} step="0.01" value={props.desconto} onChange={(e) => props.setDesconto(e.target.value)} />
+        <Labeled label="Desconto (%)">
+          <Input type="number" min={0} max={100} step="0.1" value={props.desconto} onChange={(e) => props.setDesconto(e.target.value)} />
         </Labeled>
         <Labeled label="Dia de vencimento">
           <Input type="number" min={1} max={28} value={props.diaVencimento} onChange={(e) => props.setDiaVencimento(e.target.value)} />
@@ -448,12 +544,18 @@ function Step3(props: {
         </Labeled>
         <Labeled label="Forma de pagamento">
           <Select value={props.forma} onChange={(e) => props.setForma(e.target.value)}>
-            {FORMAS.map((f) => <option key={f} value={f}>{f}</option>)}
+            {FORMAS.map((f) => (
+              <option key={f} value={f}>
+                {f === FORMA_CREDITO_TOTAL ? `${f} (${formatBRL(totalPlano)})` : f}
+              </option>
+            ))}
           </Select>
         </Labeled>
         {tipo === "fixo" ? (
           <Labeled label="Número de parcelas">
-            <Input type="number" min={1} max={48} value={props.parcelas} onChange={(e) => props.setParcelas(e.target.value)} />
+            <div className="flex h-11 w-full items-center rounded-[var(--radius-md)] border border-border bg-accent-soft px-3 text-sm text-text-primary shadow-[var(--shadow-sm)]">
+              {parcelasLabel(numeroParcelas)}
+            </div>
           </Labeled>
         ) : <div />}
       </div>
@@ -473,13 +575,17 @@ function Step3(props: {
 }
 
 function Step4({
-  pessoa, plano, valor, desconto, diaVencimento, inicio, modelos, modeloId, setModeloId,
+  pessoa, plano, valor, desconto, diaVencimento, inicio, forma, periodicidade, numeroParcelas, modelos, modeloId, setModeloId,
 }: {
   pessoa: PessoaListItem | null; plano: PlanoRow | null;
   valor: string; desconto: string; diaVencimento: string; inicio: string;
+  forma: string; periodicidade: Periodicidade; numeroParcelas: number;
   modelos: Modelo[]; modeloId: string | null; setModeloId: (id: string | null) => void;
 }) {
-  const liquido = Math.max(0, (Number(valor) || 0) - (Number(desconto) || 0));
+  const tipo = plano?.tipo ?? "fixo";
+  const total = forma === FORMA_CREDITO_TOTAL
+    ? valorTotalPlano(tipo, periodicidade, valor, desconto)
+    : valorLiquido(valor, desconto);
   return (
     <div>
       <h1 className="font-display text-[28px] leading-tight text-text-primary">Revise o que será criado antes de confirmar.</h1>
@@ -491,7 +597,10 @@ function Step4({
           label="Plano"
           value={plano?.nome ?? "—"}
         />
-        <RevRow label="Condição" value={`${formatBRL(liquido)} · vencimento dia ${diaVencimento} · início ${inicio}`} />
+        <RevRow
+          label="Condição"
+          value={`${formatBRL(total)} · ${parcelasLabel(numeroParcelas)} · ${forma === FORMA_CREDITO_TOTAL ? FORMA_CREDITO_TOTAL : `vencimento dia ${diaVencimento}`} · início ${inicio}`}
+        />
       </div>
 
       <div className="mt-5">

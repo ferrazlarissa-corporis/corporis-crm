@@ -105,6 +105,7 @@ export interface Database {
       leads: {
         Row: {
           id: string;
+          pessoa_id: string;
           nome: string;
           telefone: string;
           email: string | null;
@@ -123,6 +124,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          pessoa_id?: string;
           nome: string;
           telefone: string;
           email?: string | null;

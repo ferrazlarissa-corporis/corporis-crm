@@ -13,6 +13,9 @@ export type ClienteListItem = {
   proximoAgendamento: { inicio: string } | null;
   financeiroEmDia: boolean;
   lancamentosAtrasados: number;
+  semPlanoAtivo: boolean;
+  cadastroIncompleto: boolean;
+  precisaAtencao: boolean;
 };
 
 export type ClienteStats = {
@@ -31,7 +34,7 @@ export async function getClientes(): Promise<ClienteListItem[]> {
   const today = nowIso.slice(0, 10);
 
   const [pessoasRes, matriculasRes, agendaRes, lancamentosRes] = await Promise.all([
-    supabase.schema("core").from("pessoa").select("id, nome, tipo, status, pilar_principal, created_at")
+    supabase.schema("core").from("pessoa").select("id, nome, cpf, nascimento, telefone, email, genero, tipo, status, pilar_principal, created_at")
       .is("archived_at", null).neq("status", "lead").order("nome", { ascending: true }),
     supabase.schema("vendas").from("matricula").select("pessoa_id, plano:plano_id(nome, periodicidade)")
       .eq("status", "ativa"),
@@ -63,6 +66,21 @@ export async function getClientes(): Promise<ClienteListItem[]> {
   return pessoas.map((p) => {
     const plano = planoByPessoa.get(p.id) ?? null;
     const atrasados = atrasadosByPessoa.get(p.id) ?? 0;
+    const semPlanoAtivo = !plano;
+    const cadastro = p as typeof p & {
+      cpf: string | null;
+      nascimento: string | null;
+      telefone: string | null;
+      email: string | null;
+      genero: string | null;
+    };
+    const cadastroIncompleto =
+      !cadastro.cpf ||
+      !cadastro.nascimento ||
+      !cadastro.telefone ||
+      !cadastro.email ||
+      !cadastro.genero ||
+      !p.pilar_principal;
     return {
       id: p.id,
       nome: p.nome,
@@ -75,6 +93,9 @@ export async function getClientes(): Promise<ClienteListItem[]> {
       proximoAgendamento: proximoByPessoa.get(p.id) ?? null,
       financeiroEmDia: atrasados === 0,
       lancamentosAtrasados: atrasados,
+      semPlanoAtivo,
+      cadastroIncompleto,
+      precisaAtencao: semPlanoAtivo || cadastroIncompleto,
     };
   });
 }

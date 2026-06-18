@@ -14,6 +14,7 @@ const PLANO_PILATES_PERIODICIDADE_COR: Partial<Record<Periodicidade, CorToken>> 
   trimestral: "tangerina",
   semestral: "bege",
 };
+const GESTANTE_BADGE_COLOR = "#F3B5C6";
 
 type ServicoColorSource = {
   cor_token?: string | null;
@@ -67,6 +68,13 @@ export function taxonomyAccentStyle(token: string | null | undefined, fallback?:
   return { backgroundColor: colorVarForToken(token, fallback) };
 }
 
+function softBadgeStyle(color: string): CSSProperties {
+  return {
+    backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
+    borderColor: `color-mix(in srgb, ${color} 48%, transparent)`,
+  };
+}
+
 function BadgeShell({
   children,
   token,
@@ -111,6 +119,24 @@ export function PilarBadge({
     <BadgeShell token={token} className={className}>
       {pilar ? PILAR_LABEL[pilar] : fallback}
     </BadgeShell>
+  );
+}
+
+export function GestanteBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex max-w-full items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-[11px] font-medium leading-5 text-text-primary",
+        className,
+      )}
+      style={softBadgeStyle(GESTANTE_BADGE_COLOR)}
+    >
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-[var(--radius-pill)]"
+        style={{ backgroundColor: GESTANTE_BADGE_COLOR }}
+      />
+      <span className="truncate">Gestante</span>
+    </span>
   );
 }
 

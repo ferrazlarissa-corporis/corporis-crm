@@ -12,7 +12,7 @@ import { normalizeBrazilPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { gerarContextoFromMessages } from "@/lib/ai/contexto-server";
 import type { ContextoAvaliacao } from "@/lib/ai/contexto";
-import type { LeadStage, LeadInterest, LeadOrigin, Json } from "@/types/database";
+import type { LeadStage, LeadInterest, LeadOrigin, Json, PessoaTipo, Pilar } from "@/types/database";
 
 const LEAD_STAGE_VALUES = ["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"] as const;
 const APPOINTMENT_REQUIRED_STAGES = new Set<LeadStage>(["avaliacao_agendada", "no_show", "negociacao", "convertido"]);
@@ -154,6 +154,105 @@ const updateStageSchema = z.object({
 
 export type UpdateStageResult = { success: true } | { success: false; error: string };
 
+type ConvertedLeadSource = {
+  id: string;
+  pessoa_id: string | null;
+  nome: string;
+  telefone: string;
+  email: string | null;
+  interesse: LeadInterest;
+  responsavel_id: string | null;
+};
+
+function pilarFromInterest(interesse: LeadInterest): Pilar | null {
+  return interesse === "indefinido" ? null : interesse;
+}
+
+function tipoFromInterest(interesse: LeadInterest): PessoaTipo {
+  return interesse === "fisio_pelvica" || interesse === "acupuntura" ? "paciente" : "aluna";
+}
+
+async function ensureConvertedLeadPessoa(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lead: ConvertedLeadSource,
+): Promise<{ success: true; pessoaId: string } | { success: false; error: string }> {
+  const core = supabase.schema("core");
+  const crm = supabase.schema("crm");
+  const pilar = pilarFromInterest(lead.interesse);
+  const pessoaPayload: {
+    nome: string;
+    telefone: string;
+    status: "cliente_ativo";
+    tipo: PessoaTipo;
+    archived_at: null;
+    email?: string | null;
+    pilar_principal?: Pilar;
+    responsavel_id?: string | null;
+  } = {
+    nome: lead.nome,
+    telefone: lead.telefone,
+    status: "cliente_ativo",
+    tipo: tipoFromInterest(lead.interesse),
+    archived_at: null,
+  };
+
+  if (lead.email) pessoaPayload.email = lead.email;
+  if (pilar) pessoaPayload.pilar_principal = pilar;
+  if (lead.responsavel_id) pessoaPayload.responsavel_id = lead.responsavel_id;
+
+  let pessoaId = lead.pessoa_id;
+
+  if (pessoaId) {
+    const { data, error } = await core
+      .from("pessoa")
+      .update(pessoaPayload)
+      .eq("id", pessoaId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) return { success: false, error: error.message };
+    pessoaId = data?.id ?? null;
+  }
+
+  if (!pessoaId) {
+    const { data: existing, error: existingError } = await core
+      .from("pessoa")
+      .select("id")
+      .eq("telefone", lead.telefone)
+      .maybeSingle();
+
+    if (existingError) return { success: false, error: existingError.message };
+
+    if (existing?.id) {
+      const { error } = await core.from("pessoa").update(pessoaPayload).eq("id", existing.id);
+      if (error) return { success: false, error: error.message };
+      pessoaId = existing.id;
+    } else {
+      const { data, error } = await core
+        .from("pessoa")
+        .insert(pessoaPayload)
+        .select("id")
+        .single();
+
+      if (error || !data) return { success: false, error: error?.message ?? "Falha ao criar cliente." };
+      pessoaId = data.id;
+    }
+  }
+
+  if (!pessoaId) return { success: false, error: "Falha ao vincular cliente convertido." };
+
+  const { error: leadError } = await crm.from("leads").update({ pessoa_id: pessoaId }).eq("id", lead.id);
+  if (leadError) return { success: false, error: leadError.message };
+
+  await crm
+    .from("appointments")
+    .update({ pessoa_id: pessoaId })
+    .eq("lead_id", lead.id)
+    .is("pessoa_id", null);
+
+  return { success: true, pessoaId };
+}
+
 export async function updateLeadStage(input: z.infer<typeof updateStageSchema>): Promise<UpdateStageResult> {
   const parsed = updateStageSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: "Dados inválidos" };
@@ -162,7 +261,11 @@ export async function updateLeadStage(input: z.infer<typeof updateStageSchema>):
   const db = supabase.schema("crm");
 
   // Fetch current stage for activity log and transition guards.
-  const { data: current, error: currentError } = await db.from("leads").select("estagio").eq("id", parsed.data.id).single();
+  const { data: current, error: currentError } = await db
+    .from("leads")
+    .select("estagio, nome, telefone, email, interesse, responsavel_id, pessoa_id")
+    .eq("id", parsed.data.id)
+    .single();
   if (currentError || !current) return { success: false, error: currentError?.message ?? "Lead não encontrada." };
 
   const currentStage = current.estagio as LeadStage;
@@ -178,6 +281,19 @@ export async function updateLeadStage(input: z.infer<typeof updateStageSchema>):
 
   if (nextStage === "no_show" && currentStage !== "avaliacao_agendada") {
     return { success: false, error: "No-show só pode receber leads que estavam em Avaliação agendada." };
+  }
+
+  if (nextStage === "convertido") {
+    const conversion = await ensureConvertedLeadPessoa(supabase, {
+      id: parsed.data.id,
+      pessoa_id: current.pessoa_id,
+      nome: current.nome,
+      telefone: current.telefone,
+      email: current.email,
+      interesse: current.interesse as LeadInterest,
+      responsavel_id: current.responsavel_id,
+    });
+    if (!conversion.success) return { success: false, error: conversion.error };
   }
 
   const updatePayload: Record<string, unknown> = {
@@ -207,6 +323,8 @@ export async function updateLeadStage(input: z.infer<typeof updateStageSchema>):
 
   revalidatePath("/funil");
   revalidatePath("/dashboard");
+  revalidatePath("/clientes");
+  revalidatePath("/vendas/nova");
   revalidatePath(`/leads/${parsed.data.id}`);
   return { success: true };
 }

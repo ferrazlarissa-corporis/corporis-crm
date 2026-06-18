@@ -136,6 +136,15 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="truncate font-medium text-text-primary">{c.nome}</p>
+                            {c.precisaAtencao ? (
+                              <AlertTriangle
+                                className="h-3.5 w-3.5 shrink-0 text-[var(--color-tangerina)]"
+                                strokeWidth={1.8}
+                                aria-label="Pendência"
+                              >
+                                <title>Falta vender plano ou completar cadastro</title>
+                              </AlertTriangle>
+                            ) : null}
                             <span className="shrink-0 rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] text-text-secondary">
                               {tipoBadge(c.tipo, c.pilar_principal)}
                             </span>
@@ -155,7 +164,12 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
                             {c.planoPeriodicidade ? <span className="text-xs text-text-secondary">{PERIODICIDADE_LABEL[c.planoPeriodicidade]}</span> : null}
                           </div>
                         </>
-                      ) : <span className="text-text-secondary">Sem plano ativo</span>}
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-text-secondary">
+                          <AlertTriangle className="h-3.5 w-3.5 text-[var(--color-tangerina)]" strokeWidth={1.8} />
+                          Sem plano ativo
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn("rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-medium",
