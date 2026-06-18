@@ -14,8 +14,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PilarBadge, colorTokenForPilar, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
-import { PILAR_LABEL, PILAR_OPTIONS } from "@/lib/cadastros-labels";
+import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
 import { PERIODICIDADE_LABEL, formatBRL, MATRICULA_STATUS_LABEL } from "@/lib/vendas-labels";
 import { PESSOA_STATUS_LABEL, PESSOA_TIPO_OPTIONS, termoCliente } from "@/lib/clientes-labels";
 import type { FichaCliente } from "@/lib/queries/ficha-cliente";
@@ -79,7 +80,7 @@ export function FichaClienteClient({
                 {PESSOA_STATUS_LABEL[pessoa.status]}
               </Badge>
               <Badge tone="neutro">{termo === "paciente" ? "Paciente" : termo === "aluna" ? "Aluna" : "Cliente"}</Badge>
-              {pessoa.pilar_principal ? <Badge tone="bege">{PILAR_LABEL[pessoa.pilar_principal]}</Badge> : null}
+              {pessoa.pilar_principal ? <PilarBadge pilar={pessoa.pilar_principal} /> : null}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-text-secondary">
               {pessoa.telefone ? <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" strokeWidth={1.5} />{pessoa.telefone}</span> : null}
@@ -150,7 +151,11 @@ function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
     <div className="grid grid-cols-[1fr_300px] gap-6">
       <div className="flex flex-col gap-4">
         {/* Plano */}
-        <Card className="p-5">
+        <Card className="relative overflow-hidden p-5 pt-6">
+          <span
+            className="absolute inset-x-0 top-0 h-1"
+            style={taxonomyAccentStyle(colorTokenForPilar(ficha.matricula?.plano?.pilar))}
+          />
           <SectionTitle>Plano ativo</SectionTitle>
           {ficha.matricula?.plano ? (
             <div className="mt-2 flex items-baseline justify-between">
@@ -159,6 +164,9 @@ function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
                 <p className="text-xs text-text-secondary">
                   {PERIODICIDADE_LABEL[ficha.matricula.plano.periodicidade]} · início {fmt(ficha.matricula.inicio)}
                 </p>
+                {ficha.matricula.plano.pilar ? (
+                  <div className="mt-2"><PilarBadge pilar={ficha.matricula.plano.pilar} /></div>
+                ) : null}
               </div>
               <p className="font-display text-2xl text-text-primary">{formatBRL(ficha.matricula.plano.valor)}</p>
             </div>
@@ -248,11 +256,11 @@ function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
   );
 }
 
-function Mini({ label, value }: { label: string; value: string }) {
+function Mini({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <p className="crm-label text-[9px] tracking-[1.2px] text-text-secondary">{label}</p>
-      <p className="mt-0.5 text-text-primary">{value}</p>
+      <div className="mt-0.5 text-text-primary">{value}</div>
     </div>
   );
 }
@@ -365,7 +373,11 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
 
   return (
     <div className="max-w-3xl">
-      <Card className="p-6">
+      <Card className="relative overflow-hidden p-6 pt-7">
+        <span
+          className="absolute inset-x-0 top-0 h-1.5"
+          style={taxonomyAccentStyle(colorTokenForPilar(m.plano.pilar))}
+        />
         <div className="flex items-baseline justify-between">
           <div>
             <p className="font-display text-2xl text-text-primary">{m.plano.nome}</p>
@@ -379,7 +391,7 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
           <Mini label="Renovação" value={m.renovacao ? fmt(m.renovacao) : "Automática"} />
           <Mini label="Vencimento" value={m.dia_vencimento ? `dia ${m.dia_vencimento}` : "—"} />
           <Mini label="Frequência" value={m.plano.sessoes_semana ? `${m.plano.sessoes_semana}x/semana` : "—"} />
-          <Mini label="Pilar" value={m.plano.pilar ? PILAR_LABEL[m.plano.pilar] : "—"} />
+          <Mini label="Pilar" value={m.plano.pilar ? <PilarBadge pilar={m.plano.pilar} /> : "—"} />
         </div>
 
         <div className="mt-6 flex gap-3 border-t border-border pt-4">

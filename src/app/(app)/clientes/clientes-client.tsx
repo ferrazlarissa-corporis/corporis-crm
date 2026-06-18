@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/corporis/stat-card";
+import { PilarBadge } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
-import { PILAR_LABEL } from "@/lib/cadastros-labels";
 import { PERIODICIDADE_LABEL } from "@/lib/vendas-labels";
 import { PESSOA_STATUS_LABEL } from "@/lib/clientes-labels";
 import type { ClienteListItem, ClienteStats } from "@/lib/queries/clientes";
@@ -140,9 +140,10 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
                               {tipoBadge(c.tipo, c.pilar_principal)}
                             </span>
                           </div>
-                          <p className="text-xs text-text-secondary">
-                            {c.pilar_principal ? PILAR_LABEL[c.pilar_principal] : "—"} · desde {format(new Date(c.created_at), "MMM/yyyy", { locale: ptBR })}
-                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-text-secondary">
+                            {c.pilar_principal ? <PilarBadge pilar={c.pilar_principal} /> : <span>—</span>}
+                            <span>desde {format(new Date(c.created_at), "MMM/yyyy", { locale: ptBR })}</span>
+                          </div>
                         </div>
                       </Link>
                     </td>
@@ -150,7 +151,10 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
                       {c.planoNome ? (
                         <>
                           <p className="text-text-primary">{c.planoNome}</p>
-                          {c.planoPeriodicidade ? <p className="text-xs text-text-secondary">{PERIODICIDADE_LABEL[c.planoPeriodicidade]}</p> : null}
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            {c.planoPeriodicidade ? <span className="text-xs text-text-secondary">{PERIODICIDADE_LABEL[c.planoPeriodicidade]}</span> : null}
+                            {c.planoPilar ? <PilarBadge pilar={c.planoPilar} /> : null}
+                          </div>
                         </>
                       ) : <span className="text-text-secondary">Sem plano ativo</span>}
                     </td>

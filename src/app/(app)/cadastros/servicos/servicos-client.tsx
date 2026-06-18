@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { StatCard } from "@/components/corporis/stat-card";
+import { PilarBadge, colorVarForToken } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import {
   COR_OPTIONS,
   COR_VAR,
   PILAR_COR_PADRAO,
-  PILAR_LABEL,
   PILAR_OPTIONS,
   type CorToken,
 } from "@/lib/cadastros-labels";
@@ -241,11 +241,9 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
                   <div className="flex items-center gap-2">
                     <span
                       className="h-2.5 w-2.5 rounded-[var(--radius-pill)]"
-                      style={{ background: COR_VAR[(s.cor_token as CorToken) ?? "alaranjado"] }}
+                      style={{ background: colorVarForToken(s.cor_token, PILAR_COR_PADRAO[s.pilar]) }}
                     />
-                    <span className="crm-label text-[10px] tracking-[1.5px] text-text-secondary">
-                      {PILAR_LABEL[s.pilar]}
-                    </span>
+                    <PilarBadge pilar={s.pilar} />
                     {s.gestante ? (
                       <span className="rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-text-secondary">
                         Gestante
@@ -274,7 +272,7 @@ export function ServicosClient({ servicos, stats }: { servicos: ServicoRow[]; st
                     >
                       <span
                         className="h-3 w-3 rounded-[var(--radius-xs)]"
-                        style={{ background: COR_VAR[(s.cor_token as CorToken) ?? "alaranjado"] }}
+                        style={{ background: colorVarForToken(s.cor_token, PILAR_COR_PADRAO[s.pilar]) }}
                       />
                     </span>
                   </div>

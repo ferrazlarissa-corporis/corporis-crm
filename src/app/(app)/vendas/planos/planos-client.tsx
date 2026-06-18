@@ -9,8 +9,17 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { StatCard } from "@/components/corporis/stat-card";
+import {
+  PilarBadge,
+  ServicoBadge,
+  colorTokenForPlano,
+  colorTokenForServico,
+  colorVarForToken,
+  taxonomyAccentStyle,
+  taxonomyBadgeStyle,
+} from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
-import { PILAR_LABEL, PILAR_OPTIONS } from "@/lib/cadastros-labels";
+import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
 import {
   PERIODICIDADE_LABEL,
   PERIODICIDADE_OPTIONS,
@@ -68,7 +77,7 @@ export function PlanosClient({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const servicoNome = useMemo(() => new Map(servicos.map((s) => [s.id, s.nome])), [servicos]);
+  const servicoById = useMemo(() => new Map(servicos.map((s) => [s.id, s])), [servicos]);
 
   const filtered = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -198,52 +207,67 @@ export function PlanosClient({
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((p) => (
-              <Card key={p.id} className={cn("flex flex-col p-5", !p.ativo && "opacity-70")}>
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-display text-xl leading-tight text-text-primary">{p.nome}</h3>
-                  <span className="shrink-0 rounded-[var(--radius-pill)] bg-accent-soft px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-secondary">
-                    {PLANO_TIPO_LABEL[p.tipo]}
-                  </span>
-                </div>
-
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="font-display text-[28px] leading-none text-text-primary">{formatBRL(p.valor)}</span>
-                  <span className="text-xs text-text-secondary">
-                    {p.tipo === "fixo"
-                      ? PERIODICIDADE_LABEL[p.periodicidade].toLowerCase()
-                      : p.tipo === "avulso"
-                        ? "por sessão"
-                        : "referência"}
-                  </span>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <Field label="Sessões" value={p.sessoes_semana != null ? `${p.sessoes_semana} por semana` : "—"} />
-                  <Field label="Pilar" value={p.pilar ? PILAR_LABEL[p.pilar] : "—"} />
-                </div>
-
-                {p.servicos.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {p.servicos.map((id) => (
-                      <span key={id} className="rounded-[var(--radius-pill)] bg-accent-soft px-2.5 py-0.5 text-[11px] text-text-primary">
-                        {servicoNome.get(id) ?? "serviço"}
-                      </span>
-                    ))}
+            {filtered.map((p) => {
+              const planoToken = colorTokenForPlano(p);
+              const planoServicos = p.servicos.map((id) => p.servicosMeta.find((s) => s.id === id) ?? servicoById.get(id) ?? null);
+              return (
+                <Card key={p.id} className={cn("relative flex flex-col overflow-hidden p-5 pt-6", !p.ativo && "opacity-70")}>
+                  <span className="absolute inset-x-0 top-0 h-1.5" style={taxonomyAccentStyle(planoToken)} />
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-display text-xl leading-tight text-text-primary">{p.nome}</h3>
+                    <span
+                      className="shrink-0 rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-primary"
+                      style={taxonomyBadgeStyle(planoToken)}
+                    >
+                      {PLANO_TIPO_LABEL[p.tipo]}
+                    </span>
                   </div>
-                ) : null}
 
-                <div className="mt-5 flex items-center gap-4 border-t border-border pt-3 text-xs">
-                  <span className={cn("font-medium", p.ativo ? "text-[var(--color-verde)]" : "text-text-secondary")}>
-                    {p.ativo ? "Ativo" : "Pausado"}
-                  </span>
-                  <button onClick={() => handleToggle(p)} className="text-text-secondary hover:text-text-primary">
-                    {p.ativo ? "Pausar" : "Ativar"}
-                  </button>
-                  <button onClick={() => openEdit(p)} className="ml-auto font-medium text-text-primary hover:text-primary">Editar</button>
-                </div>
-              </Card>
-            ))}
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className="font-display text-[28px] leading-none text-text-primary">{formatBRL(p.valor)}</span>
+                    <span className="text-xs text-text-secondary">
+                      {p.tipo === "fixo"
+                        ? PERIODICIDADE_LABEL[p.periodicidade].toLowerCase()
+                        : p.tipo === "avulso"
+                          ? "por sessão"
+                          : "referência"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Field label="Sessões" value={p.sessoes_semana != null ? `${p.sessoes_semana} por semana` : "—"} />
+                    <Field label="Pilar" value={p.pilar ? <PilarBadge pilar={p.pilar} /> : "—"} />
+                  </div>
+
+                  {p.servicos.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {planoServicos.map((servico, index) => (
+                        servico ? (
+                          <ServicoBadge
+                            key={servico.id}
+                            nome={servico.nome}
+                            corToken={servico.cor_token}
+                            pilar={servico.pilar}
+                          />
+                        ) : (
+                          <ServicoBadge key={`${p.id}-servico-${index}`} nome="Serviço" pilar={p.pilar} />
+                        )
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-5 flex items-center gap-4 border-t border-border pt-3 text-xs">
+                    <span className={cn("font-medium", p.ativo ? "text-[var(--color-verde)]" : "text-text-secondary")}>
+                      {p.ativo ? "Ativo" : "Pausado"}
+                    </span>
+                    <button onClick={() => handleToggle(p)} className="text-text-secondary hover:text-text-primary">
+                      {p.ativo ? "Pausar" : "Ativar"}
+                    </button>
+                    <button onClick={() => openEdit(p)} className="ml-auto font-medium text-text-primary hover:text-primary">Editar</button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -310,13 +334,28 @@ export function PlanosClient({
               <p className="text-xs text-text-secondary">Nenhum serviço ativo. Cadastre serviços primeiro.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {servicos.map((s) => (
-                  <button key={s.id} type="button" onClick={() => toggleServico(s.id)}
-                    className={cn("rounded-[var(--radius-pill)] border px-3 py-1.5 text-xs font-medium transition-colors",
-                      form.servicos.includes(s.id) ? "border-primary bg-accent-soft text-text-primary" : "border-border text-text-secondary hover:bg-accent-soft")}>
-                    {s.nome}
-                  </button>
-                ))}
+                {servicos.map((s) => {
+                  const selected = form.servicos.includes(s.id);
+                  const token = colorTokenForServico(s);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => toggleServico(s.id)}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1.5 text-xs font-medium transition-colors",
+                        selected ? "text-text-primary" : "border-border text-text-secondary hover:bg-accent-soft",
+                      )}
+                      style={selected ? taxonomyBadgeStyle(token) : undefined}
+                    >
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-[var(--radius-pill)]"
+                        style={{ background: colorVarForToken(token) }}
+                      />
+                      {s.nome}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </FormField>
@@ -326,11 +365,11 @@ export function PlanosClient({
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <p className="crm-label text-[9px] tracking-[1.2px] text-text-secondary">{label}</p>
-      <p className="mt-1 text-sm text-text-primary">{value}</p>
+      <div className="mt-1 text-sm text-text-primary">{value}</div>
     </div>
   );
 }

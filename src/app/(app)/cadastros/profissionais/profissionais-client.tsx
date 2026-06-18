@@ -8,9 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { StatCard } from "@/components/corporis/stat-card";
+import { PilarBadge } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import {
-  PILAR_LABEL,
   PILAR_OPTIONS,
   DIAS,
   TURNOS,
@@ -210,9 +210,7 @@ export function ProfissionaisClient({ profissionais, stats }: { profissionais: P
                 {p.pilares.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {p.pilares.map((pl) => (
-                      <span key={pl} className="rounded-[var(--radius-pill)] bg-accent-soft px-2.5 py-0.5 text-[11px] text-text-primary">
-                        {PILAR_LABEL[pl]}
-                      </span>
+                      <PilarBadge key={pl} pilar={pl} />
                     ))}
                   </div>
                 ) : null}

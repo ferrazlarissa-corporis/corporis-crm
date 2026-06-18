@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/corporis/stat-card";
+import { PilarBadge, colorTokenForPilar, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
-import { PILAR_LABEL } from "@/lib/cadastros-labels";
 import {
   MATRICULA_STATUS_LABEL,
   PERIODICIDADE_LABEL,
@@ -135,12 +135,25 @@ export function VendasClient({ matriculas, stats }: { matriculas: MatriculaRow[]
                         <div className="min-w-0">
                           <p className="truncate font-medium text-text-primary">{m.pessoa?.nome ?? "—"}</p>
                           {m.pessoa?.pilar_principal ? (
-                            <p className="text-xs text-text-secondary">{PILAR_LABEL[m.pessoa.pilar_principal]}</p>
+                            <div className="mt-1"><PilarBadge pilar={m.pessoa.pilar_principal} /></div>
                           ) : null}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-text-primary">{m.plano?.nome ?? "—"}</td>
+                    <td className="px-4 py-3 text-text-primary">
+                      {m.plano ? (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-8 w-1 rounded-[var(--radius-pill)]"
+                            style={taxonomyAccentStyle(colorTokenForPilar(m.plano.pilar))}
+                          />
+                          <div>
+                            <p>{m.plano.nome}</p>
+                            {m.plano.pilar ? <div className="mt-1"><PilarBadge pilar={m.plano.pilar} /></div> : null}
+                          </div>
+                        </div>
+                      ) : "—"}
+                    </td>
                     <td className="px-4 py-3 text-text-secondary">
                       {m.plano ? PERIODICIDADE_LABEL[m.plano.periodicidade] : "—"}
                     </td>

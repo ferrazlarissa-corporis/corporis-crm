@@ -8,7 +8,13 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { PILAR_LABEL } from "@/lib/cadastros-labels";
+import {
+  PilarBadge,
+  ServicoBadge,
+  colorTokenForPlano,
+  taxonomyAccentStyle,
+  taxonomyBadgeStyle,
+} from "@/components/corporis/taxonomy-badges";
 import {
   PERIODICIDADE_LABEL,
   PERIODICIDADE_MESES,
@@ -79,6 +85,7 @@ export function NovaVendaClient({
   const totalLiquido = Math.max(0, (Number(valor) || 0) - (Number(desconto) || 0));
   const tipo: PlanoTipo = plano?.tipo ?? "fixo";
   const fim = tipo === "fixo" ? addMonthsISO(inicio, PERIODICIDADE_MESES[periodicidade]) : null;
+  const planoToken = plano ? colorTokenForPlano(plano) : null;
 
   // Pilates fixo: pré-preenche o valor pela tabela de preços (frequência × periodicidade).
   // Roda ao trocar periodicidade/frequência/plano; o valor segue editável manualmente depois.
@@ -243,10 +250,18 @@ export function NovaVendaClient({
               {plano ? (
                 <>
                   <p className="text-sm text-text-primary">{plano.nome}</p>
-                  <p className="text-xs text-text-secondary">
-                    {PLANO_TIPO_LABEL[tipo]}
-                    {tipo === "fixo" ? ` · ${PERIODICIDADE_LABEL[periodicidade]}` : ""}
-                    {tipo !== "fixo" && totalSessoes ? ` · ${totalSessoes} sessões` : ""}
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <span
+                      className="rounded-[var(--radius-pill)] border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-primary"
+                      style={planoToken ? taxonomyBadgeStyle(planoToken) : undefined}
+                    >
+                      {PLANO_TIPO_LABEL[tipo]}
+                    </span>
+                    {plano.pilar ? <PilarBadge pilar={plano.pilar} /> : null}
+                  </div>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {tipo === "fixo" ? PERIODICIDADE_LABEL[periodicidade] : ""}
+                    {tipo !== "fixo" && totalSessoes ? `${totalSessoes} sessões` : ""}
                   </p>
                   {tipo === "fixo" && fim ? (
                     <p className="text-xs text-text-secondary">Vigência até {formatDateBR(fim)}</p>
@@ -304,9 +319,10 @@ function Step1({
               pessoaId === p.id ? "border-primary bg-accent-soft" : "border-border hover:bg-accent-soft")}>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-text-primary">{p.nome}</p>
-              <p className="text-xs text-text-secondary">
-                {p.telefone ?? "sem telefone"}{p.pilar_principal ? ` · ${PILAR_LABEL[p.pilar_principal]}` : ""}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-text-secondary">
+                <span>{p.telefone ?? "sem telefone"}</span>
+                {p.pilar_principal ? <PilarBadge pilar={p.pilar_principal} /> : null}
+              </div>
             </div>
             <span className="shrink-0 rounded-[var(--radius-pill)] bg-card px-2.5 py-0.5 text-[11px] text-text-secondary">
               {p.status === "cliente_ativo" ? "Cliente ativa" : p.status === "lead" ? "Lead" : "Inativa"}
@@ -327,23 +343,41 @@ function Step2({ planos, planoId, onSelect }: { planos: PlanoRow[]; planoId: str
       <div className="mt-5 flex max-h-[52vh] flex-col gap-2 overflow-y-auto crm-scrollbar pr-1">
         {planos.length === 0 ? (
           <p className="py-8 text-center text-sm text-text-secondary">Nenhum plano ativo. Cadastre planos primeiro.</p>
-        ) : planos.map((p) => (
-          <button key={p.id} type="button" onClick={() => onSelect(p)}
-            className={cn("rounded-[var(--radius-md)] border px-4 py-3 text-left transition-colors",
-              planoId === p.id ? "border-primary bg-accent-soft" : "border-border hover:bg-accent-soft")}>
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-medium text-text-primary">{p.nome}</p>
-              <span className="shrink-0 rounded-[var(--radius-pill)] bg-card px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-text-secondary">
-                {PLANO_TIPO_LABEL[p.tipo]}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-text-secondary">
-              {formatBRL(p.valor)} · {PERIODICIDADE_LABEL[p.periodicidade]}
-              {p.sessoes_semana != null ? ` · ${p.sessoes_semana}x/semana` : ""}
-              {p.pilar ? ` · ${PILAR_LABEL[p.pilar]}` : ""}
-            </p>
-          </button>
-        ))}
+        ) : planos.map((p) => {
+          const token = colorTokenForPlano(p);
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelect(p)}
+              className={cn(
+                "relative overflow-hidden rounded-[var(--radius-md)] border px-4 py-3 pl-5 text-left transition-colors",
+                planoId === p.id ? "border-primary bg-accent-soft" : "border-border hover:bg-accent-soft",
+              )}
+            >
+              <span className="absolute inset-y-0 left-0 w-1" style={taxonomyAccentStyle(token)} />
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-text-primary">{p.nome}</p>
+                <span
+                  className="shrink-0 rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-text-primary"
+                  style={taxonomyBadgeStyle(token)}
+                >
+                  {PLANO_TIPO_LABEL[p.tipo]}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-text-secondary">
+                {formatBRL(p.valor)} · {PERIODICIDADE_LABEL[p.periodicidade]}
+                {p.sessoes_semana != null ? ` · ${p.sessoes_semana}x/semana` : ""}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {p.pilar ? <PilarBadge pilar={p.pilar} /> : null}
+                {p.servicosMeta.slice(0, 3).map((s) => (
+                  <ServicoBadge key={s.id} nome={s.nome} corToken={s.cor_token} pilar={s.pilar} />
+                ))}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -450,7 +484,15 @@ function Step4({
 
       <div className="mt-6 overflow-hidden rounded-[var(--radius-md)] border border-border">
         <RevRow label="Cliente" value={pessoa?.nome ?? "—"} />
-        <RevRow label="Plano" value={plano?.nome ?? "—"} />
+        <RevRow
+          label="Plano"
+          value={plano ? (
+            <span className="inline-flex flex-wrap justify-end gap-1.5">
+              <span>{plano.nome}</span>
+              {plano.pilar ? <PilarBadge pilar={plano.pilar} /> : null}
+            </span>
+          ) : "—"}
+        />
         <RevRow label="Condição" value={`${formatBRL(liquido)} · vencimento dia ${diaVencimento} · início ${inicio}`} />
       </div>
 
@@ -488,7 +530,7 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function RevRow({ label, value }: { label: string; value: string }) {
+function RevRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 last:border-0">
       <span className="crm-label text-[10px] tracking-[1.2px] text-text-secondary">{label}</span>

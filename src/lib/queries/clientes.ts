@@ -10,6 +10,7 @@ export type ClienteListItem = {
   created_at: string;
   planoNome: string | null;
   planoPeriodicidade: Periodicidade | null;
+  planoPilar: Pilar | null;
   proximoAgendamento: { inicio: string } | null;
   financeiroEmDia: boolean;
   lancamentosAtrasados: number;
@@ -33,7 +34,7 @@ export async function getClientes(): Promise<ClienteListItem[]> {
   const [pessoasRes, matriculasRes, agendaRes, lancamentosRes] = await Promise.all([
     supabase.schema("core").from("pessoa").select("id, nome, tipo, status, pilar_principal, created_at")
       .is("archived_at", null).neq("status", "lead").order("nome", { ascending: true }),
-    supabase.schema("vendas").from("matricula").select("pessoa_id, plano:plano_id(nome, periodicidade)")
+    supabase.schema("vendas").from("matricula").select("pessoa_id, plano:plano_id(nome, periodicidade, pilar)")
       .eq("status", "ativa"),
     supabase.schema("crm").from("appointments").select("pessoa_id, inicio")
       .in("status", ["agendado", "confirmado"]).gte("inicio", nowIso).order("inicio", { ascending: true }),
@@ -43,9 +44,9 @@ export async function getClientes(): Promise<ClienteListItem[]> {
 
   const pessoas = pessoasRes.data ?? [];
 
-  const planoByPessoa = new Map<string, { nome: string; periodicidade: Periodicidade }>();
+  const planoByPessoa = new Map<string, { nome: string; periodicidade: Periodicidade; pilar: Pilar | null }>();
   for (const m of (matriculasRes.data ?? []) as { pessoa_id: string; plano: unknown }[]) {
-    const plano = one(m.plano) as { nome: string; periodicidade: Periodicidade } | null;
+    const plano = one(m.plano) as { nome: string; periodicidade: Periodicidade; pilar: Pilar | null } | null;
     if (plano && !planoByPessoa.has(m.pessoa_id)) planoByPessoa.set(m.pessoa_id, plano);
   }
 
@@ -72,6 +73,7 @@ export async function getClientes(): Promise<ClienteListItem[]> {
       created_at: p.created_at,
       planoNome: plano?.nome ?? null,
       planoPeriodicidade: plano?.periodicidade ?? null,
+      planoPilar: plano?.pilar ?? null,
       proximoAgendamento: proximoByPessoa.get(p.id) ?? null,
       financeiroEmDia: atrasados === 0,
       lancamentosAtrasados: atrasados,

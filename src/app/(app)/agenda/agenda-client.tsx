@@ -12,9 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
+import {
+  PilarBadge,
+  ServicoBadge,
+  colorVarForToken,
+} from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import { buildClinicSchedule, type ClinicHoursRow } from "@/lib/clinic-config";
-import { COR_VAR, PILAR_LABEL, type CorToken } from "@/lib/cadastros-labels";
+import type { CorToken } from "@/lib/cadastros-labels";
 import type { AgendaEvent, AgendaOptions } from "@/lib/queries/agenda";
 import type { AppointmentStatus, AppointmentType, Pilar } from "@/types/database";
 import {
@@ -32,8 +37,7 @@ const FALLBACK_COR: Record<AppointmentType, CorToken> = {
 };
 
 function colorVar(e: AgendaEvent): string {
-  const token = (e.corToken as CorToken) ?? FALLBACK_COR[e.tipo] ?? "alaranjado";
-  return COR_VAR[token] ?? "var(--color-alaranjado)";
+  return colorVarForToken(e.corToken, FALLBACK_COR[e.tipo] ?? "alaranjado");
 }
 function bgFor(varStr: string): string {
   return `color-mix(in srgb, ${varStr} 16%, transparent)`;
@@ -303,8 +307,7 @@ export default function AgendaClient({ initialEvents, options, nowIso, clinicHou
               <p className="text-xs text-text-secondary">Cadastre serviços para definir capacidade.</p>
             ) : options.servicos.map((s) => (
               <div key={s.id} className="flex items-center gap-2 py-1.5">
-                <span className="h-2.5 w-2.5 rounded-[var(--radius-pill)]" style={{ background: COR_VAR[(s.cor_token as CorToken) ?? "alaranjado"] }} />
-                <span className="flex-1 truncate text-xs text-text-primary">{s.nome}</span>
+                <ServicoBadge nome={s.nome} corToken={s.cor_token} pilar={s.pilar} className="min-w-0 flex-1" />
                 <span className="text-[11px] text-text-secondary">{s.capacidade_slot}/slot</span>
               </div>
             ))}
@@ -356,9 +359,12 @@ function EventPopover({ e, onClose, onChanged, pending }: { e: AgendaEvent; onCl
       }>
       <div className="flex flex-col gap-3 text-sm">
         <Row label="Quando" value={`${format(new Date(e.inicio), "EEE, dd/MM 'às' HH:mm", { locale: ptBR })} — ${format(new Date(e.fim), "HH:mm")}`} />
+        {e.servicoNome ? (
+          <Row label="Serviço" value={<ServicoBadge nome={e.servicoNome} corToken={e.corToken} pilar={e.pilar} />} />
+        ) : null}
         {e.salaNome ? <Row label="Sala" value={e.salaNome} /> : null}
         {e.profissionalNome ? <Row label="Profissional" value={e.profissionalNome} /> : null}
-        {e.pilar ? <Row label="Pilar" value={PILAR_LABEL[e.pilar]} /> : null}
+        {e.pilar ? <Row label="Pilar" value={<PilarBadge pilar={e.pilar} />} /> : null}
         <Row label="Status" value={STATUS_LABEL[e.status]} />
         {e.observacoes ? (
           <div className="rounded-[var(--radius-md)] border-l-2 border-accent bg-accent-soft/40 px-3 py-2 text-xs text-text-primary">{e.observacoes}</div>
@@ -372,7 +378,7 @@ function EventPopover({ e, onClose, onChanged, pending }: { e: AgendaEvent; onCl
     </Dialog>
   );
 }
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex gap-3">
       <span className="crm-label w-24 shrink-0 text-[10px] tracking-[1.2px] text-text-secondary">{label}</span>
@@ -396,6 +402,7 @@ function NovoAgendamentoModal({ options, onClose, onScheduled }: { options: Agen
   const [min, setMin] = useState("00");
   const [obs, setObs] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const selectedServico = options.servicos.find((s) => s.id === servicoId) ?? null;
 
   function salvar() {
     setError(null);
@@ -435,6 +442,16 @@ function NovoAgendamentoModal({ options, onClose, onScheduled }: { options: Agen
             <Select value={servicoId} onChange={(e) => setServicoId(e.target.value)}>
               {options.servicos.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
             </Select>
+            {selectedServico ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <ServicoBadge
+                  nome={selectedServico.nome}
+                  corToken={selectedServico.cor_token}
+                  pilar={selectedServico.pilar}
+                />
+                <span className="text-xs text-text-secondary">{selectedServico.capacidade_slot}/slot</span>
+              </div>
+            ) : null}
           </Field>
           <Field label="Sala">
             <Select value={salaId} onChange={(e) => setSalaId(e.target.value)}>

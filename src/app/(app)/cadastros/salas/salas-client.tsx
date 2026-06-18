@@ -8,8 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { StatCard } from "@/components/corporis/stat-card";
+import { PilarBadge } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
-import { PILAR_LABEL, PILAR_OPTIONS } from "@/lib/cadastros-labels";
+import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
 import type { SalaRow, SalaStats } from "@/lib/queries/salas";
 import type { Pilar } from "@/types/database";
 import {
@@ -179,9 +180,7 @@ export function SalasClient({ salas, stats }: { salas: SalaRow[]; stats: SalaSta
                 {s.pilares.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     {s.pilares.map((p) => (
-                      <span key={p} className="rounded-[var(--radius-pill)] bg-accent-soft px-2.5 py-0.5 text-[11px] text-text-primary">
-                        {PILAR_LABEL[p]}
-                      </span>
+                      <PilarBadge key={p} pilar={p} />
                     ))}
                   </div>
                 ) : null}
