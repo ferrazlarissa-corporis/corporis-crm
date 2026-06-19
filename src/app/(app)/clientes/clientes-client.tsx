@@ -17,19 +17,16 @@ import type { ClienteListItem, ClienteStats } from "@/lib/queries/clientes";
 import type { Pilar } from "@/types/database";
 
 type StatusFilter = "todos" | "cliente_ativo" | "inativo";
+const DEFAULT_STATUS_FILTER: StatusFilter = "cliente_ativo";
 
 function initials(nome: string) {
   return nome.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-}
-function tipoBadge(tipo: string, pilar: Pilar | null): string {
-  if (tipo === "paciente" || pilar === "fisio_pelvica" || pilar === "acupuntura") return "Paciente";
-  return "Aluna";
 }
 
 export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[]; stats: ClienteStats }) {
   const [busca, setBusca] = useState("");
   const [pilar, setPilar] = useState<"" | Pilar>("");
-  const [status, setStatus] = useState<StatusFilter>("todos");
+  const [status, setStatus] = useState<StatusFilter>(DEFAULT_STATUS_FILTER);
 
   const filtered = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -41,7 +38,7 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
     });
   }, [clientes, busca, pilar, status]);
 
-  const filtersActive = busca !== "" || pilar !== "" || status !== "todos";
+  const filtersActive = busca !== "" || pilar !== "" || status !== DEFAULT_STATUS_FILTER;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -53,8 +50,7 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
               Acompanhe alunas e pacientes, planos e situação financeira.
             </h1>
             <p className="mt-2 text-sm text-text-secondary">
-              Cada cliente nasce da espinha de identidade da Corporis — plano ativo, próximo agendamento e
-              cobrança num só lugar.
+              Cada cliente nasce da espinha de identidade da Corporis — plano ativo e cobrança num só lugar.
             </p>
           </div>
           <Button size="sm" asChild className="shrink-0">
@@ -91,7 +87,7 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
           ))}
         </div>
         {filtersActive ? (
-          <button type="button" onClick={() => { setBusca(""); setPilar(""); setStatus("todos"); }}
+          <button type="button" onClick={() => { setBusca(""); setPilar(""); setStatus(DEFAULT_STATUS_FILTER); }}
             className="text-xs text-text-secondary underline-offset-2 hover:text-text-primary hover:underline">
             Limpar filtros
           </button>
@@ -120,7 +116,7 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border text-left">
-                  {["Cliente", "Plano ativo", "Status", "Próximo agendamento", "Financeiro"].map((h) => (
+                  {["Cliente", "Plano ativo", "Status", "Início", "Financeiro"].map((h) => (
                     <th key={h} className="crm-label px-4 py-3 text-[10px] tracking-[1.2px] text-text-secondary">{h}</th>
                   ))}
                 </tr>
@@ -145,25 +141,28 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
                                 <title>Falta vender plano ou completar cadastro</title>
                               </AlertTriangle>
                             ) : null}
-                            <span className="shrink-0 rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] text-text-secondary">
-                              {tipoBadge(c.tipo, c.pilar_principal)}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-text-secondary">
-                            {c.pilar_principal ? <PilarBadge pilar={c.pilar_principal} /> : <span>—</span>}
-                            <span>desde {format(new Date(c.created_at), "MMM/yyyy", { locale: ptBR })}</span>
+                            {c.pilar_principal ? (
+                              <PilarBadge pilar={c.pilar_principal} className="shrink-0 px-2 text-[10px] leading-4" />
+                            ) : null}
                           </div>
                         </div>
                       </Link>
                     </td>
                     <td className="px-4 py-3">
                       {c.planoNome ? (
-                        <>
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
                           <p className="text-text-primary">{c.planoNome}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            {c.planoPeriodicidade ? <span className="text-xs text-text-secondary">{PERIODICIDADE_LABEL[c.planoPeriodicidade]}</span> : null}
-                          </div>
-                        </>
+                          {c.planoPeriodicidade ? (
+                            <span className="shrink-0 rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] font-medium leading-4 text-text-secondary">
+                              {PERIODICIDADE_LABEL[c.planoPeriodicidade]}
+                            </span>
+                          ) : null}
+                          {c.planoSessoesSemana ? (
+                            <span className="shrink-0 rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] font-medium leading-4 text-text-secondary">
+                              {c.planoSessoesSemana}x/semana
+                            </span>
+                          ) : null}
+                        </div>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-text-secondary">
                           <AlertTriangle className="h-3.5 w-3.5 text-[var(--color-tangerina)]" strokeWidth={1.8} />
@@ -178,12 +177,12 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
                       </span>
                     </td>
                     <td className="px-4 py-3 text-text-secondary">
-                      {c.proximoAgendamento
-                        ? format(new Date(c.proximoAgendamento.inicio), "dd/MM 'às' HH:mm", { locale: ptBR })
-                        : <span className="text-text-secondary">Sem agendamento</span>}
+                      {format(new Date(c.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </td>
                     <td className="px-4 py-3">
-                      {c.financeiroEmDia ? (
+                      {c.financeiroStatus === "sem_plano" ? (
+                        <span className="text-text-secondary">Sem plano</span>
+                      ) : c.financeiroStatus === "em_dia" ? (
                         <span className="text-text-secondary">Em dia</span>
                       ) : (
                         <span className="font-medium text-error">

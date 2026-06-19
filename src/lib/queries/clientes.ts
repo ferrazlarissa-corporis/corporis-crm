@@ -1,17 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
-import type { PessoaStatus, PessoaTipo, Pilar, Periodicidade } from "@/types/database";
+import type { PessoaStatus, Pilar, Periodicidade } from "@/types/database";
+
+export type ClienteFinanceiroStatus = "sem_plano" | "em_dia" | "atrasado";
 
 export type ClienteListItem = {
   id: string;
   nome: string;
-  tipo: PessoaTipo;
   status: PessoaStatus;
   pilar_principal: Pilar | null;
   created_at: string;
   planoNome: string | null;
   planoPeriodicidade: Periodicidade | null;
-  proximoAgendamento: { inicio: string } | null;
-  financeiroEmDia: boolean;
+  planoSessoesSemana: number | null;
+  financeiroStatus: ClienteFinanceiroStatus;
   lancamentosAtrasados: number;
   semPlanoAtivo: boolean;
   cadastroIncompleto: boolean;
@@ -30,31 +31,25 @@ function one<T>(v: T | T[] | null): T | null {
 
 export async function getClientes(): Promise<ClienteListItem[]> {
   const supabase = await createClient();
-  const nowIso = new Date().toISOString();
-  const today = nowIso.slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
 
-  const [pessoasRes, matriculasRes, agendaRes, lancamentosRes] = await Promise.all([
-    supabase.schema("core").from("pessoa").select("id, nome, cpf, nascimento, telefone, email, genero, tipo, status, pilar_principal, created_at")
+  const [pessoasRes, matriculasRes, lancamentosRes] = await Promise.all([
+    supabase.schema("core").from("pessoa").select("id, nome, cpf, nascimento, telefone, email, genero, status, pilar_principal, created_at")
       .is("archived_at", null).neq("status", "lead").order("nome", { ascending: true }),
-    supabase.schema("vendas").from("matricula").select("pessoa_id, plano:plano_id(nome, periodicidade)")
+    supabase.schema("vendas").from("matricula").select("pessoa_id, sessoes_semana, plano:plano_id(nome, periodicidade)")
       .eq("status", "ativa"),
-    supabase.schema("crm").from("appointments").select("pessoa_id, inicio")
-      .in("status", ["agendado", "confirmado"]).gte("inicio", nowIso).order("inicio", { ascending: true }),
     supabase.schema("financeiro").from("lancamento").select("pessoa_id, status, vencimento")
       .neq("status", "recebido"),
   ]);
 
   const pessoas = pessoasRes.data ?? [];
 
-  const planoByPessoa = new Map<string, { nome: string; periodicidade: Periodicidade }>();
-  for (const m of (matriculasRes.data ?? []) as { pessoa_id: string; plano: unknown }[]) {
+  const planoByPessoa = new Map<string, { nome: string; periodicidade: Periodicidade; sessoes_semana: number | null }>();
+  for (const m of (matriculasRes.data ?? []) as { pessoa_id: string; sessoes_semana: number | null; plano: unknown }[]) {
     const plano = one(m.plano) as { nome: string; periodicidade: Periodicidade } | null;
-    if (plano && !planoByPessoa.has(m.pessoa_id)) planoByPessoa.set(m.pessoa_id, plano);
-  }
-
-  const proximoByPessoa = new Map<string, { inicio: string }>();
-  for (const a of (agendaRes.data ?? []) as { pessoa_id: string | null; inicio: string }[]) {
-    if (a.pessoa_id && !proximoByPessoa.has(a.pessoa_id)) proximoByPessoa.set(a.pessoa_id, { inicio: a.inicio });
+    if (plano && !planoByPessoa.has(m.pessoa_id)) {
+      planoByPessoa.set(m.pessoa_id, { ...plano, sessoes_semana: m.sessoes_semana });
+    }
   }
 
   const atrasadosByPessoa = new Map<string, number>();
@@ -84,14 +79,13 @@ export async function getClientes(): Promise<ClienteListItem[]> {
     return {
       id: p.id,
       nome: p.nome,
-      tipo: p.tipo,
       status: p.status,
       pilar_principal: p.pilar_principal,
       created_at: p.created_at,
       planoNome: plano?.nome ?? null,
       planoPeriodicidade: plano?.periodicidade ?? null,
-      proximoAgendamento: proximoByPessoa.get(p.id) ?? null,
-      financeiroEmDia: atrasados === 0,
+      planoSessoesSemana: plano?.sessoes_semana ?? null,
+      financeiroStatus: semPlanoAtivo ? "sem_plano" : atrasados > 0 ? "atrasado" : "em_dia",
       lancamentosAtrasados: atrasados,
       semPlanoAtivo,
       cadastroIncompleto,
@@ -104,6 +98,6 @@ export function getClienteStats(clientes: ClienteListItem[]): ClienteStats {
   return {
     ativos: clientes.filter((c) => c.status === "cliente_ativo").length,
     inativos: clientes.filter((c) => c.status === "inativo").length,
-    inadimplentes: clientes.filter((c) => !c.financeiroEmDia).length,
+    inadimplentes: clientes.filter((c) => c.lancamentosAtrasados > 0).length,
   };
 }

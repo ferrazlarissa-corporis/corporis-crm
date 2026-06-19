@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/corporis/stat-card";
-import { PilarBadge } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import {
   MATRICULA_STATUS_LABEL,
   PERIODICIDADE_LABEL,
+  PLANO_TIPO_LABEL,
   formatBRL,
 } from "@/lib/vendas-labels";
 import type { MatriculaRow, MatriculaStats } from "@/lib/queries/matriculas";
@@ -33,6 +33,14 @@ function fmtDate(d: string | null) {
 }
 function initials(nome: string) {
   return nome.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+}
+
+function termosMatricula(matricula: MatriculaRow) {
+  if (matricula.periodicidade) return PERIODICIDADE_LABEL[matricula.periodicidade];
+  if (matricula.tipo === "personalizado" && matricula.total_sessoes) {
+    return `${matricula.total_sessoes} sessões`;
+  }
+  return PLANO_TIPO_LABEL[matricula.tipo];
 }
 
 export function VendasClient({ matriculas, stats }: { matriculas: MatriculaRow[]; stats: MatriculaStats }) {
@@ -134,9 +142,6 @@ export function VendasClient({ matriculas, stats }: { matriculas: MatriculaRow[]
                         </div>
                         <div className="min-w-0">
                           <p className="truncate font-medium text-text-primary">{m.pessoa?.nome ?? "—"}</p>
-                          {m.pessoa?.pilar_principal ? (
-                            <div className="mt-1"><PilarBadge pilar={m.pessoa.pilar_principal} /></div>
-                          ) : null}
                         </div>
                       </div>
                     </td>
@@ -144,7 +149,7 @@ export function VendasClient({ matriculas, stats }: { matriculas: MatriculaRow[]
                       {m.plano?.nome ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-text-secondary">
-                      {m.plano ? PERIODICIDADE_LABEL[m.plano.periodicidade] : "—"}
+                      {termosMatricula(m)}
                     </td>
                     <td className="px-4 py-3 text-text-secondary">{fmtDate(m.inicio)}</td>
                     <td className="px-4 py-3 text-text-secondary">{fmtDate(m.proximaCobranca)}</td>

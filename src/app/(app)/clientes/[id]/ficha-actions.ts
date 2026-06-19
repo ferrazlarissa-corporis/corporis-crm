@@ -178,6 +178,15 @@ export async function cancelarMatricula(id: string, pessoaId: string): Promise<F
 
   const { error } = await auth.supabase.schema("vendas").from("matricula").update({ status: "cancelada" }).eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  const { error: agendaError } = await auth.supabase.schema("crm").from("appointments")
+    .update({ status: "cancelado" })
+    .eq("matricula_id", id)
+    .gte("inicio", new Date().toISOString())
+    .in("status", ["agendado", "confirmado"]);
+  if (agendaError) return { success: false, error: agendaError.message };
+
   revalidatePath(`/clientes/${pessoaId}`);
+  revalidatePath("/agenda");
   return { success: true, id };
 }

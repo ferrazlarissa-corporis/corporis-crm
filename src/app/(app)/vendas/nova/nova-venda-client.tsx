@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ import {
 import type { PessoaListItem } from "@/lib/queries/pessoa";
 import type { PlanoRow } from "@/lib/queries/planos";
 import type { Periodicidade, Pilar, PlanoTipo } from "@/types/database";
-import { criarVenda } from "../actions";
+import { criarHorariosPlano, criarVenda } from "../actions";
 
 // Periodicidades válidas para plano fixo (sem anual/avulso).
 const PERIODICIDADE_FIXO = PERIODICIDADE_OPTIONS.filter(
@@ -46,6 +47,17 @@ function formatDateBR(iso: string): string {
 
 type Modelo = { id: string; nome: string; pilares: Pilar[]; planos: string[] };
 type PessoaStatusFilter = "ativas" | "inativas" | "todas";
+type AgendaScheduleOptions = {
+  servicos: { id: string; nome: string; pilar: Pilar; cor_token: string; capacidade_slot: number; duracao_min: number }[];
+  salas: { id: string; nome: string }[];
+};
+type CreatedSale = {
+  matriculaId: string;
+  pessoaId: string;
+  inicio: string;
+  fim: string;
+  sessoesSemana: number;
+};
 
 const FORMA_CREDITO_TOTAL = "Crédito total do plano";
 const FORMAS = ["Pix recorrente", "Cartão recorrente", FORMA_CREDITO_TOTAL, "Boleto", "Dinheiro"];
@@ -87,10 +99,12 @@ export function NovaVendaClient({
   pessoas,
   planos,
   modelos,
+  agendaOptions,
 }: {
   pessoas: PessoaListItem[];
   planos: PlanoRow[];
   modelos: Modelo[];
+  agendaOptions: AgendaScheduleOptions;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -108,6 +122,7 @@ export function NovaVendaClient({
   const [busca, setBusca] = useState("");
   const [pessoaStatus, setPessoaStatus] = useState<PessoaStatusFilter>("ativas");
   const [error, setError] = useState<string | null>(null);
+  const [createdSale, setCreatedSale] = useState<CreatedSale | null>(null);
   const [pending, startTransition] = useTransition();
 
   const pessoa = useMemo(() => pessoas.find((p) => p.id === pessoaId) ?? null, [pessoas, pessoaId]);
@@ -195,9 +210,29 @@ export function NovaVendaClient({
         total_sessoes: tipo !== "fixo" && totalSessoes !== "" ? Number(totalSessoes) : null,
       });
       if (!r.success) { setError(r.error); return; }
-      router.push("/vendas");
+      if (r.matricula_id && r.pessoa_id && r.tipo === "fixo" && r.fim && (r.sessoes_semana ?? 0) > 0) {
+        setCreatedSale({
+          matriculaId: r.matricula_id,
+          pessoaId: r.pessoa_id,
+          inicio: r.inicio ?? inicio,
+          fim: r.fim,
+          sessoesSemana: r.sessoes_semana ?? 1,
+        });
+        return;
+      }
+      router.push(`/clientes/${pessoaId}`);
       router.refresh();
     });
+  }
+
+  function finishSaleFlow(pessoaDestino = createdSale?.pessoaId ?? pessoaId) {
+    if (!pessoaDestino) {
+      router.push("/vendas");
+      router.refresh();
+      return;
+    }
+    router.push(`/clientes/${pessoaDestino}`);
+    router.refresh();
   }
 
   return (
@@ -340,6 +375,17 @@ export function NovaVendaClient({
           </Card>
         </aside>
       </div>
+
+      {createdSale && plano ? (
+        <HorariosPlanoModal
+          sale={createdSale}
+          pessoaNome={pessoa?.nome ?? "Cliente"}
+          plano={plano}
+          options={agendaOptions}
+          onClose={() => finishSaleFlow(createdSale.pessoaId)}
+          onDone={() => finishSaleFlow(createdSale.pessoaId)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -615,6 +661,163 @@ function Step4({
             : "O contrato é criado em rascunho a partir do modelo escolhido."}
         </p>
       </div>
+    </div>
+  );
+}
+
+const WEEKDAYS = [
+  { value: 1, label: "Segunda" },
+  { value: 2, label: "Terça" },
+  { value: 3, label: "Quarta" },
+  { value: 4, label: "Quinta" },
+  { value: 5, label: "Sexta" },
+  { value: 6, label: "Sábado" },
+  { value: 7, label: "Domingo" },
+];
+const FULL_HOURS = Array.from({ length: 15 }, (_, index) => index + 6);
+
+function weekdayFromISO(iso: string): number {
+  const day = new Date(`${iso}T00:00:00`).getDay();
+  return day === 0 ? 7 : day;
+}
+
+function defaultScheduleSlots(inicio: string, count: number) {
+  const baseWeekday = Math.min(5, Math.max(1, weekdayFromISO(inicio)));
+  return Array.from({ length: count }, (_, index) => ({
+    weekday: Math.min(5, baseWeekday + index),
+    hour: 8,
+  }));
+}
+
+function servicosDoPlano(plano: PlanoRow, options: AgendaScheduleOptions) {
+  const servicoIds = new Set(plano.servicos);
+  const byPlan = options.servicos.filter((servico) => servicoIds.has(servico.id));
+  if (byPlan.length) return byPlan;
+
+  const planoPilares = new Set([plano.pilar, ...plano.servicosMeta.map((s) => s.pilar)].filter(Boolean) as Pilar[]);
+  const byPilar = options.servicos.filter((servico) => planoPilares.has(servico.pilar));
+  return byPilar.length ? byPilar : options.servicos;
+}
+
+function HorariosPlanoModal({
+  sale,
+  pessoaNome,
+  plano,
+  options,
+  onClose,
+  onDone,
+}: {
+  sale: CreatedSale;
+  pessoaNome: string;
+  plano: PlanoRow;
+  options: AgendaScheduleOptions;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const servicos = useMemo(() => servicosDoPlano(plano, options), [plano, options]);
+  const [servicoId, setServicoId] = useState(servicos[0]?.id ?? "");
+  const [salaId, setSalaId] = useState("");
+  const [slots, setSlots] = useState(() => defaultScheduleSlots(sale.inicio, sale.sessoesSemana));
+  const [error, setError] = useState<string | null>(null);
+  const selectedServico = servicos.find((s) => s.id === servicoId) ?? null;
+
+  function setSlot(index: number, patch: Partial<(typeof slots)[number]>) {
+    setSlots((current) => current.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
+  }
+
+  function salvar() {
+    setError(null);
+    if (!servicoId) { setError("Selecione um serviço para criar os cards da agenda."); return; }
+    startTransition(async () => {
+      const result = await criarHorariosPlano({
+        matricula_id: sale.matriculaId,
+        servico_id: servicoId,
+        sala_id: salaId || null,
+        slots,
+      });
+      if (!result.success) { setError(result.error); return; }
+      onDone();
+    });
+  }
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      eyebrow="Agenda fixa"
+      title="Definir horários das sessões"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={pending}>Agendar depois</Button>
+          <Button onClick={salvar} disabled={pending}>{pending ? "Criando agenda…" : "Confirmar horários"}</Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {error ? <p className="rounded-[var(--radius-md)] bg-error/10 px-3 py-2 text-xs text-error">{error}</p> : null}
+
+        <div className="rounded-[var(--radius-md)] border border-border bg-accent-soft/40 px-4 py-3">
+          <p className="text-sm font-medium text-text-primary">{pessoaNome}</p>
+          <p className="mt-1 text-xs text-text-secondary">
+            {plano.nome} · {sale.sessoesSemana}x/semana · {formatDateBR(sale.inicio)} até {formatDateBR(sale.fim)}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <ScheduleField label="Serviço">
+            <Select value={servicoId} onChange={(event) => setServicoId(event.target.value)}>
+              {servicos.length === 0 ? <option value="">Nenhum serviço ativo</option> : null}
+              {servicos.map((servico) => <option key={servico.id} value={servico.id}>{servico.nome}</option>)}
+            </Select>
+            {selectedServico ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <ServicoBadge nome={selectedServico.nome} corToken={selectedServico.cor_token} pilar={selectedServico.pilar} />
+                <span className="text-xs text-text-secondary">{selectedServico.capacidade_slot}/slot</span>
+              </div>
+            ) : null}
+          </ScheduleField>
+          <ScheduleField label="Sala">
+            <Select value={salaId} onChange={(event) => setSalaId(event.target.value)}>
+              <option value="">Sem sala</option>
+              {options.salas.map((sala) => <option key={sala.id} value={sala.id}>{sala.nome}</option>)}
+            </Select>
+          </ScheduleField>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {slots.map((slot, index) => (
+            <div key={index} className="grid grid-cols-[88px_1fr_120px] items-end gap-3">
+              <div className="pb-3 text-xs font-medium text-text-secondary">Sessão {index + 1}</div>
+              <ScheduleField label="Dia fixo">
+                <Select value={String(slot.weekday)} onChange={(event) => setSlot(index, { weekday: Number(event.target.value) })}>
+                  {WEEKDAYS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
+                </Select>
+              </ScheduleField>
+              <ScheduleField label="Hora">
+                <Select value={String(slot.hour)} onChange={(event) => setSlot(index, { hour: Number(event.target.value) })}>
+                  {FULL_HOURS.map((hour) => (
+                    <option key={hour} value={hour}>{String(hour).padStart(2, "0")}:00</option>
+                  ))}
+                </Select>
+              </ScheduleField>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-text-secondary">
+          Cada sessão será criada com 1h de duração e início em hora cheia.
+        </p>
+      </div>
+    </Dialog>
+  );
+}
+
+function ScheduleField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="crm-label mb-1.5 text-[10px] tracking-[1.5px] text-text-secondary">{label}</p>
+      {children}
     </div>
   );
 }
