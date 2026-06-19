@@ -4,7 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendTextMessage, sendPresence } from "@/lib/evolution/client";
 import { AGENT_TOOLS, HANDOFF_RULE_AGENDAMENTO, executeTool, type ToolInput } from "@/lib/ai/tools";
-import { resolveModel } from "@/lib/ai/model";
+import { resolveModel, type AgentProvider } from "@/lib/ai/model";
 import { isPhoneInBypassList } from "@/lib/phone";
 import type { Json } from "@/types/database";
 
@@ -586,6 +586,62 @@ async function sleepWithPresence(phone: string, totalMs: number): Promise<void> 
   }
 }
 
+async function generateTextOnlyFallback(
+  provider: AgentProvider,
+  modelId: string,
+  systemPrompt: string,
+  msgRows: ConversationMessageRow[],
+): Promise<string> {
+  const finalInstruction =
+    "\n\n## Resposta obrigatoria agora\n" +
+    "As ferramentas silenciosas ja foram usadas quando necessario. Agora responda a ultima mensagem da lead com texto final para WhatsApp. " +
+    `Nao use ferramentas. Separe mensagens curtas com uma linha contendo apenas \"${BURST_DELIMITER}\". ` +
+    "Se a lead pediu valores, responda objetivamente dentro das regras acima e mantenha o tom da Clara.";
+
+  if (provider === "openai") {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model: modelId,
+        max_tokens: 512,
+        messages: [
+          { role: "system", content: systemPrompt + finalInstruction },
+          ...msgRows.map((m) => ({
+            role: (m.direcao === "entrada" ? "user" : "assistant") as "user" | "assistant",
+            content: m.conteudo,
+          })),
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("[ai/reply] OpenAI fallback error", res.status, await res.text().catch(() => ""));
+      return "";
+    }
+
+    const data = await res.json() as { choices?: { message?: { content?: string | null } }[] };
+    return data.choices?.[0]?.message?.content?.trim() ?? "";
+  }
+
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const response = await anthropic.messages.create({
+    model: modelId,
+    max_tokens: 512,
+    system: systemPrompt + finalInstruction,
+    messages: msgRows.map((m) => ({
+      role: m.direcao === "entrada" ? ("user" as const) : ("assistant" as const),
+      content: m.conteudo,
+    })),
+  });
+
+  return response.content
+    .filter((b) => b.type === "text")
+    .map((b) => (b as Anthropic.Messages.TextBlock).text)
+    .join(" ")
+    .trim();
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -616,9 +672,7 @@ export async function POST(request: NextRequest) {
     .eq("id", conversation_id)
     .single();
 
-  if (!conv || conv.modo !== "ia") {
-    return NextResponse.json({ ok: true, skipped: "not_ia_mode" });
-  }
+  if (!conv) return NextResponse.json({ error: "conversation_not_found" }, { status: 404 });
 
   const leadRow = Array.isArray(conv.leads) ? conv.leads[0] : conv.leads;
   if (!leadRow) return NextResponse.json({ error: "lead_not_found" }, { status: 404 });
@@ -633,6 +687,10 @@ export async function POST(request: NextRequest) {
     ? (config.numeros_bypass as string[])
     : [];
   const isBypassed = isPhoneInBypassList(lead.telefone, bypassList);
+
+  if (conv.modo !== "ia" && !isBypassed) {
+    return NextResponse.json({ ok: true, skipped: "not_ia_mode" });
+  }
 
   if (!isBypassed) {
     if (!config?.ativo) {
@@ -766,6 +824,7 @@ export async function POST(request: NextRequest) {
     : AGENT_TOOLS;
 
   let finalText = "";
+  let handoffRequested = false;
 
   if (provider === "openai") {
     // ─── OpenAI agentic loop ──────────────────────────────────────────────────
@@ -811,6 +870,7 @@ export async function POST(request: NextRequest) {
       for (const tc of msg.tool_calls) {
         const input = JSON.parse(tc.function.arguments) as ToolInput;
         const result = await executeTool(tc.function.name, input, toolCtx);
+        if (tc.function.name === "solicitar_handoff") handoffRequested = true;
         oaiMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
       }
     }
@@ -841,6 +901,7 @@ export async function POST(request: NextRequest) {
       for (const block of toolUseBlocks) {
         if (block.type !== "tool_use") continue;
         const result = await executeTool(block.name, block.input as ToolInput, toolCtx);
+        if (block.name === "solicitar_handoff") handoffRequested = true;
         toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
       }
 
@@ -852,8 +913,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  if (!finalText.trim() && !handoffRequested) {
+    finalText = await generateTextOnlyFallback(provider, modelId, systemPrompt, msgRows);
+  }
+
   // Send and store reply — em mensagens curtas (bursts), como uma pessoa digitando.
-  const bursts = dedupeBurstsAgainstRecentMessages(splitIntoBursts(finalText), msgRows);
+  const candidateBursts = splitIntoBursts(finalText);
+  let bursts = dedupeBurstsAgainstRecentMessages(candidateBursts, msgRows);
+  if (candidateBursts.length > 0 && bursts.length === 0) {
+    console.warn("[ai/reply] all candidate bursts were deduped; sending one to avoid silent reply", {
+      conversation_id,
+    });
+    bursts = [candidateBursts[0]];
+  }
   if (bursts.length > 0) {
     const { data: latestInboundMessage } = await db
       .from("messages")
