@@ -36,7 +36,7 @@ export async function getClientes(): Promise<ClienteListItem[]> {
   const [pessoasRes, matriculasRes, lancamentosRes] = await Promise.all([
     supabase.schema("core").from("pessoa").select("id, nome, cpf, nascimento, telefone, email, genero, status, pilar_principal, created_at")
       .is("archived_at", null).neq("status", "lead").order("nome", { ascending: true }),
-    supabase.schema("vendas").from("matricula").select("pessoa_id, sessoes_semana, plano:plano_id(nome, periodicidade)")
+    supabase.schema("vendas").from("matricula").select("pessoa_id, periodicidade, sessoes_semana, plano:plano_id(nome)")
       .eq("status", "ativa"),
     supabase.schema("financeiro").from("lancamento").select("pessoa_id, status, vencimento")
       .neq("status", "recebido"),
@@ -44,11 +44,11 @@ export async function getClientes(): Promise<ClienteListItem[]> {
 
   const pessoas = pessoasRes.data ?? [];
 
-  const planoByPessoa = new Map<string, { nome: string; periodicidade: Periodicidade; sessoes_semana: number | null }>();
-  for (const m of (matriculasRes.data ?? []) as { pessoa_id: string; sessoes_semana: number | null; plano: unknown }[]) {
-    const plano = one(m.plano) as { nome: string; periodicidade: Periodicidade } | null;
+  const planoByPessoa = new Map<string, { nome: string; periodicidade: Periodicidade | null; sessoes_semana: number | null }>();
+  for (const m of (matriculasRes.data ?? []) as { pessoa_id: string; periodicidade: Periodicidade | null; sessoes_semana: number | null; plano: unknown }[]) {
+    const plano = one(m.plano) as { nome: string } | null;
     if (plano && !planoByPessoa.has(m.pessoa_id)) {
-      planoByPessoa.set(m.pessoa_id, { ...plano, sessoes_semana: m.sessoes_semana });
+      planoByPessoa.set(m.pessoa_id, { nome: plano.nome, periodicidade: m.periodicidade, sessoes_semana: m.sessoes_semana });
     }
   }
 

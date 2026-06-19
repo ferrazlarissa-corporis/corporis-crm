@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
 import {
   PERIODICIDADE_LABEL,
+  PERIODICIDADE_MESES,
   PERIODICIDADE_OPTIONS,
   PLANO_TIPO_LABEL,
   PLANO_TIPO_OPTIONS,
@@ -31,20 +32,31 @@ import type { Pilar, Periodicidade, PlanoTipo } from "@/types/database";
 import { createPlano, togglePlanoAtivo, updatePlano, type PlanoInput } from "../actions";
 
 type StatusFilter = "todos" | "ativos" | "inativos";
+type PrecoForm = { sessoes_semana: string; valor_total: string; ativo: boolean };
 type FormState = {
   nome: string;
   tipo: PlanoTipo;
   valor: string;
   periodicidade: Periodicidade;
   sessoes_semana: string;
+  precos: PrecoForm[];
   pilar: "" | Pilar;
   servicos: string[];
   ativo: boolean;
 };
 
+const FREQUENCIAS_PADRAO = [1, 2, 3] as const;
+function emptyPrecos(): PrecoForm[] {
+  return FREQUENCIAS_PADRAO.map((frequencia) => ({
+    sessoes_semana: String(frequencia),
+    valor_total: "",
+    ativo: true,
+  }));
+}
+
 const EMPTY: FormState = {
   nome: "", tipo: "fixo", valor: "", periodicidade: "mensal",
-  sessoes_semana: "", pilar: "", servicos: [], ativo: true,
+  sessoes_semana: "", precos: emptyPrecos(), pilar: "", servicos: [], ativo: true,
 };
 
 // Periodicidades válidas para plano fixo (a matriz comercial não usa anual/avulso).
@@ -55,7 +67,19 @@ const PERIODICIDADE_FIXO = PERIODICIDADE_OPTIONS.filter(
 function valorLabel(tipo: PlanoTipo): string {
   if (tipo === "avulso") return "Valor por sessão (R$)";
   if (tipo === "personalizado") return "Valor de referência (R$)";
-  return "Valor mensal (R$)";
+  return "Valor total (R$)";
+}
+
+function precosFromPlano(p: PlanoRow): PrecoForm[] {
+  const fromDb = new Map(p.precos.map((preco) => [preco.sessoes_semana, preco]));
+  return FREQUENCIAS_PADRAO.map((frequencia) => {
+    const preco = fromDb.get(frequencia);
+    return {
+      sessoes_semana: String(frequencia),
+      valor_total: preco ? String(preco.valor_total) : "",
+      ativo: preco?.ativo ?? true,
+    };
+  });
 }
 
 export function PlanosClient({
@@ -88,7 +112,7 @@ export function PlanosClient({
     });
   }, [planos, busca, status]);
 
-  function openCreate() { setEditing(null); setForm(EMPTY); setError(null); setOpen(true); }
+  function openCreate() { setEditing(null); setForm({ ...EMPTY, precos: emptyPrecos() }); setError(null); setOpen(true); }
   function openEdit(p: PlanoRow) {
     setEditing(p);
     setForm({
@@ -97,6 +121,7 @@ export function PlanosClient({
       valor: String(p.valor),
       periodicidade: p.periodicidade,
       sessoes_semana: p.sessoes_semana != null ? String(p.sessoes_semana) : "",
+      precos: p.tipo === "fixo" ? precosFromPlano(p) : emptyPrecos(),
       pilar: p.pilar ?? "",
       servicos: p.servicos,
       ativo: p.ativo,
@@ -108,9 +133,18 @@ export function PlanosClient({
     return {
       nome: f.nome,
       tipo: f.tipo,
-      valor: Number(f.valor),
+      valor: f.tipo === "fixo" ? 0 : Number(f.valor),
       periodicidade: f.periodicidade,
-      sessoes_semana: f.sessoes_semana === "" ? null : Number(f.sessoes_semana),
+      sessoes_semana: f.tipo === "fixo" || f.sessoes_semana === "" ? null : Number(f.sessoes_semana),
+      precos: f.tipo === "fixo"
+        ? f.precos
+            .filter((preco) => preco.valor_total !== "" && Number(preco.valor_total) > 0)
+            .map((preco) => ({
+              sessoes_semana: Number(preco.sessoes_semana),
+              valor_total: Number(preco.valor_total),
+              ativo: preco.ativo,
+            }))
+        : [],
       servicos: f.servicos,
       pilar: f.pilar === "" ? null : f.pilar,
       ativo: f.ativo,
@@ -137,8 +171,11 @@ export function PlanosClient({
       tipo: t,
       // Avulso fixa periodicidade; fixo não aceita "avulso"; sessões só fazem sentido no fixo.
       periodicidade: t === "avulso" ? "avulso" : t === "fixo" && f.periodicidade === "avulso" ? "mensal" : f.periodicidade,
-      sessoes_semana: t === "fixo" ? f.sessoes_semana : "",
+      sessoes_semana: t === "fixo" ? "" : f.sessoes_semana,
     }));
+  }
+  function updatePreco(index: number, patch: Partial<PrecoForm>) {
+    setForm((f) => ({ ...f, precos: f.precos.map((preco, i) => (i === index ? { ...preco, ...patch } : preco)) }));
   }
 
   const filtersActive = busca !== "" || status !== "todos";
@@ -209,6 +246,8 @@ export function PlanosClient({
             {filtered.map((p) => {
               const planoToken = colorTokenForPlano(p);
               const planoServicos = p.servicos.map((id) => p.servicosMeta.find((s) => s.id === id) ?? servicoById.get(id) ?? null);
+              const precosAtivos = p.precos.filter((preco) => preco.ativo).sort((a, b) => a.sessoes_semana - b.sessoes_semana);
+              const meses = PERIODICIDADE_MESES[p.periodicidade];
               return (
                 <Card key={p.id} className={cn("relative flex flex-col overflow-hidden p-5 pt-6", !p.ativo && "opacity-70")}>
                   <span className="absolute inset-x-0 top-0 h-1.5" style={taxonomyAccentStyle(planoToken)} />
@@ -222,20 +261,31 @@ export function PlanosClient({
                     </span>
                   </div>
 
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <span className="font-display text-[28px] leading-none text-text-primary">{formatBRL(p.valor)}</span>
-                    <span className="text-xs text-text-secondary">
-                      {p.tipo === "fixo"
-                        ? PERIODICIDADE_LABEL[p.periodicidade].toLowerCase()
-                        : p.tipo === "avulso"
-                          ? "por sessão"
-                          : "referência"}
-                    </span>
-                  </div>
-
-                  <div className="mt-4">
-                    <Field label="Sessões" value={p.sessoes_semana != null ? `${p.sessoes_semana} por semana` : "—"} />
-                  </div>
+                  {p.tipo === "fixo" ? (
+                    <div className="mt-4">
+                      <Field label="Periodicidade" value={PERIODICIDADE_LABEL[p.periodicidade]} />
+                      <div className="mt-3 divide-y divide-border rounded-[var(--radius-md)] border border-border">
+                        {precosAtivos.length > 0 ? precosAtivos.map((preco) => (
+                          <div key={preco.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                            <span className="font-medium text-text-primary">{preco.sessoes_semana}x/semana</span>
+                            <span className="text-right">
+                              <span className="block text-text-primary">{formatBRL(preco.valor_total)}</span>
+                              <span className="text-[11px] text-text-secondary">
+                                {formatBRL(preco.valor_total / meses)}/mês
+                              </span>
+                            </span>
+                          </div>
+                        )) : (
+                          <div className="px-3 py-2 text-sm text-text-secondary">Sem preços configurados</div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex items-baseline gap-2">
+                      <span className="font-display text-[28px] leading-none text-text-primary">{formatBRL(p.valor)}</span>
+                      <span className="text-xs text-text-secondary">{p.tipo === "avulso" ? "por sessão" : "referência"}</span>
+                    </div>
+                  )}
 
                   {p.servicos.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-1.5">
@@ -304,16 +354,32 @@ export function PlanosClient({
             ) : <div />}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label={valorLabel(form.tipo)}>
-              <Input type="number" min={0} step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="420,00" />
+          {form.tipo === "fixo" ? (
+            <FormField label="Valores totais por frequência">
+              <div className="divide-y divide-border rounded-[var(--radius-md)] border border-border">
+                {form.precos.map((preco, index) => (
+                  <div key={preco.sessoes_semana} className="grid grid-cols-[96px_1fr] items-center gap-3 px-3 py-2">
+                    <span className="text-sm font-medium text-text-primary">{preco.sessoes_semana}x/semana</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={preco.valor_total}
+                      onChange={(e) => updatePreco(index, { valor_total: e.target.value })}
+                      placeholder="Valor total"
+                    />
+                  </div>
+                ))}
+              </div>
             </FormField>
-            {form.tipo === "fixo" ? (
-              <FormField label="Sessões por semana">
-                <Input type="number" min={0} max={14} value={form.sessoes_semana} onChange={(e) => setForm({ ...form, sessoes_semana: e.target.value })} placeholder="2" />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label={valorLabel(form.tipo)}>
+                <Input type="number" min={0} step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="420,00" />
               </FormField>
-            ) : <div />}
-          </div>
+              <div />
+            </div>
+          )}
           {form.tipo === "personalizado" ? (
             <p className="-mt-2 text-xs text-text-secondary">
               Plano personalizado: o número de sessões e o valor final são definidos por cliente na adesão.

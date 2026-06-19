@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireActiveStaff } from "@/lib/auth/staff";
 import { postAccrual } from "@/lib/finance/post-income";
 import {
@@ -9,7 +10,8 @@ import {
   normalizeClinicHours,
   validateAppointmentWithinClinicHours,
 } from "@/lib/clinic-config";
-import type { AppointmentType, Pilar } from "@/types/database";
+import { PERIODICIDADE_MESES } from "@/lib/vendas-labels";
+import type { AppointmentType, CobrancaModo, Database, Pilar } from "@/types/database";
 
 export type VendaResult = {
   success: true;
@@ -29,6 +31,7 @@ function firstError(error: z.ZodError): string {
 const PILAR = z.enum(["pilates", "fisio_pelvica", "acupuntura"]);
 const PERIODICIDADE = z.enum(["mensal", "trimestral", "semestral", "anual", "avulso"]);
 const PLANO_TIPO = z.enum(["fixo", "personalizado", "avulso"]);
+const COBRANCA_MODO = z.enum(["unica", "parcelada_mensal"]);
 const PILAR_TO_TIPO: Record<Pilar, AppointmentType> = {
   pilates: "avaliacao_pilates",
   fisio_pelvica: "avaliacao_fisio_pelvica",
@@ -37,18 +40,100 @@ const PILAR_TO_TIPO: Record<Pilar, AppointmentType> = {
 
 // ─── Planos (vendas.plano) ──────────────────────────────────────────────────────
 
-const planoSchema = z.object({
-  nome: z.string().trim().min(2).max(140),
-  tipo: PLANO_TIPO,
-  valor: z.coerce.number().min(0).max(1_000_000),
-  periodicidade: PERIODICIDADE,
-  sessoes_semana: z.coerce.number().int().min(0).max(14).nullable().default(null),
-  servicos: z.array(z.string().uuid()).max(50).default([]),
-  pilar: PILAR.nullable().default(null),
+const planoPrecoSchema = z.object({
+  sessoes_semana: z.coerce.number().int().min(1).max(14),
+  valor_total: z.coerce.number().min(0).max(1_000_000),
   ativo: z.boolean().default(true),
 });
 
+const planoSchema = z.object({
+  nome: z.string().trim().min(2).max(140),
+  tipo: PLANO_TIPO,
+  valor: z.coerce.number().min(0).max(1_000_000).default(0),
+  periodicidade: PERIODICIDADE,
+  sessoes_semana: z.coerce.number().int().min(0).max(14).nullable().default(null),
+  precos: z.array(planoPrecoSchema).max(14).default([]),
+  servicos: z.array(z.string().uuid()).max(50).default([]),
+  pilar: PILAR.nullable().default(null),
+  ativo: z.boolean().default(true),
+}).superRefine((data, ctx) => {
+  if (data.tipo !== "fixo") return;
+  if (!["mensal", "trimestral", "semestral"].includes(data.periodicidade)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Plano fixo aceita apenas mensal, trimestral ou semestral.",
+      path: ["periodicidade"],
+    });
+  }
+  const frequencias = data.precos.filter((preco) => preco.ativo && preco.valor_total > 0);
+  if (frequencias.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Informe ao menos um valor total por frequência.",
+      path: ["precos"],
+    });
+  }
+  const unique = new Set(frequencias.map((preco) => preco.sessoes_semana));
+  if (unique.size !== frequencias.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Não repita a mesma frequência no plano.",
+      path: ["precos"],
+    });
+  }
+});
+
 export type PlanoInput = z.infer<typeof planoSchema>;
+
+function planoDbPayload(data: PlanoInput) {
+  const firstPreco = data.precos
+    .filter((preco) => preco.ativo && preco.valor_total > 0)
+    .sort((a, b) => a.sessoes_semana - b.sessoes_semana)[0];
+  const valor = data.tipo === "fixo" && firstPreco
+    ? Number((firstPreco.valor_total / PERIODICIDADE_MESES[data.periodicidade]).toFixed(2))
+    : data.valor;
+
+  return {
+    nome: data.nome,
+    tipo: data.tipo,
+    valor,
+    periodicidade: data.tipo === "avulso" ? "avulso" : data.periodicidade,
+    sessoes_semana: data.tipo === "fixo" ? null : data.sessoes_semana,
+    servicos: data.servicos,
+    pilar: data.pilar,
+    ativo: data.ativo,
+  };
+}
+
+function planoPrecoRows(planoId: string, data: PlanoInput) {
+  if (data.tipo !== "fixo") return [];
+  const byFrequency = new Map<number, { plano_id: string; sessoes_semana: number; valor_total: number; ativo: boolean }>();
+  for (const preco of data.precos) {
+    if (!preco.ativo || preco.valor_total <= 0) continue;
+    byFrequency.set(preco.sessoes_semana, {
+      plano_id: planoId,
+      sessoes_semana: preco.sessoes_semana,
+      valor_total: preco.valor_total,
+      ativo: true,
+    });
+  }
+  return Array.from(byFrequency.values()).sort((a, b) => a.sessoes_semana - b.sessoes_semana);
+}
+
+async function replacePlanoPrecos(
+  supabase: SupabaseClient<Database>,
+  planoId: string,
+  data: PlanoInput,
+): Promise<string | null> {
+  const { error: deleteError } = await supabase.schema("vendas").from("plano_preco").delete().eq("plano_id", planoId);
+  if (deleteError) return deleteError.message;
+
+  const rows = planoPrecoRows(planoId, data);
+  if (rows.length === 0) return null;
+
+  const { error } = await supabase.schema("vendas").from("plano_preco").insert(rows);
+  return error?.message ?? null;
+}
 
 export async function createPlano(input: PlanoInput): Promise<VendaResult> {
   const parsed = planoSchema.safeParse(input);
@@ -60,11 +145,16 @@ export async function createPlano(input: PlanoInput): Promise<VendaResult> {
   const { data, error } = await auth.supabase
     .schema("vendas")
     .from("plano")
-    .insert(parsed.data)
+    .insert(planoDbPayload(parsed.data))
     .select("id")
     .single();
 
   if (error) return { success: false, error: error.message };
+  const priceError = data?.id ? await replacePlanoPrecos(auth.supabase, data.id, parsed.data) : null;
+  if (priceError) {
+    if (data?.id) await auth.supabase.schema("vendas").from("plano").delete().eq("id", data.id);
+    return { success: false, error: priceError };
+  }
   revalidatePath("/vendas/planos");
   return { success: true, id: data?.id };
 }
@@ -77,8 +167,10 @@ export async function updatePlano(id: string, input: PlanoInput): Promise<VendaR
   const auth = await requireActiveStaff();
   if (!auth.success) return { success: false, error: auth.error };
 
-  const { error } = await auth.supabase.schema("vendas").from("plano").update(parsed.data).eq("id", id);
+  const { error } = await auth.supabase.schema("vendas").from("plano").update(planoDbPayload(parsed.data)).eq("id", id);
   if (error) return { success: false, error: error.message };
+  const priceError = await replacePlanoPrecos(auth.supabase, id, parsed.data);
+  if (priceError) return { success: false, error: priceError };
   revalidatePath("/vendas/planos");
   return { success: true, id };
 }
@@ -109,6 +201,8 @@ const adesaoSchema = z
     periodicidade: PERIODICIDADE.nullable().default(null),
     sessoes_semana: z.coerce.number().int().min(0).max(14).nullable().default(null),
     total_sessoes: z.coerce.number().int().min(1).max(500).nullable().default(null),
+    forma_pagamento: z.string().trim().min(1).max(80),
+    cobranca_modo: COBRANCA_MODO,
   })
   .refine((d) => d.tipo !== "fixo" || d.periodicidade != null, {
     message: "Selecione a periodicidade do plano fixo.",
@@ -140,8 +234,8 @@ export async function criarVenda(input: AdesaoInput): Promise<VendaResult> {
   const { data, error } = await auth.supabase.schema("vendas").rpc("criar_adesao", {
     p_pessoa_id: parsed.data.pessoa_id,
     p_plano_id: parsed.data.plano_id,
-    p_valor: parsed.data.valor,
-    p_desconto: parsed.data.desconto,
+    p_valor_total: parsed.data.valor,
+    p_desconto_total: parsed.data.desconto,
     p_dia_vencimento: parsed.data.dia_vencimento,
     p_inicio: parsed.data.inicio,
     p_modelo_contrato_id: parsed.data.modelo_contrato_id,
@@ -150,6 +244,8 @@ export async function criarVenda(input: AdesaoInput): Promise<VendaResult> {
     p_periodicidade: parsed.data.periodicidade,
     p_sessoes_semana: parsed.data.sessoes_semana,
     p_total_sessoes: parsed.data.total_sessoes,
+    p_forma_pagamento: parsed.data.forma_pagamento,
+    p_cobranca_modo: parsed.data.cobranca_modo as CobrancaModo,
   });
 
   if (error) return { success: false, error: error.message };

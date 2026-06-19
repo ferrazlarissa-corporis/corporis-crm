@@ -36,7 +36,12 @@ function initials(nome: string) {
 }
 
 function termosMatricula(matricula: MatriculaRow) {
-  if (matricula.periodicidade) return PERIODICIDADE_LABEL[matricula.periodicidade];
+  if (matricula.periodicidade) {
+    return [
+      PERIODICIDADE_LABEL[matricula.periodicidade],
+      matricula.sessoes_semana ? `${matricula.sessoes_semana}x/semana` : null,
+    ].filter(Boolean).join(" · ");
+  }
   if (matricula.tipo === "personalizado" && matricula.total_sessoes) {
     return `${matricula.total_sessoes} sessões`;
   }
@@ -146,7 +151,12 @@ export function VendasClient({ matriculas, stats }: { matriculas: MatriculaRow[]
                       </div>
                     </td>
                     <td className="px-4 py-3 text-text-primary">
-                      {m.plano?.nome ?? "—"}
+                      <div>
+                        <p>{m.plano?.nome ?? "—"}</p>
+                        <p className="text-xs text-text-secondary">
+                          {formatBRL(m.valor_total ?? m.valor)}
+                        </p>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-text-secondary">
                       {termosMatricula(m)}

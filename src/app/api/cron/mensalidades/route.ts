@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const { data: matriculas } = await supabase
     .schema("vendas").from("matricula")
-    .select("id, pessoa_id, inicio, dia_vencimento, tipo, periodicidade, valor, fim, plano:plano_id(nome)")
+    .select("id, pessoa_id, inicio, dia_vencimento, tipo, periodicidade, valor, fim, cobranca_modo, plano:plano_id(nome)")
     .eq("status", "ativa");
 
   let created = 0;
@@ -36,18 +36,19 @@ export async function GET(request: NextRequest) {
     const periodicidade = m.periodicidade as Periodicidade;
     const valor = m.valor ?? 0;
 
-    // Encerrou o compromisso? Para de cobrar e conclui a matrícula.
-    if (m.fim && competencia > m.fim) {
+    // Meses 1..periodicidade-1 geram parcelas futuras; ao completar a vigência, conclui.
+    const inicio = new Date(`${m.inicio}T00:00:00`);
+    const mesesDesdeInicio = (ano - inicio.getFullYear()) * 12 + (mes - inicio.getMonth());
+    if (mesesDesdeInicio < 0) continue;
+    const periodo = PERIODICIDADE_MESES[periodicidade];
+    if (mesesDesdeInicio >= periodo) {
       await supabase.schema("vendas").from("matricula").update({ status: "concluida" }).eq("id", m.id);
       continue;
     }
 
-    // Cobra neste mês? (meses desde o início divisível pela periodicidade)
-    const inicio = new Date(m.inicio);
-    const mesesDesdeInicio = (ano - inicio.getFullYear()) * 12 + (mes - inicio.getMonth());
-    if (mesesDesdeInicio < 0) continue;
-    const periodo = PERIODICIDADE_MESES[periodicidade];
-    if (mesesDesdeInicio % periodo !== 0) continue;
+    // À vista não tem recorrência financeira depois do lançamento inicial.
+    if (m.cobranca_modo !== "parcelada_mensal") continue;
+
     // O 1º lançamento já foi criado na adesão (mês de início).
     if (mesesDesdeInicio === 0) continue;
 

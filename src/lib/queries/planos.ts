@@ -3,10 +3,16 @@ import type { Database, Pilar } from "@/types/database";
 import { PERIODICIDADE_MESES } from "@/lib/vendas-labels";
 
 type PlanoRaw = Database["vendas"]["Tables"]["plano"]["Row"];
+type PlanoPrecoRaw = Database["vendas"]["Tables"]["plano_preco"]["Row"];
 
 export type ServicoOption = { id: string; nome: string; pilar: Pilar; cor_token: string };
+export type PlanoPrecoRow = Pick<PlanoPrecoRaw, "id" | "plano_id" | "sessoes_semana" | "valor_total" | "ativo">;
 
-export type PlanoRow = Omit<PlanoRaw, "servicos"> & { servicos: string[]; servicosMeta: ServicoOption[] };
+export type PlanoRow = Omit<PlanoRaw, "servicos"> & {
+  servicos: string[];
+  servicosMeta: ServicoOption[];
+  precos: PlanoPrecoRow[];
+};
 
 export type PlanoStats = {
   total: number;
@@ -28,8 +34,25 @@ export async function getPlanos(): Promise<PlanoRow[]> {
 
   if (error || !data) return [];
   const planos = (data as PlanoRaw[]).map((p) => ({ ...p, servicos: toStringArray(p.servicos) }));
+  const planoIds = planos.map((p) => p.id);
   const servicoIds = [...new Set(planos.flatMap((p) => p.servicos))];
   const servicosById = new Map<string, ServicoOption>();
+  const precosByPlano = new Map<string, PlanoPrecoRow[]>();
+
+  if (planoIds.length) {
+    const { data: precos } = await supabase
+      .schema("vendas")
+      .from("plano_preco")
+      .select("id, plano_id, sessoes_semana, valor_total, ativo")
+      .in("plano_id", planoIds)
+      .order("sessoes_semana", { ascending: true });
+
+    for (const preco of (precos ?? []) as PlanoPrecoRow[]) {
+      const current = precosByPlano.get(preco.plano_id) ?? [];
+      current.push(preco);
+      precosByPlano.set(preco.plano_id, current);
+    }
+  }
 
   if (servicoIds.length) {
     const { data: servicos } = await supabase
@@ -45,6 +68,7 @@ export async function getPlanos(): Promise<PlanoRow[]> {
 
   return planos.map((p) => ({
     ...p,
+    precos: precosByPlano.get(p.id) ?? [],
     servicosMeta: p.servicos.map((id) => servicosById.get(id)).filter((s): s is ServicoOption => Boolean(s)),
   }));
 }
@@ -52,8 +76,14 @@ export async function getPlanos(): Promise<PlanoRow[]> {
 export function getPlanoStats(planos: PlanoRow[]): PlanoStats {
   const ativos = planos.filter((p) => p.ativo);
   const fixosAtivos = ativos.filter((p) => p.tipo === "fixo").length;
-  // Ticket médio = média mensal normalizada dos planos ativos.
-  const mensais = ativos.map((p) => p.valor / PERIODICIDADE_MESES[p.periodicidade]);
+  // Ticket médio = média mensal normalizada das opções ativas de preço.
+  const mensais = ativos.flatMap((p) => {
+    const meses = PERIODICIDADE_MESES[p.periodicidade];
+    if (p.tipo === "fixo" && p.precos.length > 0) {
+      return p.precos.filter((preco) => preco.ativo).map((preco) => preco.valor_total / meses);
+    }
+    return [p.valor / meses];
+  });
   const ticketMedio = mensais.length ? mensais.reduce((a, b) => a + b, 0) / mensais.length : 0;
   return { total: planos.length, fixosAtivos, ticketMedio };
 }

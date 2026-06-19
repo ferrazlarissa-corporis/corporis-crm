@@ -9,6 +9,8 @@ export type MatriculaRow = {
   tipo: PlanoTipo;
   periodicidade: Periodicidade | null;
   valor: number;
+  valor_total: number | null;
+  sessoes_semana: number | null;
   total_sessoes: number | null;
   fim: string | null;
   updated_at: string;
@@ -24,7 +26,7 @@ export type MatriculaStats = {
 };
 
 const MATRICULA_SELECT =
-  "id, pessoa_id, plano_id, inicio, dia_vencimento, status, tipo, periodicidade, valor, total_sessoes, fim, updated_at, created_at";
+  "id, pessoa_id, plano_id, inicio, dia_vencimento, status, tipo, periodicidade, valor, valor_total, sessoes_semana, total_sessoes, fim, updated_at, created_at";
 
 type MatriculaRaw = {
   id: string;
@@ -36,6 +38,8 @@ type MatriculaRaw = {
   tipo: PlanoTipo;
   periodicidade: Periodicidade | null;
   valor: number | null;
+  valor_total: number | null;
+  sessoes_semana: number | null;
   total_sessoes: number | null;
   fim: string | null;
   updated_at: string;
@@ -98,6 +102,8 @@ export async function getMatriculas(): Promise<MatriculaRow[]> {
       tipo: r.tipo,
       periodicidade: r.periodicidade,
       valor: r.valor ?? 0,
+      valor_total: r.valor_total,
+      sessoes_semana: r.sessoes_semana,
       total_sessoes: r.total_sessoes,
       fim: r.fim,
       updated_at: r.updated_at,

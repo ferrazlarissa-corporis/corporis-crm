@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
   Database, Pilar, PessoaTipo, PessoaStatus, Periodicidade, PlanoTipo,
-  MatriculaStatus, LancamentoStatus, ContratoStatus, DocumentoTipo,
+  MatriculaStatus, LancamentoStatus, ContratoStatus, DocumentoTipo, CobrancaModo,
 } from "@/types/database";
 
 export type FichaPessoa = Database["core"]["Tables"]["pessoa"]["Row"];
@@ -13,7 +13,16 @@ export type FichaMatricula = {
   renovacao: string | null;
   dia_vencimento: number | null;
   status: MatriculaStatus;
-  plano: { nome: string; valor: number; periodicidade: Periodicidade; tipo: PlanoTipo; pilar: Pilar | null; sessoes_semana: number | null } | null;
+  tipo: PlanoTipo;
+  periodicidade: Periodicidade | null;
+  valor: number | null;
+  valor_total: number | null;
+  forma_pagamento: string | null;
+  cobranca_modo: CobrancaModo | null;
+  sessoes_semana: number | null;
+  total_sessoes: number | null;
+  fim: string | null;
+  plano: { nome: string; periodicidade: Periodicidade; tipo: PlanoTipo; pilar: Pilar | null } | null;
 };
 
 export type FichaLancamento = {
@@ -73,7 +82,7 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
       ? supabase.schema("crm").from("profiles").select("nome").eq("id", pessoa.responsavel_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.schema("vendas").from("matricula")
-      .select("id, inicio, renovacao, dia_vencimento, status, plano:plano_id(nome, valor, periodicidade, tipo, pilar, sessoes_semana)")
+      .select("id, inicio, renovacao, dia_vencimento, status, tipo, periodicidade, valor, valor_total, forma_pagamento, cobranca_modo, sessoes_semana, total_sessoes, fim, plano:plano_id(nome, periodicidade, tipo, pilar)")
       .eq("pessoa_id", id).eq("status", "ativa").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.schema("financeiro").from("lancamento")
       .select("id, competencia, descricao, valor, vencimento, status, recebido_at")

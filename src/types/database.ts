@@ -70,6 +70,7 @@ export type AgendaCategoria = "avaliacao" | "sessao" | "experimental";
 export type PlanoTipo = "fixo" | "personalizado" | "avulso";
 export type Periodicidade = "mensal" | "trimestral" | "semestral" | "anual" | "avulso";
 export type MatriculaStatus = "ativa" | "pausada" | "cancelada" | "concluida";
+export type CobrancaModo = "unica" | "parcelada_mensal";
 export type ContratoStatus = "rascunho" | "enviado" | "assinado" | "cancelado";
 export type LancamentoStatus = "a_receber" | "recebido" | "atrasado";
 export type DocumentoTipo = "exame" | "atestado" | "laudo" | "outro";
@@ -589,6 +590,27 @@ export interface Database {
         };
         Update: Partial<Database["vendas"]["Tables"]["plano"]["Insert"]>;
       };
+      plano_preco: {
+        Row: {
+          id: string;
+          plano_id: string;
+          sessoes_semana: number;
+          valor_total: number;
+          ativo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          plano_id: string;
+          sessoes_semana: number;
+          valor_total: number;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["vendas"]["Tables"]["plano_preco"]["Insert"]>;
+      };
       venda: {
         Row: {
           id: string;
@@ -627,6 +649,9 @@ export interface Database {
           tipo: PlanoTipo;
           periodicidade: Periodicidade | null;
           valor: number | null;
+          valor_total: number | null;
+          forma_pagamento: string | null;
+          cobranca_modo: CobrancaModo | null;
           sessoes_semana: number | null;
           total_sessoes: number | null;
           fim: string | null;
@@ -645,6 +670,9 @@ export interface Database {
           tipo?: PlanoTipo;
           periodicidade?: Periodicidade | null;
           valor?: number | null;
+          valor_total?: number | null;
+          forma_pagamento?: string | null;
+          cobranca_modo?: CobrancaModo | null;
           sessoes_semana?: number | null;
           total_sessoes?: number | null;
           fim?: string | null;
@@ -714,8 +742,8 @@ export interface Database {
         Args: {
           p_pessoa_id: string;
           p_plano_id: string;
-          p_valor: number;
-          p_desconto: number;
+          p_valor_total: number;
+          p_desconto_total: number;
           p_dia_vencimento: number;
           p_inicio: string;
           p_modelo_contrato_id: string | null;
@@ -724,6 +752,8 @@ export interface Database {
           p_periodicidade: Periodicidade | null;
           p_sessoes_semana: number | null;
           p_total_sessoes: number | null;
+          p_forma_pagamento: string;
+          p_cobranca_modo: CobrancaModo;
         };
         Returns: string;
       };

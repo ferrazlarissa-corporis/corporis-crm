@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PilarBadge, colorTokenForPlano, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
-import { PERIODICIDADE_LABEL, formatBRL, MATRICULA_STATUS_LABEL } from "@/lib/vendas-labels";
+import { PERIODICIDADE_LABEL, PLANO_TIPO_LABEL, formatBRL, MATRICULA_STATUS_LABEL } from "@/lib/vendas-labels";
 import { PESSOA_STATUS_LABEL, PESSOA_TIPO_OPTIONS, termoCliente } from "@/lib/clientes-labels";
 import type { FichaCliente } from "@/lib/queries/ficha-cliente";
 import type { Pilar, PessoaTipo, LancamentoStatus, ContratoStatus, DocumentoTipo } from "@/types/database";
@@ -146,6 +146,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
   const emAberto = ficha.lancamentos.filter((l) => l.status !== "recebido");
   const onboardingDone = onboardingStatus(ficha);
+  const matriculaPlano = ficha.matricula?.plano
+    ? { ...ficha.matricula.plano, periodicidade: ficha.matricula.periodicidade, tipo: ficha.matricula.tipo }
+    : null;
 
   return (
     <div className="grid grid-cols-[1fr_300px] gap-6">
@@ -154,7 +157,7 @@ function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
         <Card className="relative overflow-hidden p-5 pt-6">
           <span
             className="absolute inset-x-0 top-0 h-1"
-            style={taxonomyAccentStyle(ficha.matricula?.plano ? colorTokenForPlano(ficha.matricula.plano) : "bege")}
+            style={taxonomyAccentStyle(matriculaPlano ? colorTokenForPlano(matriculaPlano) : "bege")}
           />
           <SectionTitle>Plano ativo</SectionTitle>
           {ficha.matricula?.plano ? (
@@ -162,10 +165,10 @@ function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
               <div>
                 <p className="font-display text-xl text-text-primary">{ficha.matricula.plano.nome}</p>
                 <p className="text-xs text-text-secondary">
-                  {PERIODICIDADE_LABEL[ficha.matricula.plano.periodicidade]} · início {fmt(ficha.matricula.inicio)}
+                  {ficha.matricula.periodicidade ? PERIODICIDADE_LABEL[ficha.matricula.periodicidade] : PLANO_TIPO_LABEL[ficha.matricula.tipo]} · início {fmt(ficha.matricula.inicio)}
                 </p>
               </div>
-              <p className="font-display text-2xl text-text-primary">{formatBRL(ficha.matricula.plano.valor)}</p>
+              <p className="font-display text-2xl text-text-primary">{formatBRL(ficha.matricula.valor_total ?? ficha.matricula.valor ?? 0)}</p>
             </div>
           ) : <p className="mt-2 text-sm text-text-secondary">Sem plano ativo.</p>}
         </Card>
@@ -226,7 +229,7 @@ function VisaoGeral({ ficha }: { ficha: FichaCliente }) {
           <p className="mt-2 text-sm text-text-primary">{ficha.responsavelNome ?? "Sem responsável"}</p>
           <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
             <Mini label="Cliente desde" value={fmt(ficha.pessoa.created_at, "MMM/yyyy")} />
-            <Mini label="Frequência" value={ficha.matricula?.plano?.sessoes_semana ? `${ficha.matricula.plano.sessoes_semana}x/semana` : "—"} />
+            <Mini label="Frequência" value={ficha.matricula?.sessoes_semana ? `${ficha.matricula.sessoes_semana}x/semana` : "—"} />
           </div>
         </Card>
 
@@ -348,6 +351,7 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const m = ficha.matricula;
+  const planoColor = m?.plano ? { ...m.plano, periodicidade: m.periodicidade, tipo: m.tipo } : null;
 
   function cancelar() {
     if (!m) return;
@@ -373,21 +377,30 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
       <Card className="relative overflow-hidden p-6 pt-7">
         <span
           className="absolute inset-x-0 top-0 h-1.5"
-          style={taxonomyAccentStyle(colorTokenForPlano(m.plano))}
+          style={taxonomyAccentStyle(planoColor ? colorTokenForPlano(planoColor) : "bege")}
         />
         <div className="flex items-baseline justify-between">
           <div>
             <p className="font-display text-2xl text-text-primary">{m.plano.nome}</p>
-            <p className="text-xs text-text-secondary">{m.plano.tipo} · {PERIODICIDADE_LABEL[m.plano.periodicidade]} · {MATRICULA_STATUS_LABEL[m.status]}</p>
+            <p className="text-xs text-text-secondary">
+              {PLANO_TIPO_LABEL[m.tipo]} · {m.periodicidade ? PERIODICIDADE_LABEL[m.periodicidade] : "sem periodicidade"} · {MATRICULA_STATUS_LABEL[m.status]}
+            </p>
           </div>
-          <p className="font-display text-[28px] text-text-primary">{formatBRL(m.plano.valor)}</p>
+          <div className="text-right">
+            <p className="font-display text-[28px] text-text-primary">{formatBRL(m.valor_total ?? m.valor ?? 0)}</p>
+            {m.tipo === "fixo" && m.valor != null ? (
+              <p className="text-xs text-text-secondary">{formatBRL(m.valor)}/mês normalizado</p>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-5 grid grid-cols-3 gap-4">
           <Mini label="Início" value={fmt(m.inicio)} />
-          <Mini label="Renovação" value={m.renovacao ? fmt(m.renovacao) : "Automática"} />
+          <Mini label="Término" value={fmt(m.fim)} />
           <Mini label="Vencimento" value={m.dia_vencimento ? `dia ${m.dia_vencimento}` : "—"} />
-          <Mini label="Frequência" value={m.plano.sessoes_semana ? `${m.plano.sessoes_semana}x/semana` : "—"} />
+          <Mini label="Frequência" value={m.sessoes_semana ? `${m.sessoes_semana}x/semana` : "—"} />
+          <Mini label="Pagamento" value={m.forma_pagamento ?? "—"} />
+          <Mini label="Cobrança" value={m.cobranca_modo ? (m.cobranca_modo === "parcelada_mensal" ? "Parcelada mensal" : "Única") : "—"} />
         </div>
 
         <div className="mt-6 flex gap-3 border-t border-border pt-4">

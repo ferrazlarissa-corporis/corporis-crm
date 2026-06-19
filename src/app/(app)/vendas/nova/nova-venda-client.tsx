@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,20 +19,13 @@ import {
 import {
   PERIODICIDADE_LABEL,
   PERIODICIDADE_MESES,
-  PERIODICIDADE_OPTIONS,
   PLANO_TIPO_LABEL,
   formatBRL,
-  pilatesPreco,
 } from "@/lib/vendas-labels";
 import type { PessoaListItem } from "@/lib/queries/pessoa";
 import type { PlanoRow } from "@/lib/queries/planos";
 import type { Periodicidade, Pilar, PlanoTipo } from "@/types/database";
 import { criarHorariosPlano, criarVenda } from "../actions";
-
-// Periodicidades válidas para plano fixo (sem anual/avulso).
-const PERIODICIDADE_FIXO = PERIODICIDADE_OPTIONS.filter(
-  (o) => o.value !== "anual" && o.value !== "avulso",
-);
 
 /** Soma meses a uma data ISO (yyyy-mm-dd), devolvendo ISO. */
 function addMonthsISO(iso: string, months: number): string {
@@ -60,8 +53,10 @@ type CreatedSale = {
 };
 
 const FORMA_CREDITO_TOTAL = "Crédito total do plano";
+const FORMA_DINHEIRO = "Dinheiro";
 const FORMAS = ["Pix recorrente", "Cartão recorrente", FORMA_CREDITO_TOTAL, "Boleto", "Dinheiro"];
 const STEPS = ["Cliente", "Plano", "Condições", "Revisão"];
+type CobrancaModo = "unica" | "parcelada_mensal";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -81,13 +76,17 @@ function valorLiquido(valor: string, desconto: string): number {
   return Math.max(0, (Number(valor) || 0) - valorDesconto(valor, desconto));
 }
 
-function valorTotalPlano(tipo: PlanoTipo, periodicidade: Periodicidade, valor: string, desconto: string): number {
-  const liquido = valorLiquido(valor, desconto);
-  return tipo === "fixo" ? liquido * PERIODICIDADE_MESES[periodicidade] : liquido;
+function valorTotalPlano(_tipo: PlanoTipo, _periodicidade: Periodicidade, valor: string, desconto: string): number {
+  return valorLiquido(valor, desconto);
+}
+
+function cobrancaModoForForma(tipo: PlanoTipo, forma: string): CobrancaModo {
+  if (tipo !== "fixo") return "unica";
+  return forma === FORMA_CREDITO_TOTAL || forma === FORMA_DINHEIRO ? "unica" : "parcelada_mensal";
 }
 
 function parcelasDoPlano(tipo: PlanoTipo, periodicidade: Periodicidade, forma: string): number {
-  if (forma === FORMA_CREDITO_TOTAL || tipo !== "fixo") return 1;
+  if (cobrancaModoForForma(tipo, forma) === "unica") return 1;
   return PERIODICIDADE_MESES[periodicidade];
 }
 
@@ -129,25 +128,21 @@ export function NovaVendaClient({
   const plano = useMemo(() => planos.find((p) => p.id === planoId) ?? null, [planos, planoId]);
   const tipo: PlanoTipo = plano?.tipo ?? "fixo";
   const fim = tipo === "fixo" ? addMonthsISO(inicio, PERIODICIDADE_MESES[periodicidade]) : null;
-  const liquidoMensal = valorLiquido(valor, desconto);
   const totalPlano = valorTotalPlano(tipo, periodicidade, valor, desconto);
-  const totalLiquido = forma === FORMA_CREDITO_TOTAL ? totalPlano : liquidoMensal;
+  const totalLiquido = totalPlano;
   const descontoNominal = valorDesconto(valor, desconto);
   const numeroParcelas = parcelasDoPlano(tipo, periodicidade, forma);
+  const valorParcela = numeroParcelas > 1 ? totalPlano / numeroParcelas : totalPlano;
+  const cobrancaModo = cobrancaModoForForma(tipo, forma);
   const planoToken = plano ? colorTokenForPlano(plano) : null;
+  const precosDisponiveis = useMemo(
+    () => (plano?.precos ?? []).filter((preco) => preco.ativo).sort((a, b) => a.sessoes_semana - b.sessoes_semana),
+    [plano],
+  );
   const planoPilares = useMemo(() => {
     if (!plano) return [];
     return Array.from(new Set([plano.pilar, ...plano.servicosMeta.map((s) => s.pilar)].filter(Boolean) as Pilar[]));
   }, [plano]);
-  const planoEhPilates = planoPilares.includes("pilates");
-
-  // Pilates fixo: pré-preenche o valor pela tabela de preços (frequência × periodicidade).
-  // Roda ao trocar periodicidade/frequência/plano; o valor segue editável manualmente depois.
-  useEffect(() => {
-    if (tipo !== "fixo" || !planoEhPilates) return;
-    const preco = pilatesPreco(periodicidade, Number(sessoesSemana));
-    if (preco != null) setValor(String(preco));
-  }, [tipo, planoEhPilates, periodicidade, sessoesSemana]);
 
   const pessoasFiltradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -171,12 +166,18 @@ export function NovaVendaClient({
   }, [modelos, plano, planoPilares]);
 
   function selectPlano(p: PlanoRow) {
+    const firstPreco = p.precos.filter((preco) => preco.ativo).sort((a, b) => a.sessoes_semana - b.sessoes_semana)[0];
     setPlanoId(p.id);
-    setValor(String(p.valor));
+    setValor(String(p.tipo === "fixo" && firstPreco ? firstPreco.valor_total : p.valor));
     // Pré-preenche os termos com os defaults do plano (catálogo genérico — editáveis).
     setPeriodicidade(p.periodicidade === "anual" || p.periodicidade === "avulso" ? "mensal" : p.periodicidade);
-    setSessoesSemana(p.sessoes_semana != null ? String(p.sessoes_semana) : "");
+    setSessoesSemana(p.tipo === "fixo" && firstPreco ? String(firstPreco.sessoes_semana) : "");
     setTotalSessoes("");
+  }
+  function selectFrequenciaPlano(value: string) {
+    setSessoesSemana(value);
+    const preco = precosDisponiveis.find((item) => item.sessoes_semana === Number(value));
+    if (preco) setValor(String(preco.valor_total));
   }
 
   function canContinue(): boolean {
@@ -185,8 +186,9 @@ export function NovaVendaClient({
     if (step === 3) {
       const descontoPct = Number(desconto);
       const descontoValido = Number.isFinite(descontoPct) && descontoPct >= 0 && descontoPct <= 100;
-      const base = Number(valor) >= 0 && descontoValido && Number(diaVencimento) >= 1 && Number(diaVencimento) <= 28 && Boolean(inicio);
+      const base = Number(valor) > 0 && descontoValido && Number(diaVencimento) >= 1 && Number(diaVencimento) <= 28 && Boolean(inicio);
       if (tipo === "personalizado") return base && Number(totalSessoes) >= 1;
+      if (tipo === "fixo") return base && sessoesSemana !== "";
       return base;
     }
     return true;
@@ -208,6 +210,8 @@ export function NovaVendaClient({
         periodicidade: tipo === "fixo" ? periodicidade : null,
         sessoes_semana: tipo === "fixo" && sessoesSemana !== "" ? Number(sessoesSemana) : null,
         total_sessoes: tipo !== "fixo" && totalSessoes !== "" ? Number(totalSessoes) : null,
+        forma_pagamento: forma,
+        cobranca_modo: cobrancaModo,
       });
       if (!r.success) { setError(r.error); return; }
       if (r.matricula_id && r.pessoa_id && r.tipo === "fixo" && r.fim && (r.sessoes_semana ?? 0) > 0) {
@@ -270,7 +274,8 @@ export function NovaVendaClient({
                 diaVencimento={diaVencimento} setDiaVencimento={setDiaVencimento}
                 inicio={inicio} setInicio={setInicio}
                 periodicidade={periodicidade} setPeriodicidade={setPeriodicidade}
-                sessoesSemana={sessoesSemana} setSessoesSemana={setSessoesSemana}
+                sessoesSemana={sessoesSemana} setSessoesSemana={selectFrequenciaPlano}
+                precos={precosDisponiveis}
                 totalSessoes={totalSessoes} setTotalSessoes={setTotalSessoes}
                 forma={forma} setForma={setForma}
               />
@@ -341,7 +346,7 @@ export function NovaVendaClient({
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-text-secondary">
-                    {tipo === "fixo" ? PERIODICIDADE_LABEL[periodicidade] : ""}
+                    {tipo === "fixo" ? `${PERIODICIDADE_LABEL[periodicidade]}${sessoesSemana ? ` · ${sessoesSemana}x/semana` : ""}` : ""}
                     {tipo !== "fixo" && totalSessoes ? `${totalSessoes} sessões` : ""}
                   </p>
                   {tipo === "fixo" && fim ? (
@@ -355,14 +360,12 @@ export function NovaVendaClient({
               {plano ? (
                 <>
                   <p className="text-sm text-text-primary">
-                    {formatBRL(totalLiquido)} · {forma === FORMA_CREDITO_TOTAL ? "crédito" : `vencimento dia ${diaVencimento}`}
+                    {formatBRL(totalLiquido)} · {cobrancaModo === "unica" ? "pagamento único" : `${formatBRL(valorParcela)} por mês`}
                   </p>
                   <p className="text-xs text-text-secondary">
-                    {forma === FORMA_CREDITO_TOTAL
-                      ? `${parcelasLabel(numeroParcelas)} · ${forma} · ${formatBRL(totalPlano)}`
-                      : tipo === "fixo"
-                        ? `${parcelasLabel(numeroParcelas)} · ${forma}`
-                        : forma}
+                    {cobrancaModo === "parcelada_mensal"
+                      ? `${parcelasLabel(numeroParcelas)} · ${forma} · vencimento dia ${diaVencimento}`
+                      : `${parcelasLabel(numeroParcelas)} · ${forma}`}
                   </p>
                 </>
               ) : <p className="text-xs text-text-secondary">Defina as condições</p>}
@@ -480,6 +483,7 @@ function Step2({ planos, planoId, onSelect }: { planos: PlanoRow[]; planoId: str
           <p className="py-8 text-center text-sm text-text-secondary">Nenhum plano ativo. Cadastre planos primeiro.</p>
         ) : planos.map((p) => {
           const token = colorTokenForPlano(p);
+          const precos = p.precos.filter((preco) => preco.ativo).sort((a, b) => a.sessoes_semana - b.sessoes_semana);
           return (
             <button
               key={p.id}
@@ -510,10 +514,21 @@ function Step2({ planos, planoId, onSelect }: { planos: PlanoRow[]; planoId: str
                   ) : null}
                 </div>
               </div>
-              <p className="mt-1 text-xs text-text-secondary">
-                {formatBRL(p.valor)} · {PERIODICIDADE_LABEL[p.periodicidade]}
-                {p.sessoes_semana != null ? ` · ${p.sessoes_semana}x/semana` : ""}
-              </p>
+              {p.tipo === "fixo" ? (
+                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  {precos.length > 0 ? precos.map((preco) => (
+                    <span key={preco.id} className="rounded-[var(--radius-md)] border border-border bg-card px-2 py-1 text-text-secondary">
+                      <span className="font-medium text-text-primary">{preco.sessoes_semana}x</span> · {formatBRL(preco.valor_total)}
+                    </span>
+                  )) : (
+                    <span className="col-span-3 text-text-secondary">Sem preços configurados</span>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-1 text-xs text-text-secondary">
+                  {formatBRL(p.valor)} · {PERIODICIDADE_LABEL[p.periodicidade]}
+                </p>
+              )}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {p.servicosMeta.slice(0, 3).map((s) => (
                   <ServicoBadge key={s.id} nome={s.nome} corToken={s.cor_token} pilar={s.pilar} />
@@ -535,17 +550,20 @@ function Step3(props: {
   inicio: string; setInicio: (v: string) => void;
   periodicidade: Periodicidade; setPeriodicidade: (v: Periodicidade) => void;
   sessoesSemana: string; setSessoesSemana: (v: string) => void;
+  precos: PlanoRow["precos"];
   totalSessoes: string; setTotalSessoes: (v: string) => void;
   forma: string; setForma: (v: string) => void;
 }) {
   const { tipo } = props;
   const totalPlano = valorTotalPlano(tipo, props.periodicidade, props.valor, props.desconto);
   const numeroParcelas = parcelasDoPlano(tipo, props.periodicidade, props.forma);
+  const valorParcela = numeroParcelas > 1 ? totalPlano / numeroParcelas : totalPlano;
+  const modo = cobrancaModoForForma(tipo, props.forma);
   const valorLabel =
-    tipo === "avulso" ? "Valor por sessão (R$)" : tipo === "personalizado" ? "Valor do pacote (R$)" : "Valor mensal (R$)";
+    tipo === "avulso" ? "Valor por sessão (R$)" : tipo === "personalizado" ? "Valor do pacote (R$)" : "Valor total do plano (R$)";
   const ajuda =
     tipo === "fixo"
-      ? "Plano fixo: cobrança mensal recorrente até o término calculado abaixo."
+      ? "Plano fixo: o valor informado é o total do compromisso; a forma de pagamento define se será único ou parcelado mês a mês."
       : tipo === "personalizado"
         ? "Plano personalizado: cobrança única do pacote de sessões contratado."
         : "Sessão avulsa: cobrança única, sem recorrência.";
@@ -558,12 +576,19 @@ function Step3(props: {
       {tipo === "fixo" ? (
         <div className="mt-6 grid grid-cols-2 gap-4">
           <Labeled label="Periodicidade">
-            <Select value={props.periodicidade} onChange={(e) => props.setPeriodicidade(e.target.value as Periodicidade)}>
-              {PERIODICIDADE_FIXO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </Select>
+            <div className="flex h-11 w-full items-center rounded-[var(--radius-md)] border border-border bg-accent-soft px-3 text-sm text-text-primary shadow-[var(--shadow-sm)]">
+              {PERIODICIDADE_LABEL[props.periodicidade]}
+            </div>
           </Labeled>
-          <Labeled label="Sessões por semana">
-            <Input type="number" min={0} max={14} value={props.sessoesSemana} onChange={(e) => props.setSessoesSemana(e.target.value)} placeholder="2" />
+          <Labeled label="Frequência semanal">
+            <Select value={props.sessoesSemana} onChange={(e) => props.setSessoesSemana(e.target.value)}>
+              <option value="">Selecione</option>
+              {props.precos.map((preco) => (
+                <option key={preco.id} value={preco.sessoes_semana}>
+                  {preco.sessoes_semana}x/semana · {formatBRL(preco.valor_total)}
+                </option>
+              ))}
+            </Select>
           </Labeled>
         </div>
       ) : tipo === "personalizado" ? (
@@ -592,15 +617,15 @@ function Step3(props: {
           <Select value={props.forma} onChange={(e) => props.setForma(e.target.value)}>
             {FORMAS.map((f) => (
               <option key={f} value={f}>
-                {f === FORMA_CREDITO_TOTAL ? `${f} (${formatBRL(totalPlano)})` : f}
+                {f === FORMA_CREDITO_TOTAL || f === FORMA_DINHEIRO ? `${f} (total)` : f}
               </option>
             ))}
           </Select>
         </Labeled>
         {tipo === "fixo" ? (
-          <Labeled label="Número de parcelas">
+          <Labeled label={modo === "parcelada_mensal" ? "Parcelamento mensal" : "Cobrança"}>
             <div className="flex h-11 w-full items-center rounded-[var(--radius-md)] border border-border bg-accent-soft px-3 text-sm text-text-primary shadow-[var(--shadow-sm)]">
-              {parcelasLabel(numeroParcelas)}
+              {parcelasLabel(numeroParcelas)} · {formatBRL(valorParcela)}
             </div>
           </Labeled>
         ) : <div />}
@@ -608,8 +633,8 @@ function Step3(props: {
 
       {tipo === "fixo" && props.fim ? (
         <p className="mt-3 text-xs text-text-secondary">
-          Término calculado: <span className="text-text-primary">{formatDateBR(props.fim)}</span>. A cobrança mensal
-          encerra automaticamente nessa data.
+          Término calculado: <span className="text-text-primary">{formatDateBR(props.fim)}</span>. Parcelas futuras só serão
+          geradas para formas recorrentes.
         </p>
       ) : (
         <p className="mt-3 text-xs text-text-secondary">
@@ -629,9 +654,7 @@ function Step4({
   modelos: Modelo[]; modeloId: string | null; setModeloId: (id: string | null) => void;
 }) {
   const tipo = plano?.tipo ?? "fixo";
-  const total = forma === FORMA_CREDITO_TOTAL
-    ? valorTotalPlano(tipo, periodicidade, valor, desconto)
-    : valorLiquido(valor, desconto);
+  const total = valorTotalPlano(tipo, periodicidade, valor, desconto);
   return (
     <div>
       <h1 className="font-display text-[28px] leading-tight text-text-primary">Revise o que será criado antes de confirmar.</h1>

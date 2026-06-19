@@ -1,6 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Periodicidade } from "@/types/database";
-import { PERIODICIDADE_MESES } from "@/lib/vendas-labels";
 
 export type GestaoPendencia = {
   id: string;
@@ -19,10 +17,6 @@ export type GestaoStats = {
   pendencias: GestaoPendencia[];
 };
 
-function one<T>(v: T | T[] | null): T | null {
-  return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
-}
-
 export async function getGestaoStats(): Promise<GestaoStats> {
   const supabase = await createClient();
   const now = new Date();
@@ -31,15 +25,15 @@ export async function getGestaoStats(): Promise<GestaoStats> {
 
   const [ativosRes, matriculasRes, lancamentosRes, contratosRes] = await Promise.all([
     supabase.schema("core").from("pessoa").select("id", { count: "exact", head: true }).eq("status", "cliente_ativo").is("archived_at", null),
-    supabase.schema("vendas").from("matricula").select("plano:plano_id(valor, periodicidade)").eq("status", "ativa"),
+    supabase.schema("vendas").from("matricula").select("tipo, valor").eq("status", "ativa"),
     supabase.schema("financeiro").from("lancamento").select("id, pessoa_id, descricao, valor, vencimento, status, competencia"),
     supabase.schema("vendas").from("contrato").select("id, pessoa_id, created_at").eq("status", "rascunho").order("created_at", { ascending: true }).limit(5),
   ]);
 
   // MRR
   const mrr = (matriculasRes.data ?? []).reduce((sum, m) => {
-    const plano = one((m as { plano: unknown }).plano) as { valor: number; periodicidade: Periodicidade } | null;
-    return plano ? sum + plano.valor / PERIODICIDADE_MESES[plano.periodicidade] : sum;
+    const matricula = m as { tipo: string; valor: number | null };
+    return matricula.tipo === "fixo" ? sum + (matricula.valor ?? 0) : sum;
   }, 0);
 
   // Lançamentos
