@@ -12,9 +12,13 @@ const webhookSchema = z.object({
   instance: z.string().optional(),
   data: z.object({
     key: z.object({
-      id:        z.string(),
-      remoteJid: z.string(),
-      fromMe:    z.boolean().optional().default(false),
+      id:            z.string(),
+      remoteJid:     z.string(),
+      // WhatsApp LID addressing: remoteJid comes as "<n>@lid" and the real phone
+      // number lives in remoteJidAlt as "<phone>@s.whatsapp.net".
+      remoteJidAlt:  z.string().optional(),
+      addressingMode: z.string().optional(),
+      fromMe:        z.boolean().optional().default(false),
     }),
     message:          z.unknown().optional(),
     pushName:         z.string().optional(),
@@ -59,7 +63,11 @@ export async function POST(request: NextRequest) {
 
   const fromMe             = data.key.fromMe;
   const evolutionMessageId = data.key.id;
-  const remoteJid          = data.key.remoteJid;
+  const rawRemoteJid       = data.key.remoteJid;
+  // Resolve LID addressing to the real phone JID. When the chat is addressed via
+  // "@lid", the actual "<phone>@s.whatsapp.net" is provided in remoteJidAlt.
+  const isLid              = rawRemoteJid.endsWith("@lid") || data.key.addressingMode === "lid";
+  const remoteJid          = isLid && data.key.remoteJidAlt ? data.key.remoteJidAlt : rawRemoteJid;
   const telefone           = jidToE164(remoteJid);
   const textContent = extractMessageText(data.message);
   const isAudio     = !textContent && (
@@ -398,8 +406,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 8. Trigger AI if mode = 'ia'
-  if (!fromMe && conv.modo === "ia") {
+  // 8. Trigger AI if mode = 'ia' (bypass numbers always reach Clara, even if the
+  // conversation was flipped to 'humano' by a manual/synced reply — test line stays on IA).
+  if (!fromMe && (conv.modo === "ia" || isBypassed)) {
     if (!isBypassed) {
       // Skip known contacts when filter is active
       if (agentConf?.apenas_desconhecidos) {
