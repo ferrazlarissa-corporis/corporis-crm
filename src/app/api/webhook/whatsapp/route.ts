@@ -28,6 +28,42 @@ const webhookSchema = z.object({
 });
 
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve the core.pessoa id for a phone, creating the pessoa if needed.
+ * Identity key is telefone (E.164). Returns null on failure.
+ */
+async function resolvePessoaIdByPhone(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  telefone: string,
+  nome: string,
+): Promise<string | null> {
+  const core = supabase.schema("core");
+
+  const { data: existing } = await core
+    .from("pessoa")
+    .select("id")
+    .eq("telefone", telefone)
+    .maybeSingle();
+
+  if (existing?.id) return existing.id;
+
+  const { data: created, error } = await core
+    .from("pessoa")
+    .insert({ nome, telefone, status: "lead", tipo: "aluna" })
+    .select("id")
+    .single();
+
+  if (error || !created) {
+    console.error("[webhook] pessoa create error:", error);
+    return null;
+  }
+
+  return created.id;
+}
+
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -151,6 +187,17 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Every crm.lead must point to a core.pessoa (NOT NULL since the Corporis OS
+  // migration). Identity key = telefone E.164. Resolve/create it before inserting
+  // a brand-new lead; existing leads already carry pessoa_id.
+  let newLeadPessoaId: string | null = null;
+  if (!existingLead) {
+    newLeadPessoaId = await resolvePessoaIdByPhone(supabase, telefone, data.pushName?.trim() || telefone);
+    if (!newLeadPessoaId) {
+      return NextResponse.json({ error: "pessoa_resolve_failed" }, { status: 500 });
+    }
+  }
+
   const { data: lead, error: leadErr } = existingLead
     ? await db
         .from("leads")
@@ -163,6 +210,7 @@ export async function POST(request: NextRequest) {
         .insert({
           nome: data.pushName?.trim() || telefone,
           telefone,
+          pessoa_id: newLeadPessoaId!,
           ultima_interacao_at: now,
         })
         .select("id, nome, estagio")
@@ -199,11 +247,21 @@ export async function POST(request: NextRequest) {
     if (shouldRecreateLeadOnReset) {
       await db.from("leads").delete().eq("id", lead.id);
 
+      const resetPessoaId = await resolvePessoaIdByPhone(
+        supabase,
+        telefone,
+        data.pushName?.trim() || lead.nome || telefone,
+      );
+      if (!resetPessoaId) {
+        return NextResponse.json({ error: "reset_pessoa_resolve_failed" }, { status: 500 });
+      }
+
       const { data: freshLead, error: freshLeadErr } = await db
         .from("leads")
         .insert({
           nome: data.pushName?.trim() || lead.nome || telefone,
           telefone,
+          pessoa_id: resetPessoaId,
           estagio: "novo",
           interesse: "indefinido",
           score_qualificacao: null,
