@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useMemo, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Ban, Check, ChevronLeft, ChevronRight, Plus, UserCheck, UserX } from "lucide-react";
 import {
-  addDays, addWeeks, differenceInMinutes, endOfWeek, format, isSameDay,
+  addDays, addWeeks, endOfWeek, format, isSameDay,
   startOfDay, endOfDay, startOfWeek,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import {
-  PilarBadge,
   ServicoBadge,
   colorVarForToken,
 } from "@/components/corporis/taxonomy-badges";
@@ -53,6 +52,133 @@ const STATUS_DOT: Record<AppointmentStatus, string> = {
   agendado: "var(--color-bege)", confirmado: "var(--color-verde)", compareceu: "var(--color-verde)",
   faltou: "var(--color-ui-error)", cancelado: "var(--color-cinza)",
 };
+
+type EventLayout = {
+  laneIndex: number;
+  laneCount: number;
+};
+
+type CalendarEventGroup = {
+  id: string;
+  dayKey: string;
+  start: number;
+  end: number;
+  primary: AgendaEvent;
+  events: AgendaEvent[];
+};
+
+function eventStartMinutes(e: AgendaEvent): number {
+  const start = new Date(e.inicio);
+  return start.getHours() * 60 + start.getMinutes();
+}
+
+function eventEndMinutes(e: AgendaEvent): number {
+  const end = new Date(e.fim);
+  const startMinutes = eventStartMinutes(e);
+  const endMinutes = end.getHours() * 60 + end.getMinutes();
+  return Math.max(startMinutes + 1, endMinutes);
+}
+
+function visualSlotKey(e: AgendaEvent): string {
+  const start = new Date(e.inicio);
+  return `${dateKey(start)}|${eventStartMinutes(e)}`;
+}
+
+function capacitySlotKey(e: AgendaEvent): string {
+  return `${visualSlotKey(e)}|${e.servicoId ?? ""}|${e.salaId ?? ""}`;
+}
+
+function buildEventGroups(events: AgendaEvent[]): CalendarEventGroup[] {
+  const groups = new Map<string, AgendaEvent[]>();
+
+  for (const event of events) {
+    const key = capacitySlotKey(event);
+    const group = groups.get(key) ?? [];
+    group.push(event);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.entries()).map(([id, group]) => {
+    const eventsInSlot = [...group].sort((a, b) =>
+      a.inicio.localeCompare(b.inicio) ||
+      a.clienteNome.localeCompare(b.clienteNome) ||
+      a.id.localeCompare(b.id),
+    );
+    const primary = eventsInSlot[0];
+    return {
+      id,
+      dayKey: dateKey(new Date(primary.inicio)),
+      start: eventStartMinutes(primary),
+      end: Math.max(...eventsInSlot.map(eventEndMinutes)),
+      primary,
+      events: eventsInSlot,
+    };
+  }).sort((a, b) =>
+    a.dayKey.localeCompare(b.dayKey) ||
+    a.start - b.start ||
+    (a.primary.servicoNome ?? "").localeCompare(b.primary.servicoNome ?? "") ||
+    a.id.localeCompare(b.id),
+  );
+}
+
+function buildEventLayout(groups: CalendarEventGroup[]): Map<string, EventLayout> {
+  const byDay = new Map<string, CalendarEventGroup[]>();
+
+  for (const group of groups) {
+    const items = byDay.get(group.dayKey) ?? [];
+    items.push(group);
+    byDay.set(group.dayKey, items);
+  }
+
+  const layout = new Map<string, EventLayout>();
+
+  for (const items of byDay.values()) {
+    items.sort((a, b) =>
+      a.start - b.start ||
+      b.end - a.end ||
+      a.primary.clienteNome.localeCompare(b.primary.clienteNome) ||
+      a.id.localeCompare(b.id),
+    );
+
+    let cluster: typeof items = [];
+    let clusterEnd = -1;
+
+    function flushCluster() {
+      if (cluster.length === 0) return;
+
+      const laneEnds: number[] = [];
+      const laneByEvent = new Map<string, number>();
+
+      for (const item of cluster) {
+        const openLane = laneEnds.findIndex((end) => end <= item.start);
+        const laneIndex = openLane >= 0 ? openLane : laneEnds.length;
+        laneEnds[laneIndex] = item.end;
+        laneByEvent.set(item.id, laneIndex);
+      }
+
+      const laneCount = Math.max(1, laneEnds.length);
+      for (const item of cluster) {
+        layout.set(item.id, {
+          laneIndex: laneByEvent.get(item.id) ?? 0,
+          laneCount,
+        });
+      }
+
+      cluster = [];
+      clusterEnd = -1;
+    }
+
+    for (const item of items) {
+      if (cluster.length > 0 && item.start >= clusterEnd) flushCluster();
+      cluster.push(item);
+      clusterEnd = Math.max(clusterEnd, item.end);
+    }
+
+    flushCluster();
+  }
+
+  return layout;
+}
 
 interface Props {
   initialEvents: AgendaEvent[];
@@ -130,18 +256,10 @@ export default function AgendaClient({ initialEvents, options, nowIso, clinicHou
     });
   }, [events, busca, pilar, salaId]);
 
-  // Ocupação por slot (inicio|servico|sala) → contagem
-  const slotCount = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const e of filtered) {
-      const k = `${e.inicio}|${e.servicoId ?? ""}|${e.salaId ?? ""}`;
-      m.set(k, (m.get(k) ?? 0) + 1);
-    }
-    return m;
-  }, [filtered]);
-
   const dayKeys = timelineDays.map((d) => d.key);
   const periodEvents = filtered.filter((e) => dayKeys.includes(dateKey(new Date(e.inicio))));
+  const eventGroups = buildEventGroups(periodEvents);
+  const eventLayout = buildEventLayout(eventGroups);
 
   useEffect(() => {
     if (gridRef.current) {
@@ -215,7 +333,7 @@ export default function AgendaClient({ initialEvents, options, nowIso, clinicHou
             <div />
             {timelineDays.map(({ date, key }) => {
               const isToday = isSameDay(date, today);
-              const count = periodEvents.filter((e) => dateKey(new Date(e.inicio)) === key).length;
+              const count = eventGroups.filter((g) => g.dayKey === key).length;
               return (
                 <div key={key} className="border-l border-border px-2 py-2 text-center">
                   <div className={cn("crm-label text-[10px] tracking-[1.2px]", isToday ? "text-primary" : "text-text-secondary")}>
@@ -242,33 +360,44 @@ export default function AgendaClient({ initialEvents, options, nowIso, clinicHou
               ))}
 
               {/* Eventos */}
-              {periodEvents.map((e) => {
+              {eventGroups.map((group) => {
+                const e = group.primary;
                 const start = new Date(e.inicio);
-                const col = dayKeys.indexOf(dateKey(start));
+                const col = dayKeys.indexOf(group.dayKey);
                 if (col < 0) return null;
-                const mins = start.getHours() * 60 + start.getMinutes();
-                const dur = Math.max(20, differenceInMinutes(new Date(e.fim), start));
+                const mins = group.start;
+                const dur = Math.max(20, group.end - group.start);
                 const top = ((mins - tStart) / 60) * HOUR_PX;
                 const height = Math.max(26, (dur / 60) * HOUR_PX - 3);
                 const c = colorVar(e);
-                const slotKey = `${e.inicio}|${e.servicoId ?? ""}|${e.salaId ?? ""}`;
-                const occ = slotCount.get(slotKey) ?? 1;
-                const cap = e.capacidadeSlot ?? 1;
+                const layout = eventLayout.get(group.id) ?? { laneIndex: 0, laneCount: 1 };
+                const laneGap = 4;
+                const columnWidth = `(100% - ${HOUR_COL_W}px) / ${dayCount}`;
+                const columnGutter = 5;
+                const laneGapTotal = laneGap * (layout.laneCount - 1);
+                const laneWidth = `(${columnWidth} - ${columnGutter}px - ${laneGapTotal}px) / ${layout.laneCount}`;
+                const laneOffset = `(${laneWidth}) * ${layout.laneIndex} + ${laneGap * layout.laneIndex}px`;
+                const maxNames = height > 58 ? 2 : 1;
+                const visibleNames = group.events.slice(0, maxNames).map((item) => item.clienteNome).join(", ");
+                const hiddenNames = Math.max(0, group.events.length - maxNames);
+                const namesLabel = `${visibleNames}${hiddenNames > 0 ? ` +${hiddenNames}` : ""}`;
+                const serviceLabel = e.servicoNome ?? "Agendamento";
                 return (
-                  <button key={e.id} onClick={() => setSelected(e)}
-                    className="absolute overflow-hidden rounded-[var(--radius-md)] px-2 py-1 text-left"
+                  <button key={group.id} onClick={() => setSelected(e)}
+                    className="absolute overflow-hidden rounded-[var(--radius-md)] border px-2 py-1 text-left transition-shadow hover:shadow-[0_4px_14px_rgba(58,53,48,0.08)]"
+                    aria-label={`${serviceLabel}: ${group.events.map((item) => item.clienteNome).join(", ")}`}
+                    title={`${serviceLabel}: ${group.events.map((item) => item.clienteNome).join(", ")}`}
                     style={{
                       top: top + 1, height,
-                      left: `calc(${HOUR_COL_W}px + (100% - ${HOUR_COL_W}px) * ${col} / ${dayCount} + 2px)`,
-                      width: `calc((100% - ${HOUR_COL_W}px) / ${dayCount} - 5px)`,
-                      background: bgFor(c), borderLeft: `3px solid ${c}`,
+                      left: `calc(${HOUR_COL_W}px + (100% - ${HOUR_COL_W}px) * ${col} / ${dayCount} + 2px + ${laneOffset})`,
+                      width: `calc(${laneWidth})`,
+                      background: bgFor(c),
+                      borderColor: `color-mix(in srgb, ${c} 28%, transparent)`,
+                      borderLeft: `3px solid ${c}`,
                     }}>
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="truncate text-[11px] font-medium text-text-primary">{format(start, "HH:mm")}</span>
-                      <span className="shrink-0 rounded-[var(--radius-pill)] bg-card/70 px-1 text-[9px] font-medium text-text-secondary">{occ}/{cap}</span>
-                    </div>
-                    <div className="truncate text-[11px] text-text-primary">{e.clienteNome}</div>
-                    {height > 42 && e.servicoNome ? <div className="truncate text-[10px] text-text-secondary">{e.servicoNome}</div> : null}
+                    <div className="truncate text-[11px] font-medium text-text-primary">{format(start, "HH:mm")}</div>
+                    <div className="truncate text-[11px] font-medium text-text-primary">{namesLabel}</div>
+                    {height > 42 ? <div className="truncate text-[10px] text-text-secondary">{serviceLabel}</div> : null}
                   </button>
                 );
               })}
@@ -306,9 +435,9 @@ export default function AgendaClient({ initialEvents, options, nowIso, clinicHou
             {options.servicos.length === 0 ? (
               <p className="text-xs text-text-secondary">Cadastre serviços para definir capacidade.</p>
             ) : options.servicos.map((s) => (
-              <div key={s.id} className="flex items-center gap-2 py-1.5">
-                <ServicoBadge nome={s.nome} corToken={s.cor_token} pilar={s.pilar} className="min-w-0 flex-1" />
-                <span className="text-[11px] text-text-secondary">{s.capacidade_slot}/slot</span>
+              <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_42px] items-center gap-2 py-1.5">
+                <ServicoBadge nome={s.nome} corToken={s.cor_token} pilar={s.pilar} className="w-full min-w-0" />
+                <span className="text-right text-[11px] tabular-nums text-text-secondary">{s.capacidade_slot}/slot</span>
               </div>
             ))}
           </Section>
@@ -331,9 +460,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-border bg-card p-3 text-center">
+    <div className="min-w-0 rounded-[var(--radius-md)] border border-border bg-card px-2.5 py-3 text-center">
       <div className="font-display text-2xl leading-none text-text-primary">{value}</div>
-      <div className="crm-label mt-1.5 text-[8.5px] tracking-[0.5px] text-text-secondary">{label}</div>
+      <div className="mt-1.5 truncate text-[10px] font-medium uppercase tracking-[0.08em] text-text-secondary">{label}</div>
     </div>
   );
 }
@@ -342,47 +471,93 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 
 function EventPopover({ e, onClose, onChanged, pending }: { e: AgendaEvent; onClose: () => void; onChanged: () => void; pending: boolean }) {
   const [busy, setBusy] = useState(false);
+  const start = new Date(e.inicio);
+  const end = new Date(e.fim);
+  const serviceColor = colorVar(e);
   async function setStatus(status: AppointmentStatus) {
     setBusy(true);
     await updateAppointmentStatus({ id: e.id, status });
     onChanged();
   }
   return (
-    <Dialog open onClose={onClose} eyebrow={e.servicoNome ?? "Agendamento"} title={e.clienteNome}
+    <Dialog
+      open
+      onClose={onClose}
+      eyebrow="Agendamento"
+      title={e.clienteNome}
+      className="max-w-xl [&_footer]:px-5 [&_footer]:py-3 [&_h2]:text-[26px] [&_h2]:leading-tight [&_header]:px-5 [&_header]:pt-5"
       footer={
-        <>
-          <Button size="sm" variant="ghost" onClick={() => setStatus("cancelado")} disabled={busy || pending}>Cancelar agend.</Button>
-          <Button size="sm" variant="secondary" onClick={() => setStatus("faltou")} disabled={busy || pending}>Faltou</Button>
-          <Button size="sm" variant="secondary" onClick={() => setStatus("compareceu")} disabled={busy || pending}>Compareceu</Button>
-          <Button size="sm" onClick={() => setStatus("confirmado")} disabled={busy || pending}>Confirmar</Button>
-        </>
+        <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button size="sm" variant="ghost" onClick={() => setStatus("cancelado")} disabled={busy || pending}>
+            <Ban className="h-4 w-4" strokeWidth={1.7} />
+            Cancelar
+          </Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setStatus("faltou")} disabled={busy || pending}>
+              <UserX className="h-4 w-4" strokeWidth={1.7} />
+              Faltou
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setStatus("compareceu")} disabled={busy || pending}>
+              <UserCheck className="h-4 w-4" strokeWidth={1.7} />
+              Compareceu
+            </Button>
+            <Button size="sm" onClick={() => setStatus("confirmado")} disabled={busy || pending}>
+              <Check className="h-4 w-4" strokeWidth={1.8} />
+              Confirmar
+            </Button>
+          </div>
+        </div>
       }>
-      <div className="flex flex-col gap-3 text-sm">
-        <Row label="Quando" value={`${format(new Date(e.inicio), "EEE, dd/MM 'às' HH:mm", { locale: ptBR })} — ${format(new Date(e.fim), "HH:mm")}`} />
-        {e.servicoNome ? (
-          <Row label="Serviço" value={<ServicoBadge nome={e.servicoNome} corToken={e.corToken} pilar={e.pilar} />} />
-        ) : null}
-        {e.salaNome ? <Row label="Sala" value={e.salaNome} /> : null}
-        {e.profissionalNome ? <Row label="Profissional" value={e.profissionalNome} /> : null}
-        {e.pilar ? <Row label="Pilar" value={<PilarBadge pilar={e.pilar} />} /> : null}
-        <Row label="Status" value={STATUS_LABEL[e.status]} />
+      <div className="space-y-4 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          {e.servicoNome ? (
+            <ServicoBadge nome={e.servicoNome} corToken={e.corToken} pilar={e.pilar} />
+          ) : null}
+          <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-border bg-background px-2.5 py-0.5 text-[11px] font-medium leading-5 text-text-primary">
+            <span className="h-1.5 w-1.5 rounded-[var(--radius-pill)]" style={{ background: STATUS_DOT[e.status] }} />
+            {STATUS_LABEL[e.status]}
+          </span>
+        </div>
+
+        <div
+          className="rounded-[var(--radius-md)] border bg-background p-4"
+          style={{
+            borderColor: `color-mix(in srgb, ${serviceColor} 36%, var(--border))`,
+            boxShadow: `inset 3px 0 0 ${serviceColor}`,
+          }}
+        >
+          <p className="crm-label text-[10px] tracking-[1.4px] text-text-secondary">Quando</p>
+          <p className="mt-1 text-lg font-medium leading-tight text-text-primary">
+            {format(start, "EEEE, dd/MM", { locale: ptBR })}
+          </p>
+          <p className="mt-1 text-sm tabular-nums text-text-secondary">
+            {format(start, "HH:mm")} as {format(end, "HH:mm")}
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {e.salaNome ? <DetailCell label="Sala" value={e.salaNome} /> : null}
+          {e.profissionalNome ? <DetailCell label="Profissional" value={e.profissionalNome} /> : null}
+        </div>
+
         {e.observacoes ? (
-          <div className="rounded-[var(--radius-md)] border-l-2 border-accent bg-accent-soft/40 px-3 py-2 text-xs text-text-primary">{e.observacoes}</div>
+          <div className="rounded-[var(--radius-md)] border border-border bg-accent-soft/40 px-3 py-2.5 text-sm text-text-primary">{e.observacoes}</div>
         ) : null}
         {e.pessoaId ? (
-          <Link href={`/clientes/${e.pessoaId}`} className="text-xs font-medium text-primary hover:underline">Abrir ficha do cliente →</Link>
+          <Link href={`/clientes/${e.pessoaId}`} className="inline-flex text-sm font-medium text-primary hover:underline">Abrir ficha do cliente →</Link>
         ) : e.leadId ? (
-          <Link href={`/leads/${e.leadId}`} className="text-xs font-medium text-primary hover:underline">Abrir ficha do lead →</Link>
+          <Link href={`/leads/${e.leadId}`} className="inline-flex text-sm font-medium text-primary hover:underline">Abrir ficha do lead →</Link>
         ) : null}
       </div>
     </Dialog>
   );
 }
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+
+function DetailCell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex gap-3">
-      <span className="crm-label w-24 shrink-0 text-[10px] tracking-[1.2px] text-text-secondary">{label}</span>
-      <span className="text-text-primary">{value}</span>
+    <div className="min-w-0 rounded-[var(--radius-md)] border border-border bg-background px-3 py-2.5">
+      <p className="crm-label text-[9px] tracking-[1.2px] text-text-secondary">{label}</p>
+      <p className="mt-1 truncate text-sm font-medium text-text-primary">{value}</p>
     </div>
   );
 }
