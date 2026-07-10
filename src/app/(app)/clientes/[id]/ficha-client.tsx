@@ -18,9 +18,9 @@ import { PilarBadge, colorTokenForPlano, taxonomyAccentStyle } from "@/component
 import { cn } from "@/lib/utils";
 import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
 import { PERIODICIDADE_LABEL, PLANO_TIPO_LABEL, formatBRL, MATRICULA_STATUS_LABEL } from "@/lib/vendas-labels";
-import { PESSOA_STATUS_LABEL, PESSOA_TIPO_OPTIONS, termoCliente } from "@/lib/clientes-labels";
+import { PESSOA_STATUS_LABEL } from "@/lib/clientes-labels";
 import type { FichaCliente } from "@/lib/queries/ficha-cliente";
-import type { Pilar, PessoaTipo, LancamentoStatus, ContratoStatus, DocumentoTipo } from "@/types/database";
+import type { Pilar, LancamentoStatus, ContratoStatus, DocumentoTipo } from "@/types/database";
 import { updateCliente, type ClienteUpdateInput } from "../actions";
 import {
   marcarLancamentoRecebido, salvarAnamnese, adicionarEvolucao, uploadDocumento,
@@ -63,7 +63,6 @@ export function FichaClienteClient({
 }) {
   const [tab, setTab] = useState<Tab>("visao");
   const { pessoa } = ficha;
-  const termo = termoCliente(pessoa.tipo, pessoa.pilar_principal);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -79,7 +78,6 @@ export function FichaClienteClient({
               <Badge tone={pessoa.status === "cliente_ativo" ? "verde" : "neutro"}>
                 {PESSOA_STATUS_LABEL[pessoa.status]}
               </Badge>
-              <Badge tone="neutro">{termo === "paciente" ? "Paciente" : termo === "aluna" ? "Aluna" : "Cliente"}</Badge>
               {pessoa.pilar_principal ? <PilarBadge pilar={pessoa.pilar_principal} /> : null}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-text-secondary">
@@ -287,7 +285,7 @@ function DadosPessoais({ ficha }: { ficha: FichaCliente }) {
     telefone: pessoa.telefone,
     email: pessoa.email,
     genero: pessoa.genero,
-    tipo: pessoa.tipo,
+    profissao: pessoa.profissao,
     pilar_principal: pessoa.pilar_principal,
   });
   const [msg, setMsg] = useState<string | null>(null);
@@ -313,11 +311,7 @@ function DadosPessoais({ ficha }: { ficha: FichaCliente }) {
           <Field label="Telefone"><Input value={form.telefone ?? ""} onChange={(e) => setForm({ ...form, telefone: e.target.value })} /></Field>
           <Field label="E-mail"><Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
           <Field label="Gênero"><Input value={form.genero ?? ""} onChange={(e) => setForm({ ...form, genero: e.target.value })} /></Field>
-          <Field label="Tipo">
-            <Select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as PessoaTipo })}>
-              {PESSOA_TIPO_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </Select>
-          </Field>
+          <Field label="Profissão"><Input value={form.profissao ?? ""} onChange={(e) => setForm({ ...form, profissao: e.target.value })} /></Field>
           <Field label="Pilar principal">
             <Select value={form.pilar_principal ?? ""} onChange={(e) => setForm({ ...form, pilar_principal: (e.target.value || null) as Pilar | null })}>
               <option value="">A definir</option>

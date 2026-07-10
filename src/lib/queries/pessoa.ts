@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Database, PessoaStatus, Pilar, PessoaTipo } from "@/types/database";
+import type { Database, PessoaStatus, Pilar } from "@/types/database";
 
 export type PessoaRow = Database["core"]["Tables"]["pessoa"]["Row"];
 
@@ -7,7 +7,6 @@ export type PessoaListItem = {
   id: string;
   nome: string;
   telefone: string | null;
-  tipo: PessoaTipo;
   status: PessoaStatus;
   pilar_principal: Pilar | null;
   responsavel: { id: string; nome: string } | null;
@@ -18,7 +17,7 @@ export type PessoaListItem = {
 };
 
 const PESSOA_LIST_SELECT =
-  "id, nome, cpf, nascimento, telefone, email, genero, tipo, status, pilar_principal, responsavel_id";
+  "id, nome, cpf, nascimento, telefone, email, genero, status, pilar_principal, responsavel_id";
 
 type PessoaListQueryRow = Pick<
   PessoaRow,
@@ -29,7 +28,6 @@ type PessoaListQueryRow = Pick<
   | "telefone"
   | "email"
   | "genero"
-  | "tipo"
   | "status"
   | "pilar_principal"
   | "responsavel_id"
@@ -56,7 +54,6 @@ function mapPessoaListItem(
     id: row.id,
     nome: row.nome,
     telefone: row.telefone,
-    tipo: row.tipo,
     status: row.status,
     pilar_principal: row.pilar_principal,
     responsavel: responsavel ? { id: responsavel.id, nome: responsavel.nome } : null,

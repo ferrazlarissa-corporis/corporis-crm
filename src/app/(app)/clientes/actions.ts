@@ -11,7 +11,6 @@ function firstError(error: z.ZodError): string {
 }
 
 const PILAR = z.enum(["pilates", "fisio_pelvica", "acupuntura"]);
-const TIPO = z.enum(["aluna", "paciente", "ambos"]);
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().or(z.literal("")).transform((v) => v || null);
 
@@ -22,7 +21,7 @@ const clienteSchema = z.object({
   telefone: optionalText(30),
   email: z.string().trim().email().max(140).optional().or(z.literal("")).transform((v) => v || null),
   genero: optionalText(30),
-  tipo: TIPO,
+  profissao: optionalText(120),
   pilar_principal: PILAR.nullable().default(null),
   // endereço
   cep: optionalText(15),
@@ -59,7 +58,7 @@ export async function createCliente(input: ClienteInput): Promise<ClienteResult>
       telefone: d.telefone,
       email: d.email,
       genero: d.genero,
-      tipo: d.tipo,
+      profissao: d.profissao,
       pilar_principal: d.pilar_principal,
       status: "cliente_ativo",
       responsavel_id: auth.profile.id,
@@ -99,7 +98,7 @@ const updateSchema = z.object({
   telefone: optionalText(30),
   email: z.string().trim().email().max(140).optional().or(z.literal("")).transform((v) => v || null),
   genero: optionalText(30),
-  tipo: TIPO,
+  profissao: optionalText(120),
   pilar_principal: PILAR.nullable().default(null),
 });
 

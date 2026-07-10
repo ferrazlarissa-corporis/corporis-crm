@@ -12,7 +12,7 @@ import { normalizeBrazilPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { gerarContextoFromMessages } from "@/lib/ai/contexto-server";
 import type { ContextoAvaliacao } from "@/lib/ai/contexto";
-import type { LeadStage, LeadInterest, LeadOrigin, Json, PessoaTipo, Pilar } from "@/types/database";
+import type { LeadStage, LeadInterest, LeadOrigin, Json, Pilar } from "@/types/database";
 
 const LEAD_STAGE_VALUES = ["novo","qualificacao","avaliacao_agendada","no_show","negociacao","convertido","perdido"] as const;
 const APPOINTMENT_REQUIRED_STAGES = new Set<LeadStage>(["avaliacao_agendada", "no_show", "negociacao", "convertido"]);
@@ -168,10 +168,6 @@ function pilarFromInterest(interesse: LeadInterest): Pilar | null {
   return interesse === "indefinido" ? null : interesse;
 }
 
-function tipoFromInterest(interesse: LeadInterest): PessoaTipo {
-  return interesse === "fisio_pelvica" || interesse === "acupuntura" ? "paciente" : "aluna";
-}
-
 async function ensureConvertedLeadPessoa(
   supabase: Awaited<ReturnType<typeof createClient>>,
   lead: ConvertedLeadSource,
@@ -183,7 +179,6 @@ async function ensureConvertedLeadPessoa(
     nome: string;
     telefone: string;
     status: "cliente_ativo";
-    tipo: PessoaTipo;
     archived_at: null;
     email?: string | null;
     pilar_principal?: Pilar;
@@ -192,7 +187,6 @@ async function ensureConvertedLeadPessoa(
     nome: lead.nome,
     telefone: lead.telefone,
     status: "cliente_ativo",
-    tipo: tipoFromInterest(lead.interesse),
     archived_at: null,
   };
 

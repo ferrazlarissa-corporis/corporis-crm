@@ -51,7 +51,7 @@ async function resolvePessoaIdByPhone(
 
   const { data: created, error } = await core
     .from("pessoa")
-    .insert({ nome, telefone, status: "lead", tipo: "aluna" })
+    .insert({ nome, telefone, status: "lead" })
     .select("id")
     .single();
 

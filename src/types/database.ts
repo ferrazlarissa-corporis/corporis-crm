@@ -419,6 +419,7 @@ export interface Database {
           telefone: string | null;
           email: string | null;
           genero: string | null;
+          profissao: string | null;
           tipo: PessoaTipo;
           status: PessoaStatus;
           pilar_principal: Pilar | null;
@@ -436,6 +437,7 @@ export interface Database {
           telefone?: string | null;
           email?: string | null;
           genero?: string | null;
+          profissao?: string | null;
           tipo?: PessoaTipo;
           status?: PessoaStatus;
           pilar_principal?: Pilar | null;

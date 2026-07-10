@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
-  Database, Pilar, PessoaTipo, PessoaStatus, Periodicidade, PlanoTipo,
+  Database, Pilar, PessoaStatus, Periodicidade, PlanoTipo,
   MatriculaStatus, LancamentoStatus, ContratoStatus, DocumentoTipo, CobrancaModo,
 } from "@/types/database";
 
@@ -49,7 +49,7 @@ export type FichaAgendamento = { id: string; inicio: string; fim: string; tipo: 
 export type FichaAnamnese = { id: string; versao: number; dados: Record<string, unknown>; updated_at: string; autor_id: string | null };
 
 export type FichaCliente = {
-  pessoa: FichaPessoa & { tipo: PessoaTipo; status: PessoaStatus };
+  pessoa: FichaPessoa & { status: PessoaStatus };
   endereco: FichaEndereco | null;
   responsavelNome: string | null;
   matricula: FichaMatricula | null;

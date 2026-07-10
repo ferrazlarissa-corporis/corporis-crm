@@ -3,17 +3,22 @@ import {
   ChevronDown,
   ChevronUp,
   Clock3,
+  FileText,
   Globe,
   MessageCircle,
   Search,
   UsersRound,
+  UserCheck,
+  TrendingUp,
+  Wallet,
+  CircleDollarSign,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { getDashboardStats } from "@/lib/queries/dashboard";
 import { getGestaoStats } from "@/lib/queries/dashboard-gestao";
 import { StatCard } from "@/components/corporis/stat-card";
 import { formatBRL } from "@/lib/vendas-labels";
-import { UserCheck, TrendingUp, Wallet, CircleDollarSign, AlertTriangle } from "lucide-react";
 import type { LeadOrigin, AppointmentType } from "@/types/database";
 
 function InstagramGlyph(props: React.SVGProps<SVGSVGElement>) {
@@ -52,6 +57,42 @@ const TIPO_KIND: Record<AppointmentType, string> = {
   avaliacao_fisio_pelvica: "pelvica",
   avaliacao_acupuntura: "acupuntura",
 };
+
+const PENDENCIA_META = {
+  financeiro: {
+    label: "Financeiro",
+    Icon: CircleDollarSign,
+    badge: "bg-error/10 text-error",
+    icon: "bg-error/10 text-error",
+  },
+  contrato: {
+    label: "Contrato",
+    Icon: FileText,
+    badge: "bg-accent-soft text-text-secondary",
+    icon: "bg-accent-soft text-accent",
+  },
+};
+
+const PRIORIDADE_LABEL = {
+  alta: "Alta",
+  media: "Média",
+  baixa: "Baixa",
+};
+
+const PRIORIDADE_STYLE = {
+  alta: "text-error",
+  media: "text-[var(--color-tangerina)]",
+  baixa: "text-text-secondary",
+};
+
+function formatDateBR(iso: string): string {
+  const date = new Date(iso.includes("T") ? iso : `${iso}T00:00:00`);
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function countLabel(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
 
 function CardAction({ children, href = "#" }: { children: React.ReactNode; href?: string }) {
   return (
@@ -120,6 +161,8 @@ export default async function DashboardPage() {
   const topFunnel = funnelByStage[0]?.count ?? 1;
   const topOrigin = originBreakdown.reduce((max, o) => Math.max(max, o.count), 1);
   const totalOrigins = originBreakdown.reduce((s, o) => s + o.count, 0);
+  const pendenciasFinanceiras = gestao.pendencias.filter((p) => p.tipo === "financeiro").length;
+  const pendenciasContratos = gestao.pendencias.filter((p) => p.tipo === "contrato").length;
 
   return (
     <main className="h-dvh overflow-y-auto bg-background p-8">
@@ -130,46 +173,84 @@ export default async function DashboardPage() {
             <h2 className="font-display text-[22px] leading-tight text-text-primary">Visão de saúde da clínica</h2>
             <p className="mt-1 text-[13px] text-text-secondary">Clientes ativos, receita recorrente e cobranças num relance.</p>
           </div>
-          <div className="grid grid-cols-5 gap-4">
-            <StatCard label="Clientes ativos" value={gestao.clientesAtivos} icon={<UserCheck className="h-5 w-5" strokeWidth={1.5} />} />
-            <StatCard label="MRR" value={formatBRL(gestao.mrr)} icon={<TrendingUp className="h-5 w-5" strokeWidth={1.5} />} />
-            <StatCard label="Recebido no mês" value={formatBRL(gestao.recebidoMes)} icon={<Wallet className="h-5 w-5" strokeWidth={1.5} />} />
-            <StatCard label="Em aberto" value={formatBRL(gestao.emAberto)} icon={<CircleDollarSign className="h-5 w-5" strokeWidth={1.5} />} />
-            <StatCard label="Inadimplentes" value={gestao.inadimplentes} icon={<AlertTriangle className="h-5 w-5" strokeWidth={1.5} />} />
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-4">
+            <StatCard label="Clientes ativos" value={gestao.clientesAtivos} hint="em acompanhamento" icon={<UserCheck className="h-5 w-5" strokeWidth={1.5} />} />
+            <StatCard label="MRR" value={formatBRL(gestao.mrr)} hint="mensal normalizado" icon={<TrendingUp className="h-5 w-5" strokeWidth={1.5} />} />
+            <StatCard label="Recebido no mês" value={formatBRL(gestao.recebidoMes)} hint="entradas confirmadas" icon={<Wallet className="h-5 w-5" strokeWidth={1.5} />} />
+            <StatCard label="Em aberto" value={formatBRL(gestao.emAberto)} hint="a receber" icon={<CircleDollarSign className="h-5 w-5" strokeWidth={1.5} />} />
+            <StatCard label="Inadimplentes" value={gestao.inadimplentes} hint="clientes com atraso" icon={<AlertTriangle className="h-5 w-5" strokeWidth={1.5} />} />
           </div>
 
-          {gestao.pendencias.length > 0 ? (
-            <div className="mt-4 rounded-[var(--radius-lg)] border border-border bg-card p-6 shadow-[var(--shadow-sm)]">
-              <div className="mb-4 flex items-end justify-between">
-                <div className="font-display text-lg text-text-primary">Pendências</div>
-                <span className="text-xs text-text-secondary">{gestao.pendencias.length} itens</span>
+          <div className="mt-4 overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card shadow-[var(--shadow-sm)]">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-5">
+              <div>
+                <div className="font-display text-lg leading-tight text-text-primary">Pendências operacionais</div>
+                <p className="mt-1 text-[13px] text-text-secondary">
+                  Contratos e cobranças que precisam de ação para manter a operação em dia.
+                </p>
               </div>
-              <div className="grid gap-1">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <span className="rounded-[var(--radius-pill)] bg-error/10 px-2.5 py-1 text-[11px] font-medium text-error">
+                  {countLabel(pendenciasFinanceiras, "financeira", "financeiras")}
+                </span>
+                <span className="rounded-[var(--radius-pill)] bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-text-secondary">
+                  {countLabel(pendenciasContratos, "contrato", "contratos")}
+                </span>
+                {gestao.pendencias.length > 0 ? <CardAction href="/clientes">Abrir clientes</CardAction> : null}
+              </div>
+            </div>
+
+            {gestao.pendencias.length > 0 ? (
+              <div className="divide-y divide-border">
                 {gestao.pendencias.map((p) => {
+                  const meta = PENDENCIA_META[p.tipo];
+                  const Icon = meta.Icon;
                   const inner = (
-                    <>
-                      <span className={p.tipo === "financeiro"
-                        ? "shrink-0 rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--color-ui-error)_10%,transparent)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1.2px] text-[var(--color-ui-error)]"
-                        : "shrink-0 rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1.2px] text-text-secondary"}>
-                        {p.tipo === "financeiro" ? "Financeiro" : "Contrato"}
+                    <div className="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-4 px-6 py-4 transition-colors hover:bg-accent-soft/60 md:grid-cols-[40px_minmax(0,1fr)_minmax(104px,auto)_16px]">
+                      <span className={`flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] ${meta.icon}`}>
+                        <Icon className="h-[18px] w-[18px]" strokeWidth={1.6} />
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-text-primary">{p.titulo}</span>
-                        <span className="block text-xs text-text-secondary">{p.detalhe}</span>
+                      <span className="min-w-0">
+                        <span className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span className={`shrink-0 rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1.2px] ${meta.badge}`}>
+                            {meta.label}
+                          </span>
+                          <span className="min-w-0 truncate text-sm font-medium text-text-primary">{p.titulo}</span>
+                        </span>
+                        <span className="mt-1 block truncate text-xs text-text-secondary">
+                          <span className="font-medium text-text-primary">{p.pessoaNome}</span>
+                          {" · "}
+                          {p.detalhe}
+                        </span>
                       </span>
-                    </>
+                      <span className="col-start-2 text-left md:col-start-auto md:text-right">
+                        <span className="block text-sm font-medium text-text-primary">
+                          {p.valor !== null ? formatBRL(p.valor) : formatDateBR(p.data)}
+                        </span>
+                        <span className={`mt-1 block text-[10px] font-medium uppercase tracking-[1.2px] ${PRIORIDADE_STYLE[p.prioridade]}`}>
+                          {PRIORIDADE_LABEL[p.prioridade]}
+                        </span>
+                      </span>
+                      <ArrowRight className="hidden h-4 w-4 text-text-secondary md:block" strokeWidth={1.5} />
+                    </div>
                   );
+
                   return p.pessoaId ? (
-                    <Link key={p.id} href={`/clientes/${p.pessoaId}`} className="-mx-2 flex items-center gap-3 rounded-[var(--radius-md)] px-2 py-2.5 no-underline transition-colors hover:bg-accent-soft">
+                    <Link key={p.id} href={`/clientes/${p.pessoaId}`} className="block text-inherit no-underline">
                       {inner}
                     </Link>
                   ) : (
-                    <div key={p.id} className="flex items-center gap-3 px-0 py-2.5">{inner}</div>
+                    <div key={p.id}>{inner}</div>
                   );
                 })}
               </div>
-            </div>
-          ) : null}
+            ) : (
+              <div className="px-6 py-10 text-center">
+                <p className="text-sm font-medium text-text-primary">Sem pendências abertas</p>
+                <p className="mt-1 text-xs text-text-secondary">Contratos e cobranças estão em dia.</p>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* KPIs */}

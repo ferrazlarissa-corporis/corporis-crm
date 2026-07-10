@@ -27,14 +27,23 @@ import type { PlanoRow } from "@/lib/queries/planos";
 import type { Periodicidade, Pilar, PlanoTipo } from "@/types/database";
 import { criarHorariosPlano, criarVenda } from "../actions";
 
+function isDateKey(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 /** Soma meses a uma data ISO (yyyy-mm-dd), devolvendo ISO. */
-function addMonthsISO(iso: string, months: number): string {
+function addMonthsISO(iso: string, months: number): string | null {
+  if (!isDateKey(iso)) return null;
   const d = new Date(`${iso}T00:00:00`);
   d.setMonth(d.getMonth() + months);
   return d.toISOString().slice(0, 10);
 }
 
 function formatDateBR(iso: string): string {
+  if (!isDateKey(iso)) return "data inválida";
   return new Date(`${iso}T00:00:00`).toLocaleDateString("pt-BR");
 }
 
@@ -186,7 +195,7 @@ export function NovaVendaClient({
     if (step === 3) {
       const descontoPct = Number(desconto);
       const descontoValido = Number.isFinite(descontoPct) && descontoPct >= 0 && descontoPct <= 100;
-      const base = Number(valor) > 0 && descontoValido && Number(diaVencimento) >= 1 && Number(diaVencimento) <= 28 && Boolean(inicio);
+      const base = Number(valor) > 0 && descontoValido && Number(diaVencimento) >= 1 && Number(diaVencimento) <= 28 && isDateKey(inicio);
       if (tipo === "personalizado") return base && Number(totalSessoes) >= 1;
       if (tipo === "fixo") return base && sessoesSemana !== "";
       return base;
@@ -250,7 +259,7 @@ export function NovaVendaClient({
         </div>
       </header>
 
-      <div className="grid flex-1 grid-cols-[1fr_320px] gap-6 px-8 py-6">
+      <div className={cn("grid flex-1 gap-6 px-8 py-6", step === 2 ? "grid-cols-1" : "grid-cols-[1fr_320px]")}>
         {/* Coluna principal */}
         <Card className="flex flex-col p-6">
           <div className="min-h-0 flex-1">
@@ -318,65 +327,66 @@ export function NovaVendaClient({
           </footer>
         </Card>
 
-        {/* Resumo lateral */}
-        <aside>
-          <Card className="sticky top-6 p-5">
-            <p className="crm-label text-[10px] tracking-[2px] text-accent">Resumo</p>
-            <h2 className="mt-1 font-display text-xl leading-tight text-text-primary">Adesão em construção</h2>
+        {step !== 2 ? (
+          <aside>
+            <Card className="sticky top-6 p-5">
+              <p className="crm-label text-[10px] tracking-[2px] text-accent">Resumo</p>
+              <h2 className="mt-1 font-display text-xl leading-tight text-text-primary">Adesão em construção</h2>
 
-            <SummaryBlock label="Cliente">
-              {pessoa ? (
-                <>
-                  <p className="text-sm text-text-primary">{pessoa.nome}</p>
-                  <p className="text-xs text-text-secondary">{pessoa.telefone ?? "sem telefone"}</p>
-                </>
-              ) : <p className="text-xs text-text-secondary">Nenhuma cliente selecionada</p>}
-            </SummaryBlock>
+              <SummaryBlock label="Cliente">
+                {pessoa ? (
+                  <>
+                    <p className="text-sm text-text-primary">{pessoa.nome}</p>
+                    <p className="text-xs text-text-secondary">{pessoa.telefone ?? "sem telefone"}</p>
+                  </>
+                ) : <p className="text-xs text-text-secondary">Nenhuma cliente selecionada</p>}
+              </SummaryBlock>
 
-            <SummaryBlock label="Plano">
-              {plano ? (
-                <>
-                  <p className="text-sm text-text-primary">{plano.nome}</p>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    <span
-                      className="rounded-[var(--radius-pill)] border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-primary"
-                      style={planoToken ? taxonomyBadgeStyle(planoToken) : undefined}
-                    >
-                      {PLANO_TIPO_LABEL[tipo]}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-text-secondary">
-                    {tipo === "fixo" ? `${PERIODICIDADE_LABEL[periodicidade]}${sessoesSemana ? ` · ${sessoesSemana}x/semana` : ""}` : ""}
-                    {tipo !== "fixo" && totalSessoes ? `${totalSessoes} sessões` : ""}
-                  </p>
-                  {tipo === "fixo" && fim ? (
-                    <p className="text-xs text-text-secondary">Vigência até {formatDateBR(fim)}</p>
-                  ) : null}
-                </>
-              ) : <p className="text-xs text-text-secondary">Nenhum plano selecionado</p>}
-            </SummaryBlock>
+              <SummaryBlock label="Plano">
+                {plano ? (
+                  <>
+                    <p className="text-sm text-text-primary">{plano.nome}</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <span
+                        className="rounded-[var(--radius-pill)] border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-primary"
+                        style={planoToken ? taxonomyBadgeStyle(planoToken) : undefined}
+                      >
+                        {PLANO_TIPO_LABEL[tipo]}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {tipo === "fixo" ? `${PERIODICIDADE_LABEL[periodicidade]}${sessoesSemana ? ` · ${sessoesSemana}x/semana` : ""}` : ""}
+                      {tipo !== "fixo" && totalSessoes ? `${totalSessoes} sessões` : ""}
+                    </p>
+                    {tipo === "fixo" && fim ? (
+                      <p className="text-xs text-text-secondary">Vigência até {formatDateBR(fim)}</p>
+                    ) : null}
+                  </>
+                ) : <p className="text-xs text-text-secondary">Nenhum plano selecionado</p>}
+              </SummaryBlock>
 
-            <SummaryBlock label="Financeiro">
-              {plano ? (
-                <>
-                  <p className="text-sm text-text-primary">
-                    {formatBRL(totalLiquido)} · {cobrancaModo === "unica" ? "pagamento único" : `${formatBRL(valorParcela)} por mês`}
-                  </p>
-                  <p className="text-xs text-text-secondary">
-                    {cobrancaModo === "parcelada_mensal"
-                      ? `${parcelasLabel(numeroParcelas)} · ${forma} · vencimento dia ${diaVencimento}`
-                      : `${parcelasLabel(numeroParcelas)} · ${forma}`}
-                  </p>
-                </>
-              ) : <p className="text-xs text-text-secondary">Defina as condições</p>}
-            </SummaryBlock>
+              <SummaryBlock label="Financeiro">
+                {plano ? (
+                  <>
+                    <p className="text-sm text-text-primary">
+                      {formatBRL(totalLiquido)} · {cobrancaModo === "unica" ? "pagamento único" : `${formatBRL(valorParcela)} por mês`}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      {cobrancaModo === "parcelada_mensal"
+                        ? `${parcelasLabel(numeroParcelas)} · ${forma} · vencimento dia ${diaVencimento}`
+                        : `${parcelasLabel(numeroParcelas)} · ${forma}`}
+                    </p>
+                  </>
+                ) : <p className="text-xs text-text-secondary">Defina as condições</p>}
+              </SummaryBlock>
 
-            <div className="mt-5 rounded-[var(--radius-md)] bg-accent-soft px-4 py-3">
-              <p className="crm-label text-[9px] tracking-[1.5px] text-text-secondary">Total líquido</p>
-              <p className="mt-1 font-display text-[28px] leading-none text-text-primary">{formatBRL(totalLiquido)}</p>
-            </div>
-          </Card>
-        </aside>
+              <div className="mt-5 rounded-[var(--radius-md)] bg-accent-soft px-4 py-3">
+                <p className="crm-label text-[9px] tracking-[1.5px] text-text-secondary">Total líquido</p>
+                <p className="mt-1 font-display text-[28px] leading-none text-text-primary">{formatBRL(totalLiquido)}</p>
+              </div>
+            </Card>
+          </aside>
+        ) : null}
       </div>
 
       {createdSale && plano ? (
@@ -483,57 +493,18 @@ function Step2({ planos, planoId, onSelect }: { planos: PlanoRow[]; planoId: str
           <p className="py-8 text-center text-sm text-text-secondary">Nenhum plano ativo. Cadastre planos primeiro.</p>
         ) : planos.map((p) => {
           const token = colorTokenForPlano(p);
-          const precos = p.precos.filter((preco) => preco.ativo).sort((a, b) => a.sessoes_semana - b.sessoes_semana);
           return (
             <button
               key={p.id}
               type="button"
               onClick={() => onSelect(p)}
               className={cn(
-                "relative overflow-hidden rounded-[var(--radius-md)] border px-4 py-3 pl-5 text-left transition-colors",
+                "relative flex min-h-14 items-center overflow-hidden rounded-[var(--radius-md)] border px-4 py-3 pl-5 text-left transition-colors",
                 planoId === p.id ? "border-primary bg-accent-soft" : "border-border hover:bg-accent-soft",
               )}
             >
               <span className="absolute inset-y-0 left-0 w-1" style={taxonomyAccentStyle(token)} />
-              <div className="flex items-start justify-between gap-3">
-                <p className="min-w-0 truncate text-sm font-medium text-text-primary">{p.nome}</p>
-                <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-                  <span
-                    className="rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-text-primary"
-                    style={taxonomyBadgeStyle(token)}
-                  >
-                    {PLANO_TIPO_LABEL[p.tipo]}
-                  </span>
-                  {p.tipo === "fixo" ? (
-                    <span
-                      className="rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-text-primary"
-                      style={taxonomyBadgeStyle(token)}
-                    >
-                      {PERIODICIDADE_LABEL[p.periodicidade]}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              {p.tipo === "fixo" ? (
-                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                  {precos.length > 0 ? precos.map((preco) => (
-                    <span key={preco.id} className="rounded-[var(--radius-md)] border border-border bg-card px-2 py-1 text-text-secondary">
-                      <span className="font-medium text-text-primary">{preco.sessoes_semana}x</span> · {formatBRL(preco.valor_total)}
-                    </span>
-                  )) : (
-                    <span className="col-span-3 text-text-secondary">Sem preços configurados</span>
-                  )}
-                </div>
-              ) : (
-                <p className="mt-1 text-xs text-text-secondary">
-                  {formatBRL(p.valor)} · {PERIODICIDADE_LABEL[p.periodicidade]}
-                </p>
-              )}
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {p.servicosMeta.slice(0, 3).map((s) => (
-                  <ServicoBadge key={s.id} nome={s.nome} corToken={s.cor_token} pilar={s.pilar} />
-                ))}
-              </div>
+              <p className="min-w-0 truncate text-sm font-medium text-text-primary">{p.nome}</p>
             </button>
           );
         })}
@@ -700,6 +671,7 @@ const WEEKDAYS = [
 const FULL_HOURS = Array.from({ length: 15 }, (_, index) => index + 6);
 
 function weekdayFromISO(iso: string): number {
+  if (!isDateKey(iso)) return 1;
   const day = new Date(`${iso}T00:00:00`).getDay();
   return day === 0 ? 7 : day;
 }

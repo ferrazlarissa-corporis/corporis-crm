@@ -10,8 +10,8 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
-import { PESSOA_TIPO_OPTIONS, GENERO_OPTIONS } from "@/lib/clientes-labels";
-import type { Pilar, PessoaTipo } from "@/types/database";
+import { GENERO_OPTIONS } from "@/lib/clientes-labels";
+import type { Pilar } from "@/types/database";
 import { createCliente, type ClienteInput } from "../actions";
 
 const STEPS = [
@@ -22,16 +22,16 @@ const STEPS = [
 ];
 
 type Form = {
-  nome: string; nascimento: string; cpf: string; telefone: string; email: string; genero: string;
+  nome: string; nascimento: string; cpf: string; telefone: string; email: string; genero: string; profissao: string;
   cep: string; logradouro: string; numero: string; complemento: string; bairro: string; cidade: string; uf: string;
-  tipo: PessoaTipo; pilar_principal: "" | Pilar; queixa: string; objetivo: string;
+  pilar_principal: "" | Pilar; queixa: string; objetivo: string;
   consentimento: boolean;
 };
 
 const EMPTY: Form = {
-  nome: "", nascimento: "", cpf: "", telefone: "", email: "", genero: "feminino",
+  nome: "", nascimento: "", cpf: "", telefone: "", email: "", genero: "feminino", profissao: "",
   cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
-  tipo: "aluna", pilar_principal: "", queixa: "", objetivo: "", consentimento: false,
+  pilar_principal: "", queixa: "", objetivo: "", consentimento: false,
 };
 
 export function CadastroClienteClient() {
@@ -136,6 +136,9 @@ export function CadastroClienteClient() {
                     ))}
                   </div>
                 </Field>
+                <Field label="Profissão">
+                  <Input value={form.profissao} onChange={(e) => set("profissao", e.target.value)} placeholder="Ex: professora, empresária, médica" />
+                </Field>
               </Section>
             ) : null}
 
@@ -159,19 +162,12 @@ export function CadastroClienteClient() {
 
             {step === 3 ? (
               <Section title="Contexto clínico" desc="Define o pilar e organiza a agenda e o atendimento. Vira a primeira anamnese.">
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Tipo de cliente">
-                    <Select value={form.tipo} onChange={(e) => set("tipo", e.target.value as PessoaTipo)}>
-                      {PESSOA_TIPO_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </Select>
-                  </Field>
-                  <Field label="Pilar principal">
-                    <Select value={form.pilar_principal} onChange={(e) => set("pilar_principal", e.target.value as "" | Pilar)}>
-                      <option value="">A definir</option>
-                      {PILAR_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                    </Select>
-                  </Field>
-                </div>
+                <Field label="Pilar principal">
+                  <Select value={form.pilar_principal} onChange={(e) => set("pilar_principal", e.target.value as "" | Pilar)}>
+                    <option value="">A definir</option>
+                    {PILAR_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </Select>
+                </Field>
                 <Field label="Queixa principal">
                   <Textarea value={form.queixa} onChange={(e) => set("queixa", e.target.value)} placeholder="O que trouxe a cliente até a Corporis?" />
                 </Field>
