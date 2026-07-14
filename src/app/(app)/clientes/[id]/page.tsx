@@ -9,11 +9,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: ficha ? `${ficha.pessoa.nome} · Corporis` : "Cliente · Corporis" };
 }
 
-export default async function FichaClientePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function FichaClientePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const { id } = await params;
+  const { tab } = await searchParams;
   const [ficha, modelos] = await Promise.all([getFichaCliente(id), getContratoModelos()]);
   if (!ficha) notFound();
 
   const modelosAtivos = modelos.filter((m) => m.ativo).map((m) => ({ id: m.id, nome: m.nome }));
-  return <FichaClienteClient ficha={ficha} modelos={modelosAtivos} />;
+  return <FichaClienteClient ficha={ficha} modelos={modelosAtivos} initialTab={tab === "plano" ? "plano" : "visao"} />;
 }

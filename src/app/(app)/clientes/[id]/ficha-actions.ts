@@ -41,34 +41,38 @@ export async function marcarLancamentoRecebido(id: string, pessoaId: string): Pr
   return { success: true, id };
 }
 
-// ─── Anamnese (nova versão) ─────────────────────────────────────────────────────
+// ─── Anamnese (link público de preenchimento) ───────────────────────────────────
 
-const anamneseSchema = z.object({
-  pessoa_id: uuid,
-  dados: z.record(z.string(), z.unknown()),
-});
+const ANAMNESE_LINK_TTL_DIAS = 7;
 
-export async function salvarAnamnese(input: z.infer<typeof anamneseSchema>): Promise<FichaResult> {
-  const parsed = anamneseSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "Dados da anamnese inválidos." };
+export type AnamneseLinkResult = { success: true; url: string; expiraEm: string } | { success: false; error: string };
+
+export async function gerarLinkAnamnese(pessoaId: string): Promise<AnamneseLinkResult> {
+  if (!uuid.safeParse(pessoaId).success) return { success: false, error: "Cliente inválido." };
   const auth = await requireActiveStaff();
   if (!auth.success) return { success: false, error: auth.error };
 
-  const { data: last } = await auth.supabase.schema("clinico").from("anamnese")
-    .select("versao").eq("pessoa_id", parsed.data.pessoa_id).order("versao", { ascending: false }).limit(1).maybeSingle();
-  const versao = (last?.versao ?? 0) + 1;
-
-  const { data, error } = await auth.supabase.schema("clinico").from("anamnese").insert({
-    pessoa_id: parsed.data.pessoa_id,
-    versao,
-    dados: parsed.data.dados as never,
-    autor_id: auth.profile.id,
-  }).select("id").single();
+  const expiraEm = new Date(Date.now() + ANAMNESE_LINK_TTL_DIAS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await auth.supabase.schema("clinico").from("anamnese_convite").insert({
+    pessoa_id: pessoaId,
+    expira_em: expiraEm,
+    criado_por: auth.profile.id,
+  }).select("token").single();
 
   if (error) return { success: false, error: error.message };
-  await logAcesso(auth, parsed.data.pessoa_id, "anamnese", "insert");
-  revalidatePath(`/clientes/${parsed.data.pessoa_id}`);
-  return { success: true, id: data?.id };
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  return { success: true, url: `${baseUrl}/anamnese/${data.token}`, expiraEm };
+}
+
+export async function getAnamnesePdfUrl(pessoaId: string, path: string): Promise<SignedUrlResult> {
+  if (!uuid.safeParse(pessoaId).success) return { success: false, error: "Cliente inválido." };
+  const auth = await requireActiveStaff();
+  if (!auth.success) return { success: false, error: auth.error };
+
+  const { data, error } = await auth.supabase.storage.from("clinico").createSignedUrl(path, 120);
+  if (error || !data) return { success: false, error: error?.message ?? "Não foi possível gerar o link." };
+  await logAcesso(auth, pessoaId, "anamnese", "select");
+  return { success: true, url: data.signedUrl };
 }
 
 // ─── Evolução ───────────────────────────────────────────────────────────────────

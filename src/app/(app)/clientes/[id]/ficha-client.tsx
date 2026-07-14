@@ -7,13 +7,14 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Pencil, CalendarPlus, FileSignature, MessageCircle, Phone, Mail, MapPin,
-  CheckCircle2, Circle, Upload, Download,
+  CheckCircle2, Circle, Upload, Download, Link2, Copy, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog } from "@/components/ui/dialog";
 import { PilarBadge, colorTokenForPlano, taxonomyAccentStyle } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
@@ -23,8 +24,9 @@ import type { FichaCliente } from "@/lib/queries/ficha-cliente";
 import type { Pilar, LancamentoStatus, ContratoStatus, DocumentoTipo } from "@/types/database";
 import { updateCliente, type ClienteUpdateInput } from "../actions";
 import {
-  marcarLancamentoRecebido, salvarAnamnese, adicionarEvolucao, uploadDocumento,
+  marcarLancamentoRecebido, adicionarEvolucao, uploadDocumento,
   getDocumentoUrl, gerarContrato, cancelarMatricula,
+  gerarLinkAnamnese, getAnamnesePdfUrl,
 } from "./ficha-actions";
 
 type Tab = "visao" | "dados" | "plano" | "financeiro" | "anamnese" | "prontuario" | "documentos" | "contrato";
@@ -57,11 +59,13 @@ function fmt(d: string | null, p = "dd/MM/yyyy") {
 export function FichaClienteClient({
   ficha,
   modelos,
+  initialTab = "visao",
 }: {
   ficha: FichaCliente;
   modelos: { id: string; nome: string }[];
+  initialTab?: Tab;
 }) {
-  const [tab, setTab] = useState<Tab>("visao");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const { pessoa } = ficha;
 
   return (
@@ -361,7 +365,9 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
       <Card className="flex flex-col items-center justify-center p-12 text-center">
         <p className="text-sm font-medium text-text-primary">Nenhum plano ativo</p>
         <p className="mt-1 text-xs text-text-secondary">Inicie uma adesão para vincular um plano.</p>
-        <Button size="sm" className="mt-4" asChild><Link href="/vendas/nova">Nova venda</Link></Button>
+        <Button size="sm" className="mt-4" asChild>
+          <Link href={`/clientes/${ficha.pessoa.id}/nova-venda`}>Nova venda</Link>
+        </Button>
       </Card>
     );
   }
@@ -398,7 +404,9 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
         </div>
 
         <div className="mt-6 flex gap-3 border-t border-border pt-4">
-          <Button size="sm" asChild><Link href="/vendas/nova">Trocar / renovar</Link></Button>
+          <Button size="sm" asChild>
+            <Link href={`/clientes/${ficha.pessoa.id}/nova-venda`}>Trocar / renovar</Link>
+          </Button>
           <Button size="sm" variant="ghost" onClick={cancelar} disabled={pending}>
             {pending ? "Cancelando…" : "Cancelar plano"}
           </Button>
@@ -483,53 +491,143 @@ function Financeiro({ ficha }: { ficha: FichaCliente }) {
   );
 }
 
-// ─── Anamnese ───────────────────────────────────────────────────────────────────
+// ─── Anamnese (link público + visualização) ────────────────────────────────────
 
-const ANAMNESE_CAMPOS = [
-  { key: "queixa_principal", label: "Queixa principal" },
-  { key: "objetivo", label: "Objetivo" },
-  { key: "historico_relevante", label: "Histórico de saúde" },
-  { key: "restricoes", label: "Restrições / pontos de atenção" },
-];
+const ANAMNESE_ORIGEM_LABEL: Record<string, string> = { staff: "Preenchida pela recepção", publico: "Preenchida pelo cliente via link" };
 
-function Anamnese({ ficha }: { ficha: FichaCliente }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
-  const initial: Record<string, string> = {};
-  ANAMNESE_CAMPOS.forEach((c) => { initial[c.key] = String(ficha.anamnese?.dados[c.key] ?? ""); });
-  const [dados, setDados] = useState<Record<string, string>>(initial);
-
-  function save() {
-    setMsg(null);
-    startTransition(async () => {
-      const r = await salvarAnamnese({ pessoa_id: ficha.pessoa.id, dados });
-      setMsg(r.success ? "Anamnese salva (nova versão)." : r.error);
-      if (r.success) router.refresh();
+/** Achata um objeto (possivelmente aninhado) de `dados` jsonb em pares label/valor legíveis. */
+function flattenDados(v: unknown, prefix = ""): { label: string; valor: string }[] {
+  if (v === null || v === undefined || v === "") return [];
+  if (Array.isArray(v)) {
+    return v.flatMap((item, i) => flattenDados(item, prefix ? `${prefix} ${i + 1}` : `${i + 1}`));
+  }
+  if (typeof v === "object") {
+    return Object.entries(v as Record<string, unknown>).flatMap(([k, val]) => {
+      const label = k.replace(/_/g, " ");
+      return flattenDados(val, prefix ? `${prefix} · ${label}` : label);
     });
   }
+  return [{ label: prefix || "Valor", valor: String(v) }];
+}
+
+function Anamnese({ ficha }: { ficha: FichaCliente }) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [link, setLink] = useState<{ url: string; expiraEm: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function gerarLink() {
+    setError(null);
+    startTransition(async () => {
+      const r = await gerarLinkAnamnese(ficha.pessoa.id);
+      if (!r.success) { setError(r.error); return; }
+      setLink({ url: r.url, expiraEm: r.expiraEm });
+      setCopied(false);
+    });
+  }
+
+  function abrirPdf(path: string) {
+    startTransition(async () => {
+      const r = await getAnamnesePdfUrl(ficha.pessoa.id, path);
+      if (r.success) window.open(r.url, "_blank", "noopener");
+      else setError(r.error);
+    });
+  }
+
+  async function copiarLink() {
+    if (!link) return;
+    await navigator.clipboard.writeText(link.url);
+    setCopied(true);
+  }
+
+  const atual = ficha.anamnese;
+  const campos = atual ? flattenDados(atual.dados) : [];
 
   return (
     <div className="max-w-3xl">
       <Card className="p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <SectionTitle>Anamnese</SectionTitle>
-          <span className="text-xs text-text-secondary">
-            {ficha.anamnese ? `Versão ${ficha.anamnese.versao} · atualizada ${fmt(ficha.anamnese.updated_at)}` : "Nenhuma versão ainda"}
-          </span>
+          <Button size="sm" onClick={gerarLink} disabled={pending}>
+            <Link2 className="h-4 w-4" strokeWidth={1.5} />Gerar link para o cliente
+          </Button>
         </div>
-        <div className="mt-4 flex flex-col gap-4">
-          {ANAMNESE_CAMPOS.map((c) => (
-            <Field key={c.key} label={c.label}>
-              <Textarea value={dados[c.key]} onChange={(e) => setDados({ ...dados, [c.key]: e.target.value })} />
-            </Field>
-          ))}
-        </div>
-        <div className="mt-6 flex items-center justify-end gap-3 border-t border-border pt-4">
-          {msg ? <span className="text-xs text-text-secondary">{msg}</span> : null}
-          <Button onClick={save} disabled={pending}>{pending ? "Salvando…" : "Salvar anamnese"}</Button>
-        </div>
+        {error ? <p className="mt-2 text-xs text-error">{error}</p> : null}
+
+        {!atual ? (
+          <p className="mt-4 py-8 text-center text-sm text-text-secondary">
+            Nenhuma ficha de anamnese ainda. Gere um link e envie para o cliente preencher e assinar.
+          </p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-md)] bg-accent-soft px-4 py-3">
+              <div className="text-xs text-text-secondary">
+                <p className="text-text-primary">
+                  Versão {atual.versao} · {ANAMNESE_ORIGEM_LABEL[atual.origem] ?? atual.origem}
+                </p>
+                <p>
+                  {atual.assinado_at ? `Assinada em ${fmt(atual.assinado_at, "dd/MM/yyyy 'às' HH:mm")}` : `Atualizada ${fmt(atual.updated_at)}`}
+                </p>
+              </div>
+              {atual.pdf_path ? (
+                <Button size="sm" variant="secondary" onClick={() => abrirPdf(atual.pdf_path!)} disabled={pending}>
+                  <FileText className="h-4 w-4" strokeWidth={1.5} />Ver PDF assinado
+                </Button>
+              ) : (
+                <span className="text-xs text-text-secondary">Ficha antiga, sem PDF assinado</span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {campos.length === 0 ? (
+                <p className="text-sm text-text-secondary">Sem dados preenchidos.</p>
+              ) : campos.map((c, i) => (
+                <div key={i} className="grid grid-cols-[minmax(0,220px)_1fr] gap-3 border-b border-border py-2 text-sm last:border-0">
+                  <span className="capitalize text-text-secondary">{c.label}</span>
+                  <span className="whitespace-pre-wrap text-text-primary">{c.valor}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Card>
+
+      {ficha.anamneseHistorico.length > 1 ? (
+        <Card className="mt-4 p-6">
+          <SectionTitle>Histórico de versões</SectionTitle>
+          <div className="mt-3 flex flex-col gap-2">
+            {ficha.anamneseHistorico.map((v) => (
+              <div key={v.id} className="flex items-center justify-between border-b border-border py-2 text-sm last:border-0">
+                <span className="text-text-secondary">
+                  Versão {v.versao} · {fmt(v.created_at, "dd/MM/yyyy 'às' HH:mm")} · {ANAMNESE_ORIGEM_LABEL[v.origem] ?? v.origem}
+                </span>
+                {v.pdf_path ? (
+                  <Button size="sm" variant="secondary" onClick={() => abrirPdf(v.pdf_path!)} disabled={pending}>
+                    <FileText className="h-4 w-4" strokeWidth={1.5} />PDF
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
+      <Dialog open={!!link} onClose={() => setLink(null)} eyebrow="Anamnese" title="Link para o cliente">
+        {link ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-text-secondary">
+              Envie este link para o cliente preencher e assinar a ficha. Expira em{" "}
+              {fmt(link.expiraEm, "dd/MM/yyyy 'às' HH:mm")}.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input readOnly value={link.url} className="text-xs" />
+              <Button size="sm" variant="secondary" onClick={copiarLink}>
+                <Copy className="h-4 w-4" strokeWidth={1.5} />{copied ? "Copiado" : "Copiar"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

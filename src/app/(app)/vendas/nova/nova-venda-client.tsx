@@ -108,15 +108,18 @@ export function NovaVendaClient({
   planos,
   modelos,
   agendaOptions,
+  clienteContextId,
 }: {
   pessoas: PessoaListItem[];
   planos: PlanoRow[];
   modelos: Modelo[];
   agendaOptions: AgendaScheduleOptions;
+  clienteContextId?: string;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [pessoaId, setPessoaId] = useState<string | null>(null);
+  const pessoaInicialId = pessoas.some((p) => p.id === clienteContextId) ? clienteContextId ?? null : null;
+  const [step, setStep] = useState(pessoaInicialId ? 2 : 1);
+  const [pessoaId, setPessoaId] = useState<string | null>(pessoaInicialId);
   const [planoId, setPlanoId] = useState<string | null>(null);
   const [valor, setValor] = useState("");
   const [desconto, setDesconto] = useState("0");
@@ -233,7 +236,7 @@ export function NovaVendaClient({
         });
         return;
       }
-      router.push(`/clientes/${pessoaId}`);
+      router.push(`/clientes/${pessoaId}?tab=plano`);
       router.refresh();
     });
   }
@@ -244,8 +247,16 @@ export function NovaVendaClient({
       router.refresh();
       return;
     }
-    router.push(`/clientes/${pessoaDestino}`);
+    router.push(`/clientes/${pessoaDestino}?tab=plano`);
     router.refresh();
+  }
+
+  function handleBack() {
+    if (step === 2 && clienteContextId) {
+      router.push(`/clientes/${clienteContextId}?tab=plano`);
+      return;
+    }
+    setStep((current) => Math.max(1, current - 1));
   }
 
   return (
@@ -311,7 +322,7 @@ export function NovaVendaClient({
                 : "Os dados são salvos no rascunho da venda."}
             </p>
             <div className="flex gap-3">
-              <Button variant="secondary" disabled={step === 1 || pending} onClick={() => setStep((s) => Math.max(1, s - 1))}>
+              <Button variant="secondary" disabled={step === 1 || pending} onClick={handleBack}>
                 Voltar
               </Button>
               {step < 4 ? (

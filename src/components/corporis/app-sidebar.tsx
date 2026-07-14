@@ -116,7 +116,7 @@ export function AppSidebar() {
   return (
     <aside
       aria-label="Navegação"
-      className="grid h-dvh grid-rows-[1fr_auto] border-r border-border bg-card px-4 pb-4 pt-8"
+      className="sticky top-0 grid h-dvh self-start grid-rows-[1fr_auto] border-r border-border bg-card px-4 pb-4 pt-8"
     >
       <nav aria-label="Navegação principal" className="overflow-y-auto crm-scrollbar">
         {navGroups.map((group, gi) => (

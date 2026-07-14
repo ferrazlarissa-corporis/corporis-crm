@@ -74,6 +74,7 @@ export type CobrancaModo = "unica" | "parcelada_mensal";
 export type ContratoStatus = "rascunho" | "enviado" | "assinado" | "cancelado";
 export type LancamentoStatus = "a_receber" | "recebido" | "atrasado";
 export type DocumentoTipo = "exame" | "atestado" | "laudo" | "outro";
+export type AnamneseOrigem = "staff" | "publico";
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -824,6 +825,9 @@ export interface Database {
           versao: number;
           dados: Json;
           autor_id: string | null;
+          pdf_path: string | null;
+          assinado_at: string | null;
+          origem: AnamneseOrigem;
           created_at: string;
           updated_at: string;
         };
@@ -833,10 +837,34 @@ export interface Database {
           versao?: number;
           dados?: Json;
           autor_id?: string | null;
+          pdf_path?: string | null;
+          assinado_at?: string | null;
+          origem?: AnamneseOrigem;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["clinico"]["Tables"]["anamnese"]["Insert"]>;
+      };
+      anamnese_convite: {
+        Row: {
+          id: string;
+          pessoa_id: string;
+          token: string;
+          expira_em: string;
+          usado_at: string | null;
+          criado_por: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pessoa_id: string;
+          token?: string;
+          expira_em: string;
+          usado_at?: string | null;
+          criado_por?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["clinico"]["Tables"]["anamnese_convite"]["Insert"]>;
       };
       evolucao: {
         Row: {

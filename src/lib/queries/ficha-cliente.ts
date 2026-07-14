@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
   Database, Pilar, PessoaStatus, Periodicidade, PlanoTipo,
-  MatriculaStatus, LancamentoStatus, ContratoStatus, DocumentoTipo, CobrancaModo,
+  MatriculaStatus, LancamentoStatus, ContratoStatus, DocumentoTipo, CobrancaModo, AnamneseOrigem,
 } from "@/types/database";
 
 export type FichaPessoa = Database["core"]["Tables"]["pessoa"]["Row"];
@@ -46,7 +46,13 @@ export type FichaContrato = {
 
 export type FichaAgendamento = { id: string; inicio: string; fim: string; tipo: string; categoria: string };
 
-export type FichaAnamnese = { id: string; versao: number; dados: Record<string, unknown>; updated_at: string; autor_id: string | null };
+export type FichaAnamnese = {
+  id: string; versao: number; dados: Record<string, unknown>; updated_at: string;
+  autor_id: string | null; pdf_path: string | null; assinado_at: string | null; origem: AnamneseOrigem;
+};
+export type FichaAnamneseVersao = {
+  id: string; versao: number; created_at: string; pdf_path: string | null; origem: AnamneseOrigem;
+};
 
 export type FichaCliente = {
   pessoa: FichaPessoa & { status: PessoaStatus };
@@ -56,6 +62,7 @@ export type FichaCliente = {
   lancamentos: FichaLancamento[];
   anamnese: FichaAnamnese | null;
   anamneseVersoes: number;
+  anamneseHistorico: FichaAnamneseVersao[];
   evolucoes: FichaEvolucao[];
   documentos: FichaDocumento[];
   contratos: FichaContrato[];
@@ -74,7 +81,7 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
   if (!pessoa) return null;
 
   const [
-    enderecoRes, respRes, matriculaRes, lancRes, anamneseRes, anamneseCountRes,
+    enderecoRes, respRes, matriculaRes, lancRes, anamneseRes,
     evolucoesRes, documentosRes, contratosRes, agendaRes,
   ] = await Promise.all([
     supabase.schema("core").from("endereco").select("*").eq("pessoa_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
@@ -87,9 +94,9 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
     supabase.schema("financeiro").from("lancamento")
       .select("id, competencia, descricao, valor, vencimento, status, recebido_at")
       .eq("pessoa_id", id).order("competencia", { ascending: false }),
-    supabase.schema("clinico").from("anamnese").select("id, versao, dados, updated_at, autor_id")
-      .eq("pessoa_id", id).order("versao", { ascending: false }).limit(1).maybeSingle(),
-    supabase.schema("clinico").from("anamnese").select("id", { count: "exact", head: true }).eq("pessoa_id", id),
+    supabase.schema("clinico").from("anamnese")
+      .select("id, versao, dados, updated_at, autor_id, pdf_path, assinado_at, origem")
+      .eq("pessoa_id", id).order("versao", { ascending: false }),
     supabase.schema("clinico").from("evolucao")
       .select("id, texto, created_at, profissional_id")
       .eq("pessoa_id", id).order("created_at", { ascending: false }),
@@ -121,10 +128,11 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
       ? { ...(matriculaRes.data as Omit<FichaMatricula, "plano"> & { plano: unknown }), plano: one((matriculaRes.data as { plano: unknown }).plano) as FichaMatricula["plano"] }
       : null,
     lancamentos: (lancRes.data as FichaLancamento[]) ?? [],
-    anamnese: anamneseRes.data
-      ? { ...(anamneseRes.data as Omit<FichaAnamnese, "dados"> & { dados: unknown }), dados: (anamneseRes.data.dados as Record<string, unknown>) ?? {} }
+    anamnese: anamneseRes.data?.[0]
+      ? { ...(anamneseRes.data[0] as Omit<FichaAnamnese, "dados"> & { dados: unknown }), dados: (anamneseRes.data[0].dados as Record<string, unknown>) ?? {} }
       : null,
-    anamneseVersoes: anamneseCountRes.count ?? 0,
+    anamneseVersoes: anamneseRes.data?.length ?? 0,
+    anamneseHistorico: (anamneseRes.data as FichaAnamneseVersao[] | null) ?? [],
     evolucoes: evolucoesRaw.map((r) => ({
       id: r.id, texto: r.texto, created_at: r.created_at,
       profissional: r.profissional_id ? { nome: profNome.get(r.profissional_id) ?? "Profissional" } : null,
