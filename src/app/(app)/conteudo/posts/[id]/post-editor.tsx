@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Check, Copy, Plus, Sparkles, Trash2, X } from "lucide-react";
 import {
   DndContext,
@@ -170,6 +171,7 @@ export function PostEditor({
   templates: TemplateOpt[];
   trackedLink: string | null;
 }) {
+  const router = useRouter();
   const [slides, setSlides] = useState(initialSlides);
   const [versoes, setVersoes] = useState(geracoes);
   const [selectedId, setSelectedId] = useState(initialSlides[0]?.id ?? null);
@@ -393,6 +395,7 @@ export function PostEditor({
         return;
       }
       setPostStatus("em_aprovacao");
+      router.push(`/conteudo/posts/${post.id}/aprovacao`);
     });
   }
 

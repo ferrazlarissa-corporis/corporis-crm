@@ -1096,6 +1096,7 @@ export interface Database {
           hashtags: string[];
           lgpd_usa_depoimento: boolean;
           lgpd_consentimento_ref: string | null;
+          motivo_reprovacao: string | null;
           status: StatusPost;
           aprovado_por: string | null;
           agendado_para: string | null;
@@ -1115,6 +1116,7 @@ export interface Database {
           hashtags?: string[];
           lgpd_usa_depoimento?: boolean;
           lgpd_consentimento_ref?: string | null;
+          motivo_reprovacao?: string | null;
           status?: StatusPost;
           aprovado_por?: string | null;
           agendado_para?: string | null;

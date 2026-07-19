@@ -175,9 +175,36 @@ estado "Enviado para aprovação" renderizados.
 **Feito quando:** um texto com "cura garantida" é barrado; um depoimento sem `consentimento_lgpd_ref` é barrado.
 
 ## M12 — Prévia & aprovação
-- [ ] Mock fiel do post (frame de feed, carrossel navegável).
-- [ ] Ações: Aprovar / Gerar de novo / Reprovar (com motivo).
-- [ ] Atualização de status na máquina de estados (§6).
+- [x] Mock fiel do post (frame de feed, carrossel navegável).
+- [x] Ações: Aprovar / Gerar de novo / Reprovar (com motivo).
+- [x] Atualização de status na máquina de estados (§6).
+**Rota:** `/conteudo/posts/[id]/aprovacao`. Editor (M9) navega pra cá
+automaticamente após "Enviar para aprovação" ter sucesso (M11) — a tela
+representa o estado `em_aprovacao`. Frame de feed Instagram com carrossel
+navegável (setas/contador/dots) mostrando os PNGs reais compostos (M8), ações
+decorativas (curtir/comentar/compartilhar/salvar — sem contagem fake, ao
+contrário do mockup que tinha "328 curtidas" estático: número inventado não faz
+sentido pra um post ainda não publicado, removido). Gate de conformidade
+recalculado ao vivo com a mesma `avaliarConformidade()` do M11 (nunca lido só do
+`checklist_conformidade` — sempre a fonte de verdade atual do post). "Aprovar"
+revalida o gate no servidor antes de mudar `status → aprovado` (defensivo — não
+confia que nada mudou desde o envio). "Reprovar" exige motivo (novo campo
+`post.motivo_reprovacao`, mockup pedia texto mas a tabela não tinha onde
+guardar) e volta pra `reprovado`. "Gerar de novo" só navega de volta pro editor
+(sem resetar status, mesmo comportamento do mockup). "Data agendada" e
+"curtidas" honestas: mostra "Ainda não agendado" quando não há `slot_calendario`
+vinculado (hoje sempre o caso — nenhuma tela ainda liga slot a post) em vez de
+inventar uma data.
+**Verificado ponta a ponta de verdade**: SSR autenticado confirmando prévia com
+fundo real do M8, legenda/hashtags/link, gate "Pronto para aprovar"; aprovação
+real mudando status e escondendo o botão; reprovação real gravando motivo e
+exibindo na tela; gate bloqueado (texto com "cura garantida") impedindo aprovação
+com mensagem correta.
+**Gap conhecido (não é bug deste milestone):** nenhuma tela ainda liga um post a
+um `slot_calendario` (o board do M6 cria slots soltos, sem post_id) — então "e
+ele aparece como Aprovado no calendário" do "Feito quando" não é observável hoje.
+Aprovar funciona e o status muda corretamente; a ponte slot↔post é trabalho de
+UI que não foi pedido em nenhum milestone até agora — considerar antes do M15.
 **Feito quando:** aprovar um post muda o status e ele aparece como "Aprovado" no calendário.
 
 ## M13 — Export do pacote (publicação manual — Fase 1)
