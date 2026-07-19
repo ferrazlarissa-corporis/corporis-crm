@@ -68,9 +68,29 @@ Studio/Cloud antes de depender do Gemini em produção.
 **Feito quando:** um job de geração salva a imagem no bucket e aparece na tabela com status correto.
 
 ## M8 — Composição de slides (Satori)
-- [ ] Templates de slide em JSX renderizados via Satori → PNG (fundo IA + camada de texto/marca).
-- [ ] `sharp` para composição final e exportação.
-- [ ] Texto do slide editável sem precisar regenerar o fundo.
+- [x] Templates de slide em JSX renderizados via Satori → PNG (fundo IA + camada de texto/marca).
+- [x] `sharp` para composição final e exportação.
+- [x] Texto do slide editável sem precisar regenerar o fundo.
+**Verificado ponta a ponta de verdade**: `comporSlide()` compõe um slide `capa` sem
+fundo (cai no degradê do pilar) em ~250-700ms, e um slide `cta` com fundo real
+(imagem fotográfica via URL, buscada pelo próprio Satori) com o mesmo tempo — nenhum
+dos dois chama IA. Editar o texto e recompor sobrescreve o mesmo arquivo (mesmo
+path, sem versionar — quem versiona é o fundo, no M7). 4 templates (capa, conteúdo,
+citação, cta) renderizados e conferidos visualmente contra o mockup `Editor de
+post.html` (proporções, tipografia, eyebrow, pill de CTA — fiéis). Fontes reais
+(Quicksand 400, Ubuntu 400/500) baixadas do Google Fonts e commitadas em
+`src/lib/ai/imagem/fonts/*.ttf` — Satori não lê `@font-face`/CSS, precisa do
+binário. Scrim escuro (`rgba` sobre a imagem) adicionado sobre o fundo pra garantir
+contraste do texto branco em fotos reais da IA — o mockup não precisava disso
+porque simulava o fundo com degradê já escuro, mas fundo fotográfico real não
+garante contraste sozinho.
+
+**Dois bugs do Satori encontrados e corrigidos nesta sessão** (documentar pra não
+cair de novo): (1) o shorthand CSS `inset: 0` é silenciosamente ignorado pelo
+Satori — o elemento fica com tamanho zero e nada é desenhado; precisa dos 4 eixos
+explícitos (`top/right/bottom/left: 0`). (2) `sharp(...).png({ quality: N })` liga
+quantização de paleta (com dithering) e cria manchas/bandas visíveis em qualquer
+degradê suave — usar `compressionLevel` (sem perda) em vez de `quality` pra PNG.
 **Feito quando:** trocar o texto de um slide já composto gera novo PNG em segundos, sem chamar a IA de novo.
 
 ## M9 — Editor de post (tela principal)
