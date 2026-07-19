@@ -39,9 +39,9 @@ Contexto completo de decisões, schema e regras: ver `@CLAUDE.md` nesta mesma pa
 **Feito quando:** dá pra criar/editar/desativar um pilar e ver o preview mudar.
 
 ## M4 — Banco de ideias
-- [ ] CRUD de `ideia` (manual).
-- [ ] "Colar referência" → cria ideia a partir de link.
-- [ ] Botão "Gerar sugestões" via Anthropic SDK, a partir dos pilares ativos.
+- [x] CRUD de `ideia` (manual).
+- [x] "Colar referência" → cria ideia a partir de link.
+- [x] Botão "Gerar sugestões" via Anthropic SDK, a partir dos pilares ativos. *(chamada real à API não testada nesta sessão — validado só o parsing/schema; testar com uso real)*
 **Feito quando:** as 3 origens (manual, importada, sugerida) aparecem corretamente na tela.
 
 ## M5 — Referências (swipe file)

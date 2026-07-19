@@ -13,6 +13,7 @@ import {
   Filter,
   Inbox,
   LayoutDashboard,
+  Lightbulb,
   Newspaper,
   Package,
   Settings,
@@ -64,6 +65,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "Conteúdo",
     items: [
       { href: "/conteudo", label: "Painel", icon: Newspaper },
+      { href: "/conteudo/ideias", label: "Ideias", icon: Lightbulb },
       { href: "/conteudo/configuracoes", label: "Configurações", icon: Settings },
     ],
   },
