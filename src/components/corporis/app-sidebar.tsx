@@ -13,6 +13,7 @@ import {
   Filter,
   Inbox,
   LayoutDashboard,
+  Newspaper,
   Package,
   Settings,
   ShoppingBag,
@@ -57,6 +58,12 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/cadastros/profissionais", label: "Profissionais",       icon: Stethoscope },
       { href: "/cadastros/salas",         label: "Salas",               icon: DoorOpen },
       { href: "/cadastros/contratos",     label: "Modelos de contrato", icon: FileText },
+    ],
+  },
+  {
+    title: "Conteúdo",
+    items: [
+      { href: "/conteudo", label: "Painel", icon: Newspaper },
     ],
   },
 ];
