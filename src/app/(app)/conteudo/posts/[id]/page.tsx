@@ -8,12 +8,12 @@ export default async function PostEditorPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: post }, { data: slides }, { data: geracoes }, { data: pilares }, { data: templates }] =
+  const [{ data: post }, { data: slides }, { data: geracoes }, { data: pilares }, { data: templates }, { data: ctaLead }] =
     await Promise.all([
       supabase
         .schema("conteudo")
         .from("post")
-        .select("id, titulo, formato, pilar_id, briefing, publico_alvo, status")
+        .select("id, titulo, formato, pilar_id, briefing, publico_alvo, legenda, hashtags, status")
         .eq("id", id)
         .maybeSingle(),
       supabase
@@ -30,9 +30,13 @@ export default async function PostEditorPage({ params }: { params: Promise<{ id:
         .order("versao"),
       supabase.schema("conteudo").from("pilar_editorial").select("id, nome, cor_token, ativo").order("nome"),
       supabase.schema("conteudo").from("template_slide").select("id, nome, tipo"),
+      supabase.schema("conteudo").from("cta_lead").select("short_code").eq("post_id", id).maybeSingle(),
     ]);
 
   if (!post) notFound();
+
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "") || "http://localhost:3000";
+  const trackedLink = ctaLead?.short_code ? `${baseUrl}/l/${ctaLead.short_code}` : null;
 
   return (
     <PostEditor
@@ -41,6 +45,7 @@ export default async function PostEditorPage({ params }: { params: Promise<{ id:
       geracoes={(geracoes ?? []).filter((g) => g.slide_id && g.status === "pronto")}
       pilares={pilares ?? []}
       templates={templates ?? []}
+      trackedLink={trackedLink}
     />
   );
 }

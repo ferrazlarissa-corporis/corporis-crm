@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_MODEL_ID } from "@/lib/ai/model";
 import type { TipoTemplate } from "@/types/database";
 import { gerarImagemParaPost, type GerarImagemInput } from "@/lib/ai/imagem/gerar";
 import { comporSlide } from "@/lib/ai/imagem/compor";
@@ -300,4 +302,116 @@ export async function selecionarVersaoFundo(input: {
   const compose = await comporSlide(auth.supabase, parsed.data.slideId);
   revalidate(parsed.data.postId);
   return compose.success ? { success: true, imagemUrl: compose.imagemUrl } : { success: false, error: compose.error };
+}
+
+export async function updateLegendaHashtags(input: {
+  postId: string;
+  legenda?: string;
+  hashtags?: string[];
+}): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      postId: z.string().uuid(),
+      legenda: z.string().trim().max(2200).optional(),
+      hashtags: z.array(z.string().trim().max(40)).max(30).optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { success: false, error: "Dados inválidos." };
+
+  const auth = await getActiveStaffClient();
+  if (!auth.success) return { success: false, error: auth.error };
+
+  const { postId, ...fields } = parsed.data;
+  const { error } = await auth.supabase.schema("conteudo").from("post").update(fields).eq("id", postId);
+  if (error) return { success: false, error: error.message };
+
+  revalidate(postId);
+  return { success: true };
+}
+
+const legendaSchema = z.object({
+  legenda: z.string(),
+  hashtags: z.array(z.string()),
+});
+
+export type GerarLegendaResult =
+  | { success: true; legenda: string; hashtags: string[] }
+  | { success: false; error: string };
+
+export async function gerarLegendaEHashtags(postId: string): Promise<GerarLegendaResult> {
+  const auth = await getActiveStaffClient();
+  if (!auth.success) return { success: false, error: auth.error };
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return { success: false, error: "ANTHROPIC_API_KEY não configurada." };
+  }
+
+  const { data: post, error: postError } = await auth.supabase
+    .schema("conteudo")
+    .from("post")
+    .select("titulo, briefing, publico_alvo, pilar_id")
+    .eq("id", postId)
+    .single();
+  if (postError || !post) return { success: false, error: postError?.message ?? "Post não encontrado." };
+
+  const [{ data: pilar }, { data: marca }, { data: slides }] = await Promise.all([
+    post.pilar_id
+      ? auth.supabase.schema("conteudo").from("pilar_editorial").select("nome, descricao").eq("id", post.pilar_id).single()
+      : Promise.resolve({ data: null }),
+    auth.supabase.schema("conteudo").from("marca_config").select("tom_voz").maybeSingle(),
+    auth.supabase.schema("conteudo").from("post_slide").select("ordem, texto_titulo, texto_corpo").eq("post_id", postId).order("ordem"),
+  ]);
+
+  const roteiro = (slides ?? [])
+    .map((s) => `${s.ordem}. ${s.texto_titulo ?? ""}${s.texto_corpo ? ` — ${s.texto_corpo}` : ""}`)
+    .join("\n");
+
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const response = await anthropic.messages.create({
+    model: DEFAULT_MODEL_ID,
+    max_tokens: 1200,
+    system: `Você escreve legendas de Instagram para a Corporis Fisioterapia e Pilates (Xanxerê/SC).
+Tom de voz da marca: ${marca?.tom_voz || "Cuidadosa, técnica e acolhedora."}
+Regras inquebráveis: nunca prometa cura ou prazo de resultado, nunca use urgência fabricada ("últimas vagas"), nunca use caps lock, nunca fale "paciente"/"patologia" (fale "aluna"/"incômodo"/"avaliação"), fisioterapia pélvica sempre com discrição e classe.
+A legenda deve: acolher antes de informar, refletir o roteiro do carrossel sem repetir os slides literalmente, terminar com um convite de agendamento claro e sem pressão (ex.: "Se isso faz sentido pra você, agende uma avaliação individual — o link está na bio").
+Responda SOMENTE com um JSON válido: {"legenda": string, "hashtags": string[]}. "hashtags" são 5 a 8 tags em português, minúsculas, sem espaço, cada uma começando com "#" (ex.: "#fisioterapia").`,
+    messages: [
+      {
+        role: "user",
+        content: `Pilar: ${pilar?.nome ?? "—"}${pilar?.descricao ? ` (${pilar.descricao})` : ""}
+Público-alvo: ${post.publico_alvo ?? "—"}
+Briefing: ${post.briefing ?? "—"}
+Título do post: ${post.titulo}
+Roteiro do carrossel:
+${roteiro || "—"}`,
+      },
+    ],
+  });
+
+  const text = response.content
+    .filter((b) => b.type === "text")
+    .map((b) => (b as Anthropic.Messages.TextBlock).text)
+    .join("");
+
+  let raw: unknown;
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    raw = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+  } catch {
+    return { success: false, error: "A IA retornou um formato inesperado. Tente novamente." };
+  }
+
+  const parsed = legendaSchema.safeParse(raw);
+  if (!parsed.success) return { success: false, error: "A IA retornou um formato inesperado. Tente novamente." };
+
+  const { error: updateError } = await auth.supabase
+    .schema("conteudo")
+    .from("post")
+    .update({ legenda: parsed.data.legenda, hashtags: parsed.data.hashtags })
+    .eq("id", postId);
+  if (updateError) return { success: false, error: updateError.message };
+
+  revalidate(postId);
+  return { success: true, legenda: parsed.data.legenda, hashtags: parsed.data.hashtags };
 }

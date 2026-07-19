@@ -124,9 +124,30 @@ ordem)`) confirmado com uma reordenação real de 3 slides; `gerarFundo` complet
 **Feito quando:** dá pra montar um carrossel de 6 slides do zero, regenerar um fundo e comparar versões.
 
 ## M10 — Legenda, hashtags e link rastreável
-- [ ] Geração de legenda no tom acolhedor (Anthropic SDK), com CTA de agendamento.
-- [ ] Geração de hashtags.
-- [ ] Criação do link rastreável (`cta_lead` / short code) por post.
+- [x] Geração de legenda no tom acolhedor (Anthropic SDK), com CTA de agendamento.
+- [x] Geração de hashtags.
+- [x] Criação do link rastreável (`cta_lead` / short code) por post.
+**Implementação:** `gerarLegendaEHashtags` (posts/[id]/actions.ts) usa o mesmo padrão
+do `generateIdeiaSuggestions` do M4 (Anthropic + tom de marca + regras
+inquebráveis + roteiro dos slides como contexto), retorna JSON `{legenda,
+hashtags}`. Hashtags editáveis manualmente (chips, adicionar/remover). Link
+rastreável: `cta_lead` criado junto com o post em `transformarEmPost` (short code
+de 6 chars, alfabeto sem caracteres ambíguos, `src/lib/short-code.ts`), exibido
+como `{NEXT_PUBLIC_APP_URL}/l/{short_code}` com botão copiar. Rota pública
+`src/app/l/[short_code]/route.ts` (fora de `(app)`/`(auth)` — mesmo padrão do
+`anamnese/[token]` já existente no OS): valida o código, incrementa `cliques`,
+resolve o pilar do post e redireciona (307) pro WhatsApp da clínica
+(`crm.clinic_config.telefone`) com mensagem pré-preenchida mencionando o pilar;
+código inválido ou não encontrado cai num fallback genérico em vez de 404 (link
+de marketing não deve virar dead-end). `pessoa_id`/`virou_agendamento` em
+`cta_lead` ficam pro M14 (atribuição de lead).
+
+**Verificado ponta a ponta de verdade**: legenda+hashtags gerados via Anthropic
+real (não just parsing), redirect público testado sem cookie (rota pública de
+verdade) confirmando Location correto pro wa.me com o pilar certo na mensagem e
+incremento real do contador de cliques no banco, fallback genérico testado com
+código inexistente, e SSR autenticado da página confirmando legenda/hashtags/link
+renderizados.
 **Feito quando:** o post tem legenda, hashtags e um link `/l/{short_code}` funcional.
 
 ## M11 — Gate de conformidade (COFFITO + LGPD)

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, Plus, Sparkles, Trash2, X } from "lucide-react";
 import {
   DndContext,
   DragEndEvent,
@@ -17,8 +17,10 @@ import {
   createSlide,
   deleteSlide,
   gerarFundo,
+  gerarLegendaEHashtags,
   reorderSlides,
   selecionarVersaoFundo,
+  updateLegendaHashtags,
   updatePostBriefing,
   updateSlideTemplate,
   updateSlideTexto,
@@ -31,6 +33,8 @@ type Post = {
   pilar_id: string | null;
   briefing: string | null;
   publico_alvo: string | null;
+  legenda: string | null;
+  hashtags: string[];
   status: string;
 };
 type Slide = {
@@ -152,12 +156,14 @@ export function PostEditor({
   geracoes,
   pilares,
   templates,
+  trackedLink,
 }: {
   post: Post;
   initialSlides: Slide[];
   geracoes: Geracao[];
   pilares: Pilar[];
   templates: TemplateOpt[];
+  trackedLink: string | null;
 }) {
   const [slides, setSlides] = useState(initialSlides);
   const [versoes, setVersoes] = useState(geracoes);
@@ -167,6 +173,12 @@ export function PostEditor({
   const [genError, setGenError] = useState<string | null>(null);
   const [pilarId, setPilarId] = useState(post.pilar_id ?? "");
   const [publicoAlvo, setPublicoAlvo] = useState(post.publico_alvo ?? "");
+  const [legenda, setLegenda] = useState(post.legenda ?? "");
+  const [hashtags, setHashtags] = useState(post.hashtags ?? []);
+  const [hashtagInput, setHashtagInput] = useState("");
+  const [legendaPending, setLegendaPending] = useState(false);
+  const [legendaError, setLegendaError] = useState<string | null>(null);
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const [briefing, setBriefing] = useState(post.briefing ?? "");
   const [, startTransition] = useTransition();
 
@@ -293,6 +305,52 @@ export function PostEditor({
       pilar_id: patch.pilar_id ?? (pilarId || null),
       publico_alvo: patch.publico_alvo ?? (publicoAlvo || null),
       briefing: patch.briefing ?? (briefing || null),
+    });
+  }
+
+  function saveLegenda() {
+    updateLegendaHashtags({ postId: post.id, legenda });
+  }
+
+  function addHashtag() {
+    const raw = hashtagInput.trim().replace(/\s+/g, "");
+    if (!raw) return;
+    const tag = raw.startsWith("#") ? raw : `#${raw}`;
+    if (hashtags.includes(tag)) {
+      setHashtagInput("");
+      return;
+    }
+    const next = [...hashtags, tag];
+    setHashtags(next);
+    setHashtagInput("");
+    updateLegendaHashtags({ postId: post.id, hashtags: next });
+  }
+
+  function removeHashtag(tag: string) {
+    const next = hashtags.filter((h) => h !== tag);
+    setHashtags(next);
+    updateLegendaHashtags({ postId: post.id, hashtags: next });
+  }
+
+  function handleGerarLegenda() {
+    setLegendaPending(true);
+    setLegendaError(null);
+    gerarLegendaEHashtags(post.id).then((result) => {
+      setLegendaPending(false);
+      if (!result.success) {
+        setLegendaError(result.error);
+        return;
+      }
+      setLegenda(result.legenda);
+      setHashtags(result.hashtags);
+    });
+  }
+
+  function handleCopyLink() {
+    if (!trackedLink) return;
+    navigator.clipboard.writeText(trackedLink).then(() => {
+      setLinkCopiado(true);
+      setTimeout(() => setLinkCopiado(false), 1800);
     });
   }
 
@@ -514,9 +572,108 @@ export function PostEditor({
             />
           </div>
 
+          <div className="border-t border-dashed border-border pt-4" />
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-medium uppercase tracking-[2px] text-[var(--color-bege)]" style={{ fontFamily: "var(--font-body)" }}>
+                Legenda
+              </label>
+              <button
+                type="button"
+                onClick={handleGerarLegenda}
+                disabled={legendaPending}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-bege)] px-3 py-1.5 text-[11.5px] font-medium text-text-primary transition-colors hover:bg-[var(--color-bege-claro)] disabled:opacity-70"
+                style={{ fontFamily: "var(--font-body)" }}
+              >
+                <Sparkles className="h-3 w-3" strokeWidth={1.8} style={{ color: "var(--color-bege)" }} />
+                {legendaPending ? "Gerando…" : "Gerar legenda"}
+              </button>
+            </div>
+            {legendaError && (
+              <p className="text-[11.5px]" style={{ color: "var(--color-ui-error)" }}>
+                {legendaError}
+              </p>
+            )}
+            <textarea
+              value={legenda}
+              onChange={(e) => setLegenda(e.target.value)}
+              onBlur={saveLegenda}
+              placeholder="Legenda em tom acolhedor…"
+              rows={5}
+              className="resize-y rounded-[var(--radius-md)] border border-border bg-[var(--surface-sunken)] px-3 py-2.5 text-[13.5px] text-text-primary outline-none"
+              style={{ fontFamily: "var(--font-body)" }}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-[2px] text-[var(--color-bege)]" style={{ fontFamily: "var(--font-body)" }}>
+              Hashtags
+            </label>
+            <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] border border-border bg-[var(--surface-sunken)] p-2">
+              {hashtags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card py-1 pl-2.5 pr-1 text-[12px] text-text-primary"
+                  style={{ fontFamily: "var(--font-body)" }}
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeHashtag(tag)}
+                    className="flex h-3.5 w-3.5 items-center justify-center text-text-secondary"
+                    aria-label={`Remover ${tag}`}
+                  >
+                    <X className="h-3 w-3" strokeWidth={2} />
+                  </button>
+                </span>
+              ))}
+              <input
+                value={hashtagInput}
+                onChange={(e) => setHashtagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addHashtag();
+                  }
+                }}
+                onBlur={addHashtag}
+                placeholder="adicionar e pressionar Enter"
+                className="min-w-[100px] flex-1 border-0 bg-transparent p-1 text-[12px] text-text-primary outline-none"
+                style={{ fontFamily: "var(--font-body)" }}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-[2px] text-[var(--color-bege)]" style={{ fontFamily: "var(--font-body)" }}>
+              Link rastreável
+            </label>
+            <p className="-mt-0.5 text-[11px] text-text-secondary" style={{ fontFamily: "var(--font-body)" }}>
+              CTA de agendamento — usado na bio e nos stories
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={trackedLink ?? "—"}
+                className="flex-1 rounded-[var(--radius-md)] border border-border bg-[var(--surface-sunken)] px-3 py-2 text-[13px] text-text-primary outline-none"
+                style={{ fontFamily: "var(--font-body)" }}
+              />
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                disabled={!trackedLink}
+                aria-label="Copiar link"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border bg-[var(--surface-sunken)] text-text-secondary transition-colors hover:border-[var(--color-bege)] hover:text-[var(--color-alaranjado)] disabled:opacity-60"
+              >
+                {linkCopiado ? <Check className="h-3.5 w-3.5" strokeWidth={2} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.8} />}
+              </button>
+            </div>
+          </div>
+
           <div className="border-t border-dashed border-border pt-4">
             <p className="text-[12px] text-text-secondary" style={{ fontFamily: "var(--font-body)" }}>
-              Legenda, hashtags, link rastreável e consentimento LGPD entram no próximo milestone (M10/M11).
+              Consentimento LGPD e gate de conformidade entram no próximo milestone (M11).
             </p>
           </div>
         </aside>

@@ -5,6 +5,7 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_MODEL_ID } from "@/lib/ai/model";
+import { generateShortCode } from "@/lib/short-code";
 import type { IdeiaOrigem, IdeiaStatus } from "@/types/database";
 
 export type ConfigResult = { success: true } | { success: false; error: string };
@@ -143,6 +144,15 @@ export async function transformarEmPost(ideiaId: string): Promise<ConfigResult &
     .single();
 
   if (postError || !post) return { success: false, error: postError?.message ?? "Falha ao criar post." };
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { error: ctaError } = await auth.supabase
+      .schema("conteudo")
+      .from("cta_lead")
+      .insert({ post_id: post.id, short_code: generateShortCode() });
+    if (!ctaError) break;
+    if (!ctaError.message.includes("duplicate") && !ctaError.message.includes("unique")) break;
+  }
 
   const { error: statusError } = await auth.supabase
     .schema("conteudo")
