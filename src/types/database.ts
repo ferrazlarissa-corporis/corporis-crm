@@ -1091,6 +1091,7 @@ export interface Database {
           pilar_id: string | null;
           ideia_id: string | null;
           briefing: string | null;
+          publico_alvo: string | null;
           legenda: string | null;
           hashtags: string[];
           status: StatusPost;
@@ -1107,6 +1108,7 @@ export interface Database {
           pilar_id?: string | null;
           ideia_id?: string | null;
           briefing?: string | null;
+          publico_alvo?: string | null;
           legenda?: string | null;
           hashtags?: string[];
           status?: StatusPost;

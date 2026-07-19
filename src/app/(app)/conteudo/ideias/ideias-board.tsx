@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Link2, Plus, Sparkles, X } from "lucide-react";
 import {
   DndContext,
@@ -268,6 +269,7 @@ function NewIdeiaModal({ pilares, onClose, onCreated }: { pilares: Pilar[]; onCl
 }
 
 export function IdeiasBoard({ initialIdeias, pilares }: { initialIdeias: Ideia[]; pilares: Pilar[] }) {
+  const router = useRouter();
   const [ideias, setIdeias] = useState(initialIdeias);
   const [pasteValue, setPasteValue] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -309,14 +311,16 @@ export function IdeiasBoard({ initialIdeias, pilares }: { initialIdeias: Ideia[]
       transformarEmPost(ideia.id).then((result) => {
         if (!result.success) {
           setIdeias((prev) => prev.map((i) => (i.id === ideia.id ? { ...i, status: ideia.status } : i)));
+          setPending(ideia.id, false);
+          return;
         }
-        setPending(ideia.id, false);
+        router.push(`/conteudo/posts/${result.postId}`);
       });
       return;
     }
     const target: IdeiaStatus = action === "selecionar" ? "selecionada" : action === "descartar" ? "descartada" : "nova";
     applyStatus(ideia.id, target);
-  }, [applyStatus, setPending]);
+  }, [applyStatus, setPending, router]);
 
   const handleDragStart = useCallback((event: { active: { id: string | number } }) => {
     setActiveId(String(event.active.id));

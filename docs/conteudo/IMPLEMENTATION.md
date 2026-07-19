@@ -94,9 +94,33 @@ degradê suave — usar `compressionLevel` (sem perda) em vez de `quality` pra P
 **Feito quando:** trocar o texto de um slide já composto gera novo PNG em segundos, sem chamar a IA de novo.
 
 ## M9 — Editor de post (tela principal)
-- [ ] Integrar M7 + M8 na tela "Editor de post" (trilha de slides + prévia + geração + versões).
-- [ ] Reordenar slides, adicionar/remover.
-- [ ] Seletor de versão (v1, v2, v3…) por slide.
+- [x] Integrar M7 + M8 na tela "Editor de post" (trilha de slides + prévia + geração + versões).
+- [x] Reordenar slides, adicionar/remover.
+- [x] Seletor de versão (v1, v2, v3…) por slide.
+**Rota:** `/conteudo/posts/[id]`. Entrada real: "Transformar em post" no Banco de
+ideias (M4) agora navega direto pro editor do post recém-criado (`transformarEmPost`
+passou a retornar `postId`). Adicionado `post.publico_alvo` (text livre, mesmo
+padrão de `ideia.publico_alvo`) — campo do mockup que a tabela `post` não tinha.
+
+Layout 3 colunas fiel ao mockup (rail de slides com drag-and-drop via
+`@dnd-kit/sortable`, prévia central, painel de briefing) + rodapé de gate. Duas
+adaptações conscientes em relação ao mockup: (1) texto do slide agora é editado em
+inputs abaixo da prévia, não via `contenteditable` sobreposto à imagem — porque
+nossa prévia é o PNG real já composto (M8), não um mock em CSS ao vivo; (2) os
+botões duplicados "Gerar de novo"/"Gerar fundo" do mockup (que chamavam a mesma
+função) viraram um único botão com label dinâmico. Legenda/hashtags/link
+rastreável/toggles LGPD e o gate de conformidade aparecem como placeholders "em
+breve" — são o escopo do M10/M11, mesmo padrão já usado na aba "Descobertas" do M5.
+
+**Verificado ponta a ponta de verdade**: SSR real da página via `fetch` autenticado
+(usuário de teste criado via Admin API, sessão via password grant, cookie
+`sb-127-auth-token` no formato do `@supabase/ssr`) contra o Supabase local — HTTP
+200, título/briefing/público-alvo pré-preenchidos corretos, sem regressão nas
+outras rotas do módulo. Lógica das server actions mais arriscadas replicada e
+testada à parte: reorder em duas fases (evita colisão com a unique `(post_id,
+ordem)`) confirmado com uma reordenação real de 3 slides; `gerarFundo` completo
+(prompt → IA real via OpenAI, ~41s, Gemini seguia com quota 0 → fallback → link do
+`fundo_geracao_id` → recompor) confirmado ponta a ponta com URL pública 200.
 **Feito quando:** dá pra montar um carrossel de 6 slides do zero, regenerar um fundo e comparar versões.
 
 ## M10 — Legenda, hashtags e link rastreável

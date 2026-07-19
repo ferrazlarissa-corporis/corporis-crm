@@ -114,29 +114,35 @@ export async function updateIdeiaStatus(input: z.infer<typeof updateStatusSchema
   return { success: true };
 }
 
-export async function transformarEmPost(ideiaId: string): Promise<ConfigResult> {
+export async function transformarEmPost(ideiaId: string): Promise<ConfigResult & { postId?: string }> {
   const auth = await getActiveStaffClient();
   if (!auth.success) return { success: false, error: auth.error };
 
   const { data: ideia, error: ideiaError } = await auth.supabase
     .schema("conteudo")
     .from("ideia")
-    .select("id, titulo, pilar_id")
+    .select("id, titulo, publico_alvo, pilar_id")
     .eq("id", ideiaId)
     .maybeSingle();
 
   if (ideiaError) return { success: false, error: ideiaError.message };
   if (!ideia) return { success: false, error: "Ideia não encontrada." };
 
-  const { error: postError } = await auth.supabase.schema("conteudo").from("post").insert({
-    titulo: ideia.titulo,
-    formato: "carrossel",
-    pilar_id: ideia.pilar_id,
-    ideia_id: ideia.id,
-    status: "rascunho",
-  });
+  const { data: post, error: postError } = await auth.supabase
+    .schema("conteudo")
+    .from("post")
+    .insert({
+      titulo: ideia.titulo,
+      formato: "carrossel",
+      pilar_id: ideia.pilar_id,
+      publico_alvo: ideia.publico_alvo,
+      ideia_id: ideia.id,
+      status: "rascunho",
+    })
+    .select("id")
+    .single();
 
-  if (postError) return { success: false, error: postError.message };
+  if (postError || !post) return { success: false, error: postError?.message ?? "Falha ao criar post." };
 
   const { error: statusError } = await auth.supabase
     .schema("conteudo")
@@ -147,7 +153,7 @@ export async function transformarEmPost(ideiaId: string): Promise<ConfigResult> 
   if (statusError) return { success: false, error: statusError.message };
 
   revalidatePath("/conteudo/ideias");
-  return { success: true };
+  return { success: true, postId: post.id };
 }
 
 const suggestionSchema = z.object({
