@@ -186,10 +186,18 @@ O DLS Corporis foi escrito para comunicação de marca. Para um CRM precisamos d
 4. Documente cada token novo neste `CLAUDE.md` (atualize esta seção).
 
 Valores derivados sugeridos para tokens de aplicação (apenas referência — não criar antes de precisar):
-- `--app-sidebar-width`, `--app-sidebar-collapsed`, `--app-topbar-height`
-- `--surface-page` (= `--color-fundo-claro`), `--surface-raised` (= `#FFFFFF`, exceção controlada para cards), `--surface-sunken` (= `--color-bege-claro`)
 - `--row-hover` (tint quente derivado do fundo), `--row-selected` (= `--color-bege-claro`)
 - `--chart-1`..`--chart-5` (derivados da paleta, em ordem de uso: alaranjado, bege, verde, tangerina, texto-médio)
+
+### 5.4.1 Tokens já criados em `design-system/app-tokens.css`
+
+Criados no M2 do módulo Conteúdo (`docs/conteudo/`), valores extraídos direto dos mockups HTML do módulo:
+
+- **Shell:** `--sidebar-w` (264px), `--topbar-h` (64px), `--surface-raised` (`#FFFFFF`), `--surface-sunken` (= `--bg-2`). *(Nota: `--surface-sunken` usa `--bg-2` — `#F4EFE6` — não `--color-bege-claro` como a referência acima sugeria; mockup real venceu.)*
+- **Pilares editoriais** (`--pillar-*`, um por linha de `conteudo.pilar_editorial.cor_token`): `diastase`, `pelvica`, `postura`, `gestante`, `terapeutico`, `preventiva`, `bastidores`, `indefinido` (fallback).
+- **Status de ideia** (`--status-*`, `conteudo.ideia.status`): `nova`, `selecionada`, `post`, `descartada`.
+- **Estado de slot do calendário** (`--slot-*`, `conteudo.slot_calendario.status`): `empty`, `draft`, `scheduled`, `approved`, `published`.
+- **Gate de conformidade COFFITO/LGPD** (`--gate-*`, `conteudo.checklist_conformidade.resultado`): `ok`, `alert`, `block`, + `--gate-h` (64px, altura da faixa).
 
 ### 5.5 Não-negociáveis de marca (resumo — fonte completa no skill)
 

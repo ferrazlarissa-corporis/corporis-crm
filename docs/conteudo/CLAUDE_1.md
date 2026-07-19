@@ -47,28 +47,32 @@ de leads. Publicação automática e automações via n8n ficam para a Fase 2.
 
 ---
 
-## 3. Identidade visual de conteúdo (PROPOSTA — validar contra o feed real)
+## 3. Identidade visual de conteúdo (DEFINITIVO — M2, confirmado contra os mockups)
 
-Herda a marca Corporis e adiciona um recorte **feminino/acolhedor** para a vertical pélvica e gestante.
-Confirmar os hexes exatos com o design system do Corporis OS.
+> Substitui a proposta original desta seção. Os mockups HTML (`docs/conteudo/*.html`)
+> já foram construídos reaproveitando **exatamente** a paleta e tipografia do
+> `design-system/colors_and_type.css` do Corporis OS — não a proposta
+> terracota/areia/salvia/blush abaixo, que nunca chegou a ser usada. Zero cor
+> hardcoded nova: Conteúdo herda a marca 100%, sem "recorte" próprio de paleta.
 
-**Paleta (tokens):**
-- `--marca-terracota` (primária, acolhimento): `#C9724F` *(confirmar com laranja do OS)*
-- `--marca-areia` (fundo claro): `#F5EFE6`
-- `--marca-salvia` (secundária, calma/saúde): `#7C9885`
-- `--marca-blush` (**acento feminino — pélvica/gestante**): `#E8C5C0`
-- `--marca-carvao` (texto): `#2E2A26`
+**Paleta:** mesma do OS (`--color-alaranjado`, `--color-tangerina`, `--color-bege`,
+`--color-bege-claro`, `--color-verde`, `--color-fundo-claro`, `--color-espresso`,
+`--color-texto-escuro`, `--color-texto-medio`, `--color-cinza`). Ver
+`design-system/colors_and_type.css`.
 
-O **blush** é a assinatura que diferencia a marca do "cream + terracota" genérico: usado com
-restrição nos pilares de saúde pélvica e gestante.
+**Tipografia:** Olicy (display, hoje substituída por Quicksand) + Ubuntu (corpo) — igual ao OS, não Fraunces.
 
-**Tipografia:** Fraunces (display, soft serif, com restrição) + Ubuntu (corpo). Continuidade com o OS.
+**Tokens de extensão do módulo** (não existem na marca, criados em
+`design-system/app-tokens.css` — ver §5.4.1 do `CLAUDE.md` raiz para a lista
+completa e os valores): `--pillar-*` (cor por pilar editorial, ver §7),
+`--status-*` (estado da ideia), `--slot-*` (estado do slot no calendário),
+`--gate-*` (resultado do gate de conformidade COFFITO/LGPD).
 
 **Estilo de imagem:** foto real da clínica tratada com leve calor + ilustração/fundo IA em traço
 suave e orgânico. Nada clínico-frio; nada estridente.
 
 **Grid do feed:** alternância intencional entre foto humanizada, card educativo e peça ilustrada,
-mantendo o blush/salvia como fio condutor visual.
+usando a cor do pilar (`--pillar-*`) como fio condutor visual — não um "blush" de marca próprio.
 
 ---
 
@@ -87,7 +91,7 @@ Tabelas:
 - **`template_slide`** — `id, nome, tipo (capa|conteudo|citacao|cta), layout_json` *(`citacao` no lugar de `prova_social` — nome real usado no array `TEMPLATES` de `Editor de post.html`)*
 - **`geracao_imagem`** (image jobs, suporta "gerar de novo"). `id, post_id, slide_id, prompt, provedor (gemini|openai), modelo, versao, status (fila|processando|pronto|erro), imagem_url, custo, created_at`
 - **`checklist_conformidade`** — resultado do gate. `id, post_id, regra, resultado (ok|alerta|bloqueio), detalhe, consentimento_lgpd_ref`
-- **`slot_calendario`** — `id, data, horario, pilar_sugerido, post_id (nullable), status`
+- **`slot_calendario`** — `id, data, horario, pilar_sugerido, post_id (nullable), status (vazio|rascunho|agendado|aprovado|publicado)` *(estados batem com os tokens `--slot-*` de `Calendário.html`)*
 - **`publicacao`** — `id, post_id, ig_media_id (Fase 2), publicado_em, canal`
 - **`metrica`** — série temporal. `id, post_id, data, alcance, impressoes, curtidas, saves, comentarios, visitas_perfil, cliques_link`
 - **`cta_lead`** — **atribuição**. `id, post_id, short_code, cliques, pessoa_id (FK core.pessoa do OS), virou_agendamento (bool), created_at`
@@ -139,7 +143,7 @@ estados transversais: erro · arquivado
 Tudo em PT-BR, tom acolhedor, falando com o cliente final. Foco no público feminino.
 
 > Substitui a proposta original desta seção. Os 7 pilares abaixo são os que já
-> estavam codificados nos mockups HTML (`app/conteúdo/*.html`, array `PILLARS`
+> estavam codificados nos mockups HTML (`docs/conteudo/*.html`, array `PILLARS`
 > em `Corporis Conteúdo - Banco de ideias.html`), cada um com `cor_token` próprio
 > na paleta (`--pillar-*`). Mantidos como fonte da verdade pra bater com as telas.
 

@@ -27,9 +27,9 @@ Contexto completo de decisões, schema e regras: ver `@CLAUDE.md` nesta mesma pa
 **Feito quando:** todas as tabelas existem, RLS testada, seed visível via Supabase Studio.
 
 ## M2 — Design tokens do módulo
-- [ ] Extrair os tokens reais (cor, tipografia, espaçamento) das telas já geradas no Claude Design.
-- [ ] Atualizar §3 do CLAUDE.md com os hexes definitivos (hoje são proposta).
-- [ ] Configurar tokens no Tailwind v4 do módulo, reaproveitando shadcn/ui do OS.
+- [x] Extrair os tokens reais (cor, tipografia, espaçamento) das telas já geradas no Claude Design.
+- [x] Atualizar §3 do CLAUDE.md com os hexes definitivos (hoje são proposta).
+- [x] Configurar tokens no Tailwind v4 do módulo, reaproveitando shadcn/ui do OS.
 **Feito quando:** um componente de teste renderiza com a paleta e tipografia definitivas.
 
 ## M3 — Configurações (pilares, marca, tom de voz)
