@@ -57,9 +57,14 @@ Contexto completo de decisões, schema e regras: ver `@CLAUDE.md` nesta mesma pa
 **Feito quando:** dá pra ver a semana com ~5 slots coloridos por pilar e mover um post entre dias.
 
 ## M7 — Motor de geração de imagem
-- [ ] Prompt builder: briefing + pilar + template → prompt de imagem.
-- [ ] Router de provedor: Gemini (padrão) / OpenAI (premium), com fallback em caso de erro.
-- [ ] `geracao_imagem` com versionamento (cada "gerar de novo" cria nova versão, sem apagar as anteriores).
+- [x] Prompt builder: briefing + pilar + template → prompt de imagem.
+- [x] Router de provedor: Gemini (padrão) / OpenAI (premium), com fallback em caso de erro.
+- [x] `geracao_imagem` com versionamento (cada "gerar de novo" cria nova versão, sem apagar as anteriores).
+**Verificado ponta a ponta de verdade** (não só tsc): gerou imagem real via OpenAI,
+subiu pro bucket, URL pública respondeu 200, linha `pronto` no banco. **Gemini
+(provedor padrão) está com quota 0 / billing não habilitado na chave atual** —
+fallback pro OpenAI entrou em ação sozinho. Resolver o billing do Google AI
+Studio/Cloud antes de depender do Gemini em produção.
 **Feito quando:** um job de geração salva a imagem no bucket e aparece na tabela com status correto.
 
 ## M8 — Composição de slides (Satori)
