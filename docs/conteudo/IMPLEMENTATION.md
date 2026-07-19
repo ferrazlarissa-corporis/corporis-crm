@@ -208,7 +208,22 @@ UI que não foi pedido em nenhum milestone até agora — considerar antes do M1
 **Feito quando:** aprovar um post muda o status e ele aparece como "Aprovado" no calendário.
 
 ## M13 — Export do pacote (publicação manual — Fase 1)
-- [ ] Botão que gera um pacote para download: PNGs dos slides + legenda + hashtags + link.
+- [x] Botão que gera um pacote para download: PNGs dos slides + legenda + hashtags + link.
+**Implementação:** rota `GET /conteudo/posts/[id]/export` (Route Handler, fora do
+alcance do layout `(app)` — auth checada manualmente dentro da rota, mesmo padrão
+de `getActiveStaffClient`). Monta um zip em memória via `jszip` (nova dependência —
+sem lib de zip no projeto ainda): PNGs numerados `01-{tipo}.png`, `02-{tipo}.png`…
+(direto do bucket, os PNGs finais do M8), `legenda.txt` com legenda + hashtags
+juntas (pronto pra colar na legenda do Instagram, que aceita hashtag inline) e
+`link-bio.txt` separado (o link rastreável vai na bio/stories, não na legenda —
+por isso arquivo à parte). Botão "Baixar pacote pra publicar" aparece na tela de
+aprovação (M12) só quando `status === 'aprovado'` — é o checkpoint natural antes
+da publicação manual.
+**Verificado ponta a ponta de verdade**: download real via HTTP com cookie de
+sessão, zip inspecionado de volta (4 arquivos certos, PNG validado por magic
+bytes, conteúdo de legenda/link corretos), 401 sem autenticação, 404 pra post
+inexistente, título com acento e pontuação vira nome de arquivo seguro
+(`slugify`).
 **Feito quando:** o pacote baixado tem tudo pronto para colar no Instagram manualmente.
 
 ## M14 — Métricas & atribuição de leads

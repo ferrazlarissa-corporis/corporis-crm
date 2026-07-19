@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Download,
   Heart,
   MessageCircle,
   MoreHorizontal,
@@ -415,9 +416,19 @@ export function AprovacaoClient({
             )}
 
             {status === "aprovado" && (
-              <p className="text-center text-[13.5px] font-medium" style={{ color: "var(--color-verde)", fontFamily: "var(--font-body)" }}>
-                Post aprovado
-              </p>
+              <>
+                <p className="text-center text-[13.5px] font-medium" style={{ color: "var(--color-verde)", fontFamily: "var(--font-body)" }}>
+                  Post aprovado
+                </p>
+                <a
+                  href={`/conteudo/posts/${post.id}/export`}
+                  className="flex items-center justify-center gap-2 rounded-[var(--radius-pill)] px-3 py-3 text-[13.5px] font-medium text-white transition-colors"
+                  style={{ background: "var(--color-alaranjado)", fontFamily: "var(--font-body)" }}
+                >
+                  <Download className="h-3.5 w-3.5" strokeWidth={2} />
+                  Baixar pacote pra publicar
+                </a>
+              </>
             )}
             {status === "reprovado" && (
               <Link
