@@ -64,6 +64,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: "Conteúdo",
     items: [
       { href: "/conteudo", label: "Painel", icon: Newspaper },
+      { href: "/conteudo/configuracoes", label: "Configurações", icon: Settings },
     ],
   },
 ];

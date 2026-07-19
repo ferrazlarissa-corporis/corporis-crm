@@ -969,6 +969,7 @@ export interface Database {
           nome: string;
           descricao: string | null;
           cor_token: string;
+          publico_alvo: string | null;
           ativo: boolean;
           created_at: string;
           updated_at: string;
@@ -978,11 +979,29 @@ export interface Database {
           nome: string;
           descricao?: string | null;
           cor_token: string;
+          publico_alvo?: string | null;
           ativo?: boolean;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["conteudo"]["Tables"]["pilar_editorial"]["Insert"]>;
+      };
+      marca_config: {
+        Row: {
+          id: string;
+          tom_voz: string;
+          tom_tags: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tom_voz?: string;
+          tom_tags?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["marca_config"]["Insert"]>;
       };
       template_slide: {
         Row: {

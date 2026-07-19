@@ -33,9 +33,9 @@ Contexto completo de decisões, schema e regras: ver `@CLAUDE.md` nesta mesma pa
 **Feito quando:** um componente de teste renderiza com a paleta e tipografia definitivas.
 
 ## M3 — Configurações (pilares, marca, tom de voz)
-- [ ] CRUD de `pilar_editorial`.
-- [ ] Tela de edição dos tokens de marca com preview.
-- [ ] Campo de tom de voz que alimenta os prompts de IA.
+- [x] CRUD de `pilar_editorial`.
+- [x] Tela de edição dos tokens de marca com preview. *(decisão: aba Marca é só leitura — cor de marca não é editável em nenhuma tela do OS hoje, ver §5.4 do CLAUDE.md raiz; preview é estático, não reage a edição de token)*
+- [x] Campo de tom de voz que alimenta os prompts de IA. *(campo salvo em `conteudo.marca_config`; consumo pelo prompt de IA entra quando a geração de copy for implementada, M10)*
 **Feito quando:** dá pra criar/editar/desativar um pilar e ver o preview mudar.
 
 ## M4 — Banco de ideias
