@@ -84,6 +84,7 @@ export type ProvedorGeracao = "gemini" | "openai";
 export type StatusGeracao = "fila" | "processando" | "pronto" | "erro";
 export type ResultadoConformidade = "ok" | "alerta" | "bloqueio";
 export type StatusSlot = "vazio" | "rascunho" | "agendado" | "aprovado" | "publicado";
+export type TipoFonteReferencia = "instagram" | "reels" | "tiktok" | "artigo" | "pinterest" | "perfil";
 
 // ─── Corporis OS — core ─────────────────────────────────────────────────────────
 
@@ -1054,8 +1055,10 @@ export interface Database {
       referencia: {
         Row: {
           id: string;
+          titulo: string;
           url: string;
           fonte: string | null;
+          tipo_fonte: TipoFonteReferencia | null;
           print_url: string | null;
           pilar_id: string | null;
           por_que_funciona: string | null;
@@ -1066,8 +1069,10 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          titulo?: string;
           url: string;
           fonte?: string | null;
+          tipo_fonte?: TipoFonteReferencia | null;
           print_url?: string | null;
           pilar_id?: string | null;
           por_que_funciona?: string | null;

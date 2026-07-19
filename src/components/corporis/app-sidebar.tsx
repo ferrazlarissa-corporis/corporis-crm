@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  BookmarkCheck,
   Bot,
   CalendarDays,
   ClipboardCheck,
@@ -66,6 +67,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/conteudo", label: "Painel", icon: Newspaper },
       { href: "/conteudo/ideias", label: "Ideias", icon: Lightbulb },
+      { href: "/conteudo/referencias", label: "Referências", icon: BookmarkCheck },
       { href: "/conteudo/configuracoes", label: "Configurações", icon: Settings },
     ],
   },

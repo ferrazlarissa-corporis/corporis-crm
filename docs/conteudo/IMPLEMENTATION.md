@@ -45,9 +45,9 @@ Contexto completo de decisões, schema e regras: ver `@CLAUDE.md` nesta mesma pa
 **Feito quando:** as 3 origens (manual, importada, sugerida) aparecem corretamente na tela.
 
 ## M5 — Referências (swipe file)
-- [ ] CRUD de `referencia` (manual).
-- [ ] Aba "Descobertas" como estado "em breve" (Fase 2).
-- [ ] Ação "Virar ideia" cria registro em `ideia`.
+- [x] CRUD de `referencia` (manual).
+- [x] Aba "Descobertas" como estado "em breve" (Fase 2).
+- [x] Ação "Virar ideia" cria registro em `ideia`.
 **Feito quando:** salvar uma referência e transformá-la em ideia funciona ponta a ponta.
 
 ## M6 — Calendário editorial
