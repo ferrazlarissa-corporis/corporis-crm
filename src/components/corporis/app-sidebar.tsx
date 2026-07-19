@@ -68,6 +68,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/conteudo", label: "Painel", icon: Newspaper },
       { href: "/conteudo/ideias", label: "Ideias", icon: Lightbulb },
       { href: "/conteudo/referencias", label: "Referências", icon: BookmarkCheck },
+      { href: "/conteudo/calendario", label: "Calendário", icon: CalendarDays },
       { href: "/conteudo/configuracoes", label: "Configurações", icon: Settings },
     ],
   },

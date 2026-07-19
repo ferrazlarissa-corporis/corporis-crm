@@ -51,9 +51,9 @@ Contexto completo de decisões, schema e regras: ver `@CLAUDE.md` nesta mesma pa
 **Feito quando:** salvar uma referência e transformá-la em ideia funciona ponta a ponta.
 
 ## M6 — Calendário editorial
-- [ ] Grid semanal/mensal de `slot_calendario`.
-- [ ] Criar slot ao clicar em dia vazio; reagendar por drag-and-drop.
-- [ ] Filtro por pilar e status.
+- [x] Grid semanal/mensal de `slot_calendario`. *(grid mensal — cada semana é uma linha; navegação mês a mês por querystring)*
+- [x] Criar slot ao clicar em dia vazio; reagendar por drag-and-drop.
+- [x] Filtro por pilar e status.
 **Feito quando:** dá pra ver a semana com ~5 slots coloridos por pilar e mover um post entre dias.
 
 ## M7 — Motor de geração de imagem
