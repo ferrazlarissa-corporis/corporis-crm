@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Copy, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, Copy, Plus, Sparkles, Trash2, X } from "lucide-react";
 import {
   DndContext,
   DragEndEvent,
@@ -13,14 +13,17 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ProvedorGeracao, StatusGeracao, TipoTemplate } from "@/types/database";
+import { avaliarConformidade, resumoGate } from "@/lib/conteudo/gate";
 import {
   createSlide,
   deleteSlide,
+  enviarParaAprovacao,
   gerarFundo,
   gerarLegendaEHashtags,
   reorderSlides,
   selecionarVersaoFundo,
   updateLegendaHashtags,
+  updateLgpd,
   updatePostBriefing,
   updateSlideTemplate,
   updateSlideTexto,
@@ -35,6 +38,8 @@ type Post = {
   publico_alvo: string | null;
   legenda: string | null;
   hashtags: string[];
+  lgpd_usa_depoimento: boolean;
+  lgpd_consentimento_ref: string | null;
   status: string;
 };
 type Slide = {
@@ -180,6 +185,11 @@ export function PostEditor({
   const [legendaError, setLegendaError] = useState<string | null>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [briefing, setBriefing] = useState(post.briefing ?? "");
+  const [lgpdUsaDepoimento, setLgpdUsaDepoimento] = useState(post.lgpd_usa_depoimento);
+  const [lgpdConsentimentoRef, setLgpdConsentimentoRef] = useState(post.lgpd_consentimento_ref ?? "");
+  const [postStatus, setPostStatus] = useState(post.status);
+  const [enviando, setEnviando] = useState(false);
+  const [enviarErro, setEnviarErro] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -191,6 +201,16 @@ export function PostEditor({
     () => versoes.filter((v) => v.slide_id === selectedId).sort((a, b) => a.versao - b.versao),
     [versoes, selectedId],
   );
+
+  const gate = useMemo(() => {
+    const itens = avaliarConformidade({
+      legenda,
+      slides: slides.map((s) => ({ texto_titulo: s.texto_titulo, texto_corpo: s.texto_corpo })),
+      lgpdUsaDepoimento,
+      lgpdConsentimentoRef,
+    });
+    return resumoGate(itens);
+  }, [legenda, slides, lgpdUsaDepoimento, lgpdConsentimentoRef]);
 
   const [tituloDraft, setTituloDraft] = useState(selected?.texto_titulo ?? "");
   const [corpoDraft, setCorpoDraft] = useState(selected?.texto_corpo ?? "");
@@ -351,6 +371,28 @@ export function PostEditor({
     navigator.clipboard.writeText(trackedLink).then(() => {
       setLinkCopiado(true);
       setTimeout(() => setLinkCopiado(false), 1800);
+    });
+  }
+
+  function toggleUsaDepoimento(checked: boolean) {
+    setLgpdUsaDepoimento(checked);
+    updateLgpd({ postId: post.id, lgpd_usa_depoimento: checked, lgpd_consentimento_ref: lgpdConsentimentoRef || null });
+  }
+
+  function saveConsentimentoRef() {
+    updateLgpd({ postId: post.id, lgpd_usa_depoimento: lgpdUsaDepoimento, lgpd_consentimento_ref: lgpdConsentimentoRef || null });
+  }
+
+  function handleEnviarAprovacao() {
+    setEnviando(true);
+    setEnviarErro(null);
+    enviarParaAprovacao(post.id).then((result) => {
+      setEnviando(false);
+      if (!result.success) {
+        setEnviarErro(result.error);
+        return;
+      }
+      setPostStatus("em_aprovacao");
     });
   }
 
@@ -671,34 +713,88 @@ export function PostEditor({
             </div>
           </div>
 
-          <div className="border-t border-dashed border-border pt-4">
-            <p className="text-[12px] text-text-secondary" style={{ fontFamily: "var(--font-body)" }}>
-              Consentimento LGPD e gate de conformidade entram no próximo milestone (M11).
-            </p>
+          <div className="flex flex-col gap-3 border-t border-dashed border-border pt-4">
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <span className="relative mt-0.5 h-[21px] w-9 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={lgpdUsaDepoimento}
+                  onChange={(e) => toggleUsaDepoimento(e.target.checked)}
+                  className="absolute inset-0 z-10 m-0 h-full w-full cursor-pointer opacity-0"
+                />
+                <span
+                  className="absolute inset-0 rounded-[var(--radius-pill)] transition-colors"
+                  style={{ background: lgpdUsaDepoimento ? "var(--color-alaranjado)" : "var(--color-cinza)" }}
+                />
+                <span
+                  className="absolute top-[2px] h-[17px] w-[17px] rounded-[var(--radius-pill)] bg-white shadow-sm transition-transform"
+                  style={{ left: 2, transform: lgpdUsaDepoimento ? "translateX(15px)" : "translateX(0)" }}
+                />
+              </span>
+              <span className="text-[12.5px] leading-[1.4] text-text-primary" style={{ fontFamily: "var(--font-body)" }}>
+                Este post usa depoimento ou imagem real de uma aluna
+              </span>
+            </label>
+
+            {lgpdUsaDepoimento && (
+              <div className="flex flex-col gap-1.5 pl-[46px]">
+                <label className="text-[10px] font-medium uppercase tracking-[2px] text-[var(--color-bege)]" style={{ fontFamily: "var(--font-body)" }}>
+                  Referência da autorização
+                </label>
+                <input
+                  value={lgpdConsentimentoRef}
+                  onChange={(e) => setLgpdConsentimentoRef(e.target.value)}
+                  onBlur={saveConsentimentoRef}
+                  placeholder="Ex.: termo assinado em 12/03 — pasta Drive/Consentimentos"
+                  className="rounded-[var(--radius-md)] border border-border bg-[var(--surface-sunken)] px-3 py-2 text-[13px] text-text-primary outline-none"
+                  style={{ fontFamily: "var(--font-body)" }}
+                />
+              </div>
+            )}
           </div>
         </aside>
       </div>
 
       <footer className="flex items-center gap-5 border-t border-border bg-card px-6" style={{ height: "var(--gate-h, 64px)" }}>
         <div className="flex items-center gap-2 text-[13px] text-text-primary" style={{ fontFamily: "var(--font-body)" }}>
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-cinza)" }} />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: `var(--gate-${gate.coffito === "ok" ? "ok" : gate.coffito === "alerta" ? "alert" : "block"})` }} />
           <b className="font-medium">COFFITO</b>
-          <span className="text-text-secondary">— em breve</span>
+          <span className="text-text-secondary">{gate.coffito === "ok" ? "OK" : gate.coffito === "alerta" ? "Alerta" : "Bloqueado"}</span>
         </div>
         <div className="flex items-center gap-2 text-[13px] text-text-primary" style={{ fontFamily: "var(--font-body)" }}>
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-cinza)" }} />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: `var(--gate-${gate.lgpd === "ok" ? "ok" : gate.lgpd === "alerta" ? "alert" : "block"})` }} />
           <b className="font-medium">LGPD</b>
-          <span className="text-text-secondary">— em breve</span>
+          <span className="text-text-secondary">{gate.lgpd === "ok" ? "OK" : gate.lgpd === "alerta" ? "Alerta" : "Bloqueado"}</span>
         </div>
-        <div className="flex-1" />
-        <button
-          type="button"
-          disabled
-          className="shrink-0 rounded-[var(--radius-pill)] px-5 py-2.5 text-[13.5px] font-medium text-text-secondary"
-          style={{ background: "var(--color-cinza)", fontFamily: "var(--font-body)", cursor: "not-allowed" }}
-        >
-          Enviar para aprovação
-        </button>
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[12.5px]" style={{ fontFamily: "var(--font-body)", color: "var(--gate-block)" }}>
+          {!gate.podeEnviar && (
+            <>
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+              <span className="truncate">{gate.motivoBloqueio}</span>
+            </>
+          )}
+          {enviarErro && <span className="truncate">{enviarErro}</span>}
+        </div>
+        {postStatus === "em_aprovacao" ? (
+          <span className="shrink-0 text-[13px] font-medium" style={{ fontFamily: "var(--font-body)", color: "var(--color-verde)" }}>
+            Enviado para aprovação
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleEnviarAprovacao}
+            disabled={!gate.podeEnviar || enviando}
+            className="shrink-0 rounded-[var(--radius-pill)] px-5 py-2.5 text-[13.5px] font-medium transition-colors"
+            style={{
+              background: gate.podeEnviar ? "var(--color-alaranjado)" : "var(--color-cinza)",
+              color: gate.podeEnviar ? "#fff" : "var(--color-texto-medio)",
+              fontFamily: "var(--font-body)",
+              cursor: gate.podeEnviar && !enviando ? "pointer" : "not-allowed",
+            }}
+          >
+            {enviando ? "Enviando…" : "Enviar para aprovação"}
+          </button>
+        )}
       </footer>
     </div>
   );

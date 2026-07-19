@@ -1094,6 +1094,8 @@ export interface Database {
           publico_alvo: string | null;
           legenda: string | null;
           hashtags: string[];
+          lgpd_usa_depoimento: boolean;
+          lgpd_consentimento_ref: string | null;
           status: StatusPost;
           aprovado_por: string | null;
           agendado_para: string | null;
@@ -1111,6 +1113,8 @@ export interface Database {
           publico_alvo?: string | null;
           legenda?: string | null;
           hashtags?: string[];
+          lgpd_usa_depoimento?: boolean;
+          lgpd_consentimento_ref?: string | null;
           status?: StatusPost;
           aprovado_por?: string | null;
           agendado_para?: string | null;

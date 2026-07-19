@@ -13,7 +13,7 @@ export default async function PostEditorPage({ params }: { params: Promise<{ id:
       supabase
         .schema("conteudo")
         .from("post")
-        .select("id, titulo, formato, pilar_id, briefing, publico_alvo, legenda, hashtags, status")
+        .select("id, titulo, formato, pilar_id, briefing, publico_alvo, legenda, hashtags, lgpd_usa_depoimento, lgpd_consentimento_ref, status")
         .eq("id", id)
         .maybeSingle(),
       supabase

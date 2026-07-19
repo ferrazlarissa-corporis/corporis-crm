@@ -8,6 +8,7 @@ import { DEFAULT_MODEL_ID } from "@/lib/ai/model";
 import type { TipoTemplate } from "@/types/database";
 import { gerarImagemParaPost, type GerarImagemInput } from "@/lib/ai/imagem/gerar";
 import { comporSlide } from "@/lib/ai/imagem/compor";
+import { avaliarConformidade, resumoGate, type ChecklistItem } from "@/lib/conteudo/gate";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -414,4 +415,85 @@ ${roteiro || "—"}`,
 
   revalidate(postId);
   return { success: true, legenda: parsed.data.legenda, hashtags: parsed.data.hashtags };
+}
+
+export async function updateLgpd(input: {
+  postId: string;
+  lgpd_usa_depoimento: boolean;
+  lgpd_consentimento_ref?: string | null;
+}): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      postId: z.string().uuid(),
+      lgpd_usa_depoimento: z.boolean(),
+      lgpd_consentimento_ref: z.string().trim().max(280).nullable().optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { success: false, error: "Dados inválidos." };
+
+  const auth = await getActiveStaffClient();
+  if (!auth.success) return { success: false, error: auth.error };
+
+  const { postId, ...fields } = parsed.data;
+  const { error } = await auth.supabase.schema("conteudo").from("post").update(fields).eq("id", postId);
+  if (error) return { success: false, error: error.message };
+
+  revalidate(postId);
+  return { success: true };
+}
+
+export type EnviarAprovacaoResult = { success: true } | { success: false; error: string; itens: ChecklistItem[] };
+
+export async function enviarParaAprovacao(postId: string): Promise<EnviarAprovacaoResult> {
+  const parsedId = z.string().uuid().safeParse(postId);
+  if (!parsedId.success) return { success: false, error: "Post inválido.", itens: [] };
+
+  const auth = await getActiveStaffClient();
+  if (!auth.success) return { success: false, error: auth.error, itens: [] };
+
+  const { data: post, error: postError } = await auth.supabase
+    .schema("conteudo")
+    .from("post")
+    .select("legenda, lgpd_usa_depoimento, lgpd_consentimento_ref")
+    .eq("id", postId)
+    .single();
+  if (postError || !post) return { success: false, error: postError?.message ?? "Post não encontrado.", itens: [] };
+
+  const { data: slides } = await auth.supabase
+    .schema("conteudo")
+    .from("post_slide")
+    .select("texto_titulo, texto_corpo")
+    .eq("post_id", postId);
+
+  const itens = avaliarConformidade({
+    legenda: post.legenda,
+    slides: slides ?? [],
+    lgpdUsaDepoimento: post.lgpd_usa_depoimento,
+    lgpdConsentimentoRef: post.lgpd_consentimento_ref,
+  });
+
+  await auth.supabase.schema("conteudo").from("checklist_conformidade").insert(
+    itens.map((i) => ({
+      post_id: postId,
+      regra: i.regra,
+      resultado: i.resultado,
+      detalhe: i.detalhe,
+      consentimento_lgpd_ref: i.regra === "lgpd_consentimento" ? post.lgpd_consentimento_ref : null,
+    })),
+  );
+
+  const { podeEnviar, motivoBloqueio } = resumoGate(itens);
+  if (!podeEnviar) {
+    return { success: false, error: motivoBloqueio ?? "Gate de conformidade com bloqueio aberto.", itens };
+  }
+
+  const { error: statusError } = await auth.supabase
+    .schema("conteudo")
+    .from("post")
+    .update({ status: "em_aprovacao" })
+    .eq("id", postId);
+  if (statusError) return { success: false, error: statusError.message, itens };
+
+  revalidate(postId);
+  return { success: true };
 }

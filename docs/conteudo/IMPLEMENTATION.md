@@ -151,9 +151,27 @@ renderizados.
 **Feito quando:** o post tem legenda, hashtags e um link `/l/{short_code}` funcional.
 
 ## M11 — Gate de conformidade (COFFITO + LGPD)
-- [ ] Implementar as regras de bloqueio/alerta do §8 do CLAUDE.md como função de validação.
-- [ ] UI da faixa de conformidade (verde/âmbar/vermelho) no editor.
-- [ ] Bloquear "Enviar para aprovação" enquanto houver `bloqueio` aberto.
+- [x] Implementar as regras de bloqueio/alerta do §8 do CLAUDE_1.md como função de validação.
+- [x] UI da faixa de conformidade (verde/âmbar/vermelho) no editor.
+- [x] Bloquear "Enviar para aprovação" enquanto houver `bloqueio` aberto.
+**Implementação:** `src/lib/conteudo/gate.ts` — `avaliarConformidade()` é uma
+função pura (sem I/O), usada tanto no client (footer reativo, recalcula a cada
+edição de texto/toggle, sem round-trip) quanto no server (`enviarParaAprovacao`,
+que nunca confia no client — revalida tudo contra o banco). 7 regras fixas
+(3 bloqueio + 2 alerta COFFITO, 1 bloqueio + 1 alerta LGPD), heurística por
+palavra-chave normalizada (sem acento/caixa) — documentado no código como
+heurística, não NLP. Adicionado `post.lgpd_usa_depoimento` +
+`post.lgpd_consentimento_ref` (toggle + campo de referência, mockup só tinha os 2
+toggles mas o schema pede uma referência de texto, não só booleano). Toda
+tentativa de envio grava as 7 linhas em `checklist_conformidade` (audit trail
+cumulativo, nunca sobrescreve) e só transiciona `post.status → em_aprovacao` se
+não houver bloqueio.
+**Verificado ponta a ponta de verdade**: casos unitários das duas frases do
+"Feito quando" (cura garantida / depoimento sem referência) confirmados bloqueando;
+fluxo real gravando no banco (texto ruim → recusado, 7 linhas persistidas, status
+inalterado → texto corrigido → aceito, 14 linhas acumuladas, status vira
+`em_aprovacao`); SSR autenticado confirmando toggle LGPD, faixa COFFITO/LGPD e
+estado "Enviado para aprovação" renderizados.
 **Feito quando:** um texto com "cura garantida" é barrado; um depoimento sem `consentimento_lgpd_ref` é barrado.
 
 ## M12 — Prévia & aprovação
