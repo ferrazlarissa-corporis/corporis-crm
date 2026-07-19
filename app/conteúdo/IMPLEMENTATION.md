@@ -21,9 +21,9 @@ Contexto completo de decisões, schema e regras: ver `@CLAUDE.md` nesta mesma pa
 **Feito quando:** rota vazia sobe, autenticação funciona, upload de teste no bucket é acessível por URL pública.
 
 ## M1 — Schema & seed
-- [ ] Migrations Supabase para todas as tabelas do schema `conteudo` (§4 do CLAUDE.md).
-- [ ] Seed dos 7 pilares editoriais (§7).
-- [ ] Seed dos templates de slide base (capa, conteúdo, CTA, prova social).
+- [x] Migrations Supabase para todas as tabelas do schema `conteudo` (§4 do CLAUDE.md).
+- [x] Seed dos 7 pilares editoriais (§7).
+- [x] Seed dos templates de slide base (capa, conteúdo, citação, CTA).
 **Feito quando:** todas as tabelas existem, RLS testada, seed visível via Supabase Studio.
 
 ## M2 — Design tokens do módulo

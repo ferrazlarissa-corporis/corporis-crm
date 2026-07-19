@@ -84,7 +84,7 @@ Tabelas:
 - **`referencia`** — swipe file. `id, url, fonte, print_url, pilar_id, por_que_funciona, origem (manual|descoberta), tags[]`
 - **`post`** — máquina de estados (ver §6). `id, titulo, formato (carrossel|estatico), pilar_id, ideia_id, briefing, legenda, hashtags[], status, aprovado_por, agendado_para, publicado_em`
 - **`post_slide`** — `id, post_id, ordem, template_id, texto_titulo, texto_corpo, fundo_geracao_id, imagem_url`
-- **`template_slide`** — `id, nome, tipo (capa|conteudo|cta|prova_social), layout_json`
+- **`template_slide`** — `id, nome, tipo (capa|conteudo|citacao|cta), layout_json` *(`citacao` no lugar de `prova_social` — nome real usado no array `TEMPLATES` de `Editor de post.html`)*
 - **`geracao_imagem`** (image jobs, suporta "gerar de novo"). `id, post_id, slide_id, prompt, provedor (gemini|openai), modelo, versao, status (fila|processando|pronto|erro), imagem_url, custo, created_at`
 - **`checklist_conformidade`** — resultado do gate. `id, post_id, regra, resultado (ok|alerta|bloqueio), detalhe, consentimento_lgpd_ref`
 - **`slot_calendario`** — `id, data, horario, pilar_sugerido, post_id (nullable), status`
@@ -134,20 +134,25 @@ estados transversais: erro · arquivado
 
 ---
 
-## 7. Pilares editoriais (proposta)
+## 7. Pilares editoriais (definitivo — seedado em M1)
 
 Tudo em PT-BR, tom acolhedor, falando com o cliente final. Foco no público feminino.
 
-1. **Corpo & Movimento** — Pilates para postura, dor lombar, ciático, fortalecimento.
-2. **Saúde pélvica sem tabu** — incontinência, dor na relação (dispareunia). Informativo, empático, **sem sensacionalismo**.
-3. **Gestação & pós-parto** — Pilates para gestante, preparo para o parto, recuperação, diástase.
-4. **Mitos & verdades** — desmistifica dúvidas comuns com acolhimento.
-5. **Por dentro da Corporis** — bastidores, a Larissa, o ambiente, humanização.
-6. **Histórias que inspiram** — prova social **somente com consentimento LGPD registrado**.
-7. **Convite** — CTA de agendamento (o pilar que puxa o lead; sempre com link rastreável).
+> Substitui a proposta original desta seção. Os 7 pilares abaixo são os que já
+> estavam codificados nos mockups HTML (`app/conteúdo/*.html`, array `PILLARS`
+> em `Corporis Conteúdo - Banco de ideias.html`), cada um com `cor_token` próprio
+> na paleta (`--pillar-*`). Mantidos como fonte da verdade pra bater com as telas.
+
+1. **Diástase abdominal** (`pillar-diastase`) — recuperação do abdômen no pós-parto.
+2. **Fisio pélvica** (`pillar-pelvica`) — incontinência, dor na relação. Informativo, empático, **sem sensacionalismo**.
+3. **Postura no trabalho** (`pillar-postura`) — dor lombar, ciático, postura de quem passa o dia sentada.
+4. **Pilates gestante** (`pillar-gestante`) — preparo para o parto, recuperação, acompanhamento por fase da gestação.
+5. **Pilates terapêutico** (`pillar-terapeutico`) — fortalecimento e reabilitação sob orientação individual.
+6. **Saúde preventiva** (`pillar-preventiva`) — cuidado contínuo, antes do incômodo aparecer.
+7. **Bastidores & equipe** (`pillar-bastidores`) — a Larissa, o ambiente, a equipe, humanização.
 
 **Voz:** "você" direto, frases curtas, empatia com o desconforto, esperança realista.
-Nunca prometer cura. Nunca alarmar. Especialmente cuidadoso nos pilares 2 e 3.
+Nunca prometer cura. Nunca alarmar. Especialmente cuidadoso nos pilares 1 e 2.
 
 ---
 
