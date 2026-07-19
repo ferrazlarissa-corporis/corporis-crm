@@ -227,10 +227,41 @@ inexistente, título com acento e pontuação vira nome de arquivo seguro
 **Feito quando:** o pacote baixado tem tudo pronto para colar no Instagram manualmente.
 
 ## M14 — Métricas & atribuição de leads
-- [ ] Ponte com `core.pessoa` do Corporis OS: lead que clicou no link e virou agendamento marca `origem_post_id`.
-- [ ] Dashboard: ranking "posts que mais trouxeram leads".
-- [ ] Entrada manual de alcance/saves/impressões (marcado como "manual" até a Fase 2).
-- [ ] Botão "Aprender com os melhores" → transforma top posts em novas ideias.
+- [x] Ponte com `core.pessoa` do Corporis OS: lead que clicou no link e virou agendamento marca `origem_post_id`.
+- [x] Dashboard: ranking "posts que mais trouxeram leads".
+- [x] Entrada manual de alcance/saves/impressões (marcado como "manual" até a Fase 2).
+- [x] Botão "Aprender com os melhores" → transforma top posts em novas ideias.
+**Decisão de arquitetura (perguntada ao usuário antes de codar):** atribuição de
+lead é **manual**, não automática. wa.me não devolve tracking pro webhook — só o
+texto pré-preenchido chega como 1ª mensagem, e correlacionar por heurística de
+texto+janela de tempo mexeria no webhook de produção que este branch já está
+consertando por outro motivo (risco desnecessário pro ganho). Staff busca a
+pessoa (nome/telefone, `core.pessoa`) e atribui na tela de Métricas; cada
+atribuição cria uma nova linha em `conteudo.cta_lead` (post_id + pessoa_id +
+virou_agendamento + short_code novo gerado só pra essa atribuição, não é um link
+real) — isso também permite múltiplos leads por post sem mudar o schema, que já
+suporta N linhas de `cta_lead` por `post_id` (só `short_code` é `unique`).
+**Rota:** `/conteudo/metricas` (novo item no sidebar). Ranking calcula leads =
+contagem de `cta_lead` com `pessoa_id` setado, cliques = soma de `cta_lead.cliques`
+de todas as linhas do post, saves = soma de `conteudo.metrica.saves`. Métricas
+manuais (alcance/impressões/curtidas/saves/comentários/visitas/cliques) por post
+via upsert em `conteudo.metrica` (unique `post_id,data`) — botão "Métricas" em
+cada linha do ranking, sem os cards globais editáveis do mockup (que não mapeiam
+pra um schema por-post-por-dia; os 3 cards viraram somatórios read-only com selo
+"Manual"). "Aprender com os melhores" cria `ideia` (origem `sugestao`) a partir
+dos top 3 posts por lead. Simplificação consciente: sem seletor de período nem
+funil de conversão do mockup (não pedidos pelos 4 itens do checklist deste
+milestone) — ranking é all-time.
+**Gotcha real encontrado**: PostgREST não resolve embed implícito entre schemas
+diferentes (`conteudo.cta_lead` → `core.pessoa`, mesmo com FK real no banco) —
+erro `PGRST200`. Corrigido buscando `core.pessoa` à parte e juntando em JS
+(mesmo princípio do §2 do CLAUDE.md raiz: nada de acesso cross-schema implícito
+entre módulos).
+**Verificado ponta a ponta de verdade**: pessoa real criada em `core.pessoa`,
+busca via RLS de staff autenticado, atribuição gravada, métrica manual com
+upsert (confirmado que não duplica linha), SSR autenticado mostrando nome da
+pessoa atribuída e total de leads corretos, "Aprender com os melhores" criando
+uma `ideia` real que aparece no Banco de ideias.
 **Feito quando:** um lead de teste que passou pelo link aparece atribuído ao post certo no ranking.
 
 ## M15 — Polish & QA

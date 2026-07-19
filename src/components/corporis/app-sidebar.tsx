@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  BarChart3,
   BookmarkCheck,
   Bot,
   CalendarDays,
@@ -69,6 +70,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/conteudo/ideias", label: "Ideias", icon: Lightbulb },
       { href: "/conteudo/referencias", label: "Referências", icon: BookmarkCheck },
       { href: "/conteudo/calendario", label: "Calendário", icon: CalendarDays },
+      { href: "/conteudo/metricas", label: "Métricas", icon: BarChart3 },
       { href: "/conteudo/configuracoes", label: "Configurações", icon: Settings },
     ],
   },
