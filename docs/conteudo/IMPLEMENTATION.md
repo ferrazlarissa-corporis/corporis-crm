@@ -265,9 +265,49 @@ uma `ideia` real que aparece no Banco de ideias.
 **Feito quando:** um lead de teste que passou pelo link aparece atribuído ao post certo no ranking.
 
 ## M15 — Polish & QA
-- [ ] Responsivo mobile em todas as telas.
-- [ ] Foco de teclado visível, estados vazios revisados.
-- [ ] Passagem ponta a ponta com Bruno e Larissa: ideia → post publicado manualmente → lead atribuído.
+- [~] Responsivo mobile em todas as telas — **decisão explícita, perguntada ao
+  usuário**: pulado. Ferramenta de produção de conteúdo (compor carrossel, editar
+  imagem) é uso desktop/laptop na prática, e o shell do app (`AppSidebar`, 264px
+  fixo em `(app)/layout.tsx`) não é responsivo em NENHUMA tela do sistema hoje —
+  não só Conteúdo. Adaptar só as 8 telas do módulo sem tocar o shell compartilhado
+  seria inconsistente e incompleto; resolver o shell é escopo maior, fora do
+  módulo Conteúdo. Esforço redirecionado pros dois itens abaixo.
+- [x] Foco de teclado visível, estados vazios revisados.
+- [x] Passagem ponta a ponta: ideia → post publicado manualmente → lead atribuído.
+
+**Foco de teclado — achados e correções:**
+- `:focus-visible` já tem ring global (`box-shadow` laranja suave) em
+  `src/app/globals.css` — herdado automaticamente por todo componente novo, não
+  precisou de trabalho extra na maioria dos casos.
+- Dois elementos combinavam `useDraggable`/`useSortable` (dnd-kit) com `onClick`
+  sem handler de teclado equivalente — focáveis via `tabIndex` que o dnd-kit
+  injeta, mas Enter/Espaço não ativavam a ação. Corrigido com `onKeyDown` em
+  `SlotChip` (calendário, M6) e `SortableRailItem` (editor de post, M9).
+- Dois botões de ação só apareciam com `hover` (`opacity-0`/`hidden` +
+  `group-hover`), sem equivalente de foco — um deles (`hidden` puro) nem ficava
+  no tab order. Corrigido com `focus-visible:opacity-100` no botão de excluir
+  slide (editor, M9) e no botão de criar slot (calendário, M6).
+
+**Estados vazios**: revisados em todas as 8 telas — já cobertos desde os
+milestones originais (Ideias, Referências, Métricas, Editor). O gap real era o
+**Painel** (`/conteudo`), que desde o M0 nunca saiu do placeholder "Módulo em
+construção — M2". Reconstruído como dashboard real nesta etapa: saudação
+dinâmica, 3 KPIs reais (leads atribuídos, aguardando aprovação, próximas
+publicações), lista "Aguardando você" (posts `em_aprovacao` reais, com
+Ver/Aprovar direto do painel) e "Semana" (slots reais da semana atual). Testado
+de propósito com banco vazio (sem posts/leads/slots) pra confirmar que não
+quebra e mostra "Nada esperando aprovação". Seção "Ideias em alta" do mockup
+(tendências externas de audiência) ficou de fora — é Fase 2 (descoberta
+automática), mesmo motivo já documentado no stub "Descobertas" das Referências
+(M5).
+
+**Passagem ponta a ponta verificada de propósito, com dados e chamadas reais**
+(não mock): ideia manual → transformar em post (com `cta_lead` criado junto) →
+2 slides compostos via Satori (M8, sem IA) → legenda+hashtags via Anthropic real
+→ gate de conformidade limpo → `em_aprovacao` → aparece no Painel em "Aguardando
+você" → aprovado → pacote exportado (zip real, `/export`) → lead real atribuído
+em `core.pessoa` → aparece no ranking de Métricas com o post certo. Zero etapa
+manual fora do sistema.
 **Feito quando:** um post real passa pelo fluxo inteiro sem gambiarra manual fora do sistema.
 
 ---

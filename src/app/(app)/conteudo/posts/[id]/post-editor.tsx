@@ -96,6 +96,12 @@ function SortableRailItem({
       {...attributes}
       {...listeners}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
       className="group relative cursor-pointer rounded-[var(--radius-md)] p-1.5 transition-colors"
     >
       <div
@@ -129,7 +135,7 @@ function SortableRailItem({
               onDelete();
             }}
             aria-label="Remover slide"
-            className="absolute right-1 top-1 hidden h-[18px] w-[18px] items-center justify-center rounded-full bg-black/50 text-white group-hover:flex"
+            className="absolute right-1 top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
           >
             <Trash2 className="h-2.5 w-2.5" strokeWidth={2.2} />
           </button>

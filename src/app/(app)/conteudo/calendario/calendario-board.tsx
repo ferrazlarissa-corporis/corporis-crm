@@ -72,6 +72,12 @@ function SlotChip({ slot, pilar, onClick }: { slot: Slot; pilar: Pilar | undefin
       {...attributes}
       {...listeners}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1, touchAction: "none" }}
       className="flex cursor-grab items-center gap-1.5 rounded-[var(--radius-xs)] px-2 py-1.5 text-[11px] font-medium"
       title={slot.post_titulo ?? pilar?.nome ?? "Slot"}
@@ -126,7 +132,7 @@ function DayCell({
         <button
           type="button"
           onClick={onAdd}
-          className="flex h-6 w-6 items-center justify-center rounded-full text-text-secondary opacity-0 transition-opacity group-hover:opacity-100"
+          className="flex h-6 w-6 items-center justify-center rounded-full text-text-secondary opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
           style={{ border: "1.5px dashed var(--color-cinza)" }}
           aria-label={`Criar slot em ${iso}`}
         >
