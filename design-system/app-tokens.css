@@ -1,0 +1,42 @@
+/* ============================================================
+   Corporis OS — App Tokens (extensão de aplicação, ver CLAUDE.md §5.4)
+   NÃO é do DLS de marca — não editar colors_and_type.css.
+   Fonte dos valores: app/conteúdo/*.html (mockups do módulo Conteúdo).
+   ============================================================ */
+
+:root {
+  /* ——— Shell (sugeridos no §5.4, valor real confirmado nos mockups) ——— */
+  --sidebar-w: 264px;
+  --topbar-h: 64px;
+  --surface-raised: #FFFFFF;
+  --surface-sunken: var(--bg-2);
+
+  /* ——— Pilares editoriais — Corporis Conteúdo (conteudo.pilar_editorial.cor_token) ——— */
+  --pillar-diastase:    #F08353;
+  --pillar-pelvica:     #ACC095;
+  --pillar-postura:     #D2B06E;
+  --pillar-gestante:    #F6A958;
+  --pillar-terapeutico: #C97448;
+  --pillar-preventiva:  #7E9469;
+  --pillar-bastidores:  #7A6E68;
+  --pillar-indefinido:  var(--color-cinza);   /* fallback: ideia/referência sem pilar */
+
+  /* ——— Status de ideia — Corporis Conteúdo (conteudo.ideia.status) ——— */
+  --status-nova:        var(--color-bege);
+  --status-selecionada: var(--color-alaranjado);
+  --status-post:        var(--color-verde);    /* virou_post */
+  --status-descartada:  var(--color-texto-medio);
+
+  /* ——— Estado de slot do calendário — Corporis Conteúdo (conteudo.slot_calendario.status) ——— */
+  --slot-empty:     var(--color-cinza);
+  --slot-draft:     var(--color-texto-medio);
+  --slot-scheduled: var(--color-bege);
+  --slot-approved:  var(--color-alaranjado);
+  --slot-published: var(--color-verde);
+
+  /* ——— Gate de conformidade COFFITO/LGPD — Corporis Conteúdo (conteudo.checklist_conformidade.resultado) ——— */
+  --gate-ok:    var(--color-verde);
+  --gate-alert: var(--color-bege);
+  --gate-block: var(--color-ui-error);
+  --gate-h:     64px;
+}

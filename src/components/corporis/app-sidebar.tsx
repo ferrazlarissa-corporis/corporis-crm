@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  BarChart3,
+  BookmarkCheck,
   Bot,
   CalendarDays,
   ClipboardCheck,
@@ -13,6 +15,8 @@ import {
   Filter,
   Inbox,
   LayoutDashboard,
+  Lightbulb,
+  Newspaper,
   Package,
   Settings,
   ShoppingBag,
@@ -57,6 +61,17 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { href: "/cadastros/profissionais", label: "Profissionais",       icon: Stethoscope },
       { href: "/cadastros/salas",         label: "Salas",               icon: DoorOpen },
       { href: "/cadastros/contratos",     label: "Modelos de contrato", icon: FileText },
+    ],
+  },
+  {
+    title: "Conteúdo",
+    items: [
+      { href: "/conteudo", label: "Painel", icon: Newspaper },
+      { href: "/conteudo/ideias", label: "Ideias", icon: Lightbulb },
+      { href: "/conteudo/referencias", label: "Referências", icon: BookmarkCheck },
+      { href: "/conteudo/calendario", label: "Calendário", icon: CalendarDays },
+      { href: "/conteudo/metricas", label: "Métricas", icon: BarChart3 },
+      { href: "/conteudo/configuracoes", label: "Configurações", icon: Settings },
     ],
   },
 ];

@@ -495,21 +495,6 @@ function Financeiro({ ficha }: { ficha: FichaCliente }) {
 
 const ANAMNESE_ORIGEM_LABEL: Record<string, string> = { staff: "Preenchida pela recepção", publico: "Preenchida pelo cliente via link" };
 
-/** Achata um objeto (possivelmente aninhado) de `dados` jsonb em pares label/valor legíveis. */
-function flattenDados(v: unknown, prefix = ""): { label: string; valor: string }[] {
-  if (v === null || v === undefined || v === "") return [];
-  if (Array.isArray(v)) {
-    return v.flatMap((item, i) => flattenDados(item, prefix ? `${prefix} ${i + 1}` : `${i + 1}`));
-  }
-  if (typeof v === "object") {
-    return Object.entries(v as Record<string, unknown>).flatMap(([k, val]) => {
-      const label = k.replace(/_/g, " ");
-      return flattenDados(val, prefix ? `${prefix} · ${label}` : label);
-    });
-  }
-  return [{ label: prefix || "Valor", valor: String(v) }];
-}
-
 function Anamnese({ ficha }: { ficha: FichaCliente }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -541,7 +526,6 @@ function Anamnese({ ficha }: { ficha: FichaCliente }) {
   }
 
   const atual = ficha.anamnese;
-  const campos = atual ? flattenDados(atual.dados) : [];
 
   return (
     <div className="max-w-3xl">
@@ -559,35 +543,22 @@ function Anamnese({ ficha }: { ficha: FichaCliente }) {
             Nenhuma ficha de anamnese ainda. Gere um link e envie para o cliente preencher e assinar.
           </p>
         ) : (
-          <div className="mt-4 flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-md)] bg-accent-soft px-4 py-3">
-              <div className="text-xs text-text-secondary">
-                <p className="text-text-primary">
-                  Versão {atual.versao} · {ANAMNESE_ORIGEM_LABEL[atual.origem] ?? atual.origem}
-                </p>
-                <p>
-                  {atual.assinado_at ? `Assinada em ${fmt(atual.assinado_at, "dd/MM/yyyy 'às' HH:mm")}` : `Atualizada ${fmt(atual.updated_at)}`}
-                </p>
-              </div>
-              {atual.pdf_path ? (
-                <Button size="sm" variant="secondary" onClick={() => abrirPdf(atual.pdf_path!)} disabled={pending}>
-                  <FileText className="h-4 w-4" strokeWidth={1.5} />Ver PDF assinado
-                </Button>
-              ) : (
-                <span className="text-xs text-text-secondary">Ficha antiga, sem PDF assinado</span>
-              )}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-md)] bg-accent-soft px-4 py-3">
+            <div className="text-xs text-text-secondary">
+              <p className="text-text-primary">
+                Versão {atual.versao} · {ANAMNESE_ORIGEM_LABEL[atual.origem] ?? atual.origem}
+              </p>
+              <p>
+                {atual.assinado_at ? `Assinada em ${fmt(atual.assinado_at, "dd/MM/yyyy 'às' HH:mm")}` : `Atualizada ${fmt(atual.updated_at)}`}
+              </p>
             </div>
-
-            <div className="flex flex-col gap-2">
-              {campos.length === 0 ? (
-                <p className="text-sm text-text-secondary">Sem dados preenchidos.</p>
-              ) : campos.map((c, i) => (
-                <div key={i} className="grid grid-cols-[minmax(0,220px)_1fr] gap-3 border-b border-border py-2 text-sm last:border-0">
-                  <span className="capitalize text-text-secondary">{c.label}</span>
-                  <span className="whitespace-pre-wrap text-text-primary">{c.valor}</span>
-                </div>
-              ))}
-            </div>
+            {atual.pdf_path ? (
+              <Button size="sm" variant="secondary" onClick={() => abrirPdf(atual.pdf_path!)} disabled={pending}>
+                <FileText className="h-4 w-4" strokeWidth={1.5} />Ver PDF assinado
+              </Button>
+            ) : (
+              <span className="text-xs text-text-secondary">Ficha antiga, sem PDF assinado</span>
+            )}
           </div>
         )}
       </Card>

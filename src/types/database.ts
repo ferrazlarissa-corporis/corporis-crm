@@ -61,6 +61,31 @@ export type ActivityType =
 export type CampaignStatus = "rascunho" | "agendada" | "enviando" | "concluida";
 export type TemplateCategory = "lembrete" | "confirmacao" | "reativacao" | "boas_vindas";
 
+// ─── Corporis Conteúdo ──────────────────────────────────────────────────────────
+
+export type IdeiaOrigem = "manual" | "import" | "sugestao";
+export type IdeiaStatus = "nova" | "selecionada" | "virou_post" | "descartada";
+export type ReferenciaOrigem = "manual" | "descoberta";
+export type TipoTemplate = "capa" | "conteudo" | "citacao" | "cta";
+export type FormatoPost = "carrossel" | "estatico";
+export type StatusPost =
+  | "rascunho"
+  | "briefing"
+  | "gerando"
+  | "previa"
+  | "em_aprovacao"
+  | "aprovado"
+  | "reprovado"
+  | "agendado"
+  | "publicado"
+  | "erro"
+  | "arquivado";
+export type ProvedorGeracao = "gemini" | "openai";
+export type StatusGeracao = "fila" | "processando" | "pronto" | "erro";
+export type ResultadoConformidade = "ok" | "alerta" | "bloqueio";
+export type StatusSlot = "vazio" | "rascunho" | "agendado" | "aprovado" | "publicado";
+export type TipoFonteReferencia = "instagram" | "reels" | "tiktok" | "artigo" | "pinterest" | "perfil";
+
 // ─── Corporis OS — core ─────────────────────────────────────────────────────────
 
 export type PessoaTipo = "aluna" | "paciente" | "ambos";
@@ -930,6 +955,345 @@ export interface Database {
           at?: string;
         };
         Update: Partial<Database["clinico"]["Tables"]["acesso_log"]["Insert"]>;
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+  conteudo: {
+    Tables: {
+      pilar_editorial: {
+        Row: {
+          id: string;
+          nome: string;
+          descricao: string | null;
+          cor_token: string;
+          publico_alvo: string | null;
+          ativo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          descricao?: string | null;
+          cor_token: string;
+          publico_alvo?: string | null;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["pilar_editorial"]["Insert"]>;
+      };
+      marca_config: {
+        Row: {
+          id: string;
+          tom_voz: string;
+          tom_tags: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tom_voz?: string;
+          tom_tags?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["marca_config"]["Insert"]>;
+      };
+      template_slide: {
+        Row: {
+          id: string;
+          nome: string;
+          tipo: TipoTemplate;
+          layout_json: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          tipo: TipoTemplate;
+          layout_json?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["template_slide"]["Insert"]>;
+      };
+      ideia: {
+        Row: {
+          id: string;
+          titulo: string;
+          angulo: string | null;
+          pilar_id: string | null;
+          publico_alvo: string | null;
+          origem: IdeiaOrigem;
+          status: IdeiaStatus;
+          notas: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          titulo: string;
+          angulo?: string | null;
+          pilar_id?: string | null;
+          publico_alvo?: string | null;
+          origem?: IdeiaOrigem;
+          status?: IdeiaStatus;
+          notas?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["ideia"]["Insert"]>;
+      };
+      referencia: {
+        Row: {
+          id: string;
+          titulo: string;
+          url: string;
+          fonte: string | null;
+          tipo_fonte: TipoFonteReferencia | null;
+          print_url: string | null;
+          pilar_id: string | null;
+          por_que_funciona: string | null;
+          origem: ReferenciaOrigem;
+          tags: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          titulo?: string;
+          url: string;
+          fonte?: string | null;
+          tipo_fonte?: TipoFonteReferencia | null;
+          print_url?: string | null;
+          pilar_id?: string | null;
+          por_que_funciona?: string | null;
+          origem?: ReferenciaOrigem;
+          tags?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["referencia"]["Insert"]>;
+      };
+      post: {
+        Row: {
+          id: string;
+          titulo: string;
+          formato: FormatoPost;
+          pilar_id: string | null;
+          ideia_id: string | null;
+          briefing: string | null;
+          publico_alvo: string | null;
+          legenda: string | null;
+          hashtags: string[];
+          lgpd_usa_depoimento: boolean;
+          lgpd_consentimento_ref: string | null;
+          motivo_reprovacao: string | null;
+          status: StatusPost;
+          aprovado_por: string | null;
+          agendado_para: string | null;
+          publicado_em: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          titulo: string;
+          formato: FormatoPost;
+          pilar_id?: string | null;
+          ideia_id?: string | null;
+          briefing?: string | null;
+          publico_alvo?: string | null;
+          legenda?: string | null;
+          hashtags?: string[];
+          lgpd_usa_depoimento?: boolean;
+          lgpd_consentimento_ref?: string | null;
+          motivo_reprovacao?: string | null;
+          status?: StatusPost;
+          aprovado_por?: string | null;
+          agendado_para?: string | null;
+          publicado_em?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["post"]["Insert"]>;
+      };
+      post_slide: {
+        Row: {
+          id: string;
+          post_id: string;
+          ordem: number;
+          template_id: string | null;
+          texto_titulo: string | null;
+          texto_corpo: string | null;
+          fundo_geracao_id: string | null;
+          imagem_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          ordem: number;
+          template_id?: string | null;
+          texto_titulo?: string | null;
+          texto_corpo?: string | null;
+          fundo_geracao_id?: string | null;
+          imagem_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["post_slide"]["Insert"]>;
+      };
+      geracao_imagem: {
+        Row: {
+          id: string;
+          post_id: string;
+          slide_id: string | null;
+          prompt: string;
+          provedor: ProvedorGeracao;
+          modelo: string | null;
+          versao: number;
+          status: StatusGeracao;
+          imagem_url: string | null;
+          custo: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          slide_id?: string | null;
+          prompt: string;
+          provedor: ProvedorGeracao;
+          modelo?: string | null;
+          versao?: number;
+          status?: StatusGeracao;
+          imagem_url?: string | null;
+          custo?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["geracao_imagem"]["Insert"]>;
+      };
+      checklist_conformidade: {
+        Row: {
+          id: string;
+          post_id: string;
+          regra: string;
+          resultado: ResultadoConformidade;
+          detalhe: string | null;
+          consentimento_lgpd_ref: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          regra: string;
+          resultado: ResultadoConformidade;
+          detalhe?: string | null;
+          consentimento_lgpd_ref?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["checklist_conformidade"]["Insert"]>;
+      };
+      slot_calendario: {
+        Row: {
+          id: string;
+          data: string;
+          horario: string | null;
+          pilar_sugerido: string | null;
+          post_id: string | null;
+          status: StatusSlot;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          data: string;
+          horario?: string | null;
+          pilar_sugerido?: string | null;
+          post_id?: string | null;
+          status?: StatusSlot;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["slot_calendario"]["Insert"]>;
+      };
+      publicacao: {
+        Row: {
+          id: string;
+          post_id: string;
+          ig_media_id: string | null;
+          publicado_em: string | null;
+          canal: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          ig_media_id?: string | null;
+          publicado_em?: string | null;
+          canal?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["publicacao"]["Insert"]>;
+      };
+      metrica: {
+        Row: {
+          id: string;
+          post_id: string;
+          data: string;
+          alcance: number | null;
+          impressoes: number | null;
+          curtidas: number | null;
+          saves: number | null;
+          comentarios: number | null;
+          visitas_perfil: number | null;
+          cliques_link: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          data: string;
+          alcance?: number | null;
+          impressoes?: number | null;
+          curtidas?: number | null;
+          saves?: number | null;
+          comentarios?: number | null;
+          visitas_perfil?: number | null;
+          cliques_link?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["metrica"]["Insert"]>;
+      };
+      cta_lead: {
+        Row: {
+          id: string;
+          post_id: string;
+          short_code: string;
+          cliques: number;
+          pessoa_id: string | null;
+          virou_agendamento: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          short_code: string;
+          cliques?: number;
+          pessoa_id?: string | null;
+          virou_agendamento?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["conteudo"]["Tables"]["cta_lead"]["Insert"]>;
       };
     };
     Views: Record<string, never>;
