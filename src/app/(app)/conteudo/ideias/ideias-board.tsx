@@ -32,6 +32,8 @@ type Ideia = {
   origem: IdeiaOrigem;
   status: IdeiaStatus;
   pilar_id: string | null;
+  resumo: string | null;
+  imagem_preview_url: string | null;
 };
 
 const COLUMNS: { id: IdeiaStatus; label: string; dot: string }[] = [
@@ -107,53 +109,72 @@ function IdeiaCard({
 }) {
   return (
     <div
-      className="flex flex-col gap-2.5 rounded-[var(--radius-md)] border border-border bg-card p-3.5 shadow-[var(--shadow-sm)]"
+      className="flex flex-col gap-2.5 overflow-hidden rounded-[var(--radius-md)] border border-border bg-card shadow-[var(--shadow-sm)]"
       style={{ opacity: pending ? 0.6 : 1 }}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <span
-            className="h-1.5 w-1.5 shrink-0 rounded-full"
-            style={{ background: pilar ? `var(--${pilar.cor_token})` : "var(--color-cinza)" }}
-          />
-          <span className="truncate text-[12px] text-text-secondary">{pilar?.nome ?? "Sem pilar"}</span>
-        </div>
-        <OrigemBadge origem={ideia.origem} />
-      </div>
-
-      <p className="text-[14.5px] font-medium leading-snug text-text-primary">{ideia.titulo}</p>
-      {ideia.angulo ? <p className="type-body-sm italic text-text-secondary">{ideia.angulo}</p> : null}
-      {ideia.publico_alvo ? (
-        <span
-          className="w-fit rounded-[var(--radius-pill)] px-2.5 py-1 text-[11px]"
-          style={{ background: "var(--bg-2)", color: "var(--color-texto-medio)", fontFamily: "var(--font-body)" }}
-        >
-          {ideia.publico_alvo}
-        </span>
+      {ideia.imagem_preview_url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- miniatura de domínio externo, sem otimização Next necessária
+        <img
+          src={ideia.imagem_preview_url}
+          alt=""
+          className="h-28 w-full object-cover"
+          style={{ background: "var(--bg-2)" }}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
       ) : null}
 
-      <div className="mt-1 flex gap-2">
-        {ideia.status === "nova" && (
-          <>
-            <PillButton onClick={() => onAction("selecionar")} disabled={pending}>Selecionar</PillButton>
-            <PillButton primary onClick={() => onAction("transformar")} disabled={pending}>Transformar em post</PillButton>
-          </>
-        )}
-        {ideia.status === "selecionada" && (
-          <>
-            <PillButton onClick={() => onAction("descartar")} disabled={pending}>Descartar</PillButton>
-            <PillButton primary onClick={() => onAction("transformar")} disabled={pending}>Transformar em post</PillButton>
-          </>
-        )}
-        {ideia.status === "virou_post" && (
-          <PillButton disabled>Ver post no calendário (em breve)</PillButton>
-        )}
-        {ideia.status === "descartada" && (
-          <>
-            <PillButton onClick={() => onAction("restaurar")} disabled={pending}>Restaurar</PillButton>
-            <PillButton primary onClick={() => onAction("selecionar")} disabled={pending}>Selecionar</PillButton>
-          </>
-        )}
+      <div className="flex flex-col gap-2.5 p-3.5 pt-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ background: pilar ? `var(--${pilar.cor_token})` : "var(--color-cinza)" }}
+            />
+            <span className="truncate text-[12px] text-text-secondary">{pilar?.nome ?? "Sem pilar"}</span>
+          </div>
+          <OrigemBadge origem={ideia.origem} />
+        </div>
+
+        <p className="line-clamp-2 text-[14.5px] font-medium leading-snug text-text-primary">{ideia.titulo}</p>
+        {ideia.resumo ? (
+          <p className="type-body-sm line-clamp-2 text-text-secondary">{ideia.resumo}</p>
+        ) : ideia.angulo ? (
+          <p className="type-body-sm italic text-text-secondary">{ideia.angulo}</p>
+        ) : null}
+        {ideia.publico_alvo ? (
+          <span
+            className="w-fit rounded-[var(--radius-pill)] px-2.5 py-1 text-[11px]"
+            style={{ background: "var(--bg-2)", color: "var(--color-texto-medio)", fontFamily: "var(--font-body)" }}
+          >
+            {ideia.publico_alvo}
+          </span>
+        ) : null}
+
+        <div className="mt-1 flex gap-2">
+          {ideia.status === "nova" && (
+            <>
+              <PillButton onClick={() => onAction("selecionar")} disabled={pending}>Selecionar</PillButton>
+              <PillButton primary onClick={() => onAction("transformar")} disabled={pending}>Transformar em post</PillButton>
+            </>
+          )}
+          {ideia.status === "selecionada" && (
+            <>
+              <PillButton onClick={() => onAction("descartar")} disabled={pending}>Descartar</PillButton>
+              <PillButton primary onClick={() => onAction("transformar")} disabled={pending}>Transformar em post</PillButton>
+            </>
+          )}
+          {ideia.status === "virou_post" && (
+            <PillButton disabled>Ver post no calendário (em breve)</PillButton>
+          )}
+          {ideia.status === "descartada" && (
+            <>
+              <PillButton onClick={() => onAction("restaurar")} disabled={pending}>Restaurar</PillButton>
+              <PillButton primary onClick={() => onAction("selecionar")} disabled={pending}>Selecionar</PillButton>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -202,7 +223,7 @@ function NewIdeiaModal({ pilares, onClose, onCreated }: { pilares: Pilar[]; onCl
       setError(null);
       const result = await createIdeia({ titulo, angulo, publico_alvo, pilar_id });
       if (result.success) {
-        onCreated({ id: crypto.randomUUID(), titulo, angulo, publico_alvo, pilar_id, origem: "manual", status: "nova" });
+        onCreated({ id: crypto.randomUUID(), titulo, angulo, publico_alvo, pilar_id, origem: "manual", status: "nova", resumo: null, imagem_preview_url: null });
         onClose();
       } else {
         setError(result.error);
@@ -347,11 +368,8 @@ export function IdeiasBoard({ initialIdeias, pilares }: { initialIdeias: Ideia[]
     startPasteTransition(async () => {
       const result = await createIdeiaFromLink({ url: pasteValue.trim() });
       if (result.success) {
-        setPasteValue("");
-        setIdeias((prev) => [
-          { id: crypto.randomUUID(), titulo: pasteValue.trim().slice(0, 80), angulo: null, publico_alvo: null, pilar_id: null, origem: "import", status: "nova" },
-          ...prev,
-        ]);
+        // busca de prévia (og:title/image/resumo) roda no server; reload traz o card já com a miniatura.
+        window.location.reload();
       }
     });
   }

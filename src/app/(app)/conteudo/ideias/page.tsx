@@ -10,7 +10,7 @@ export default async function IdeiasPage() {
     supabase
       .schema("conteudo")
       .from("ideia")
-      .select("id, titulo, angulo, publico_alvo, origem, status, pilar_id")
+      .select("id, titulo, angulo, publico_alvo, origem, status, pilar_id, resumo, imagem_preview_url")
       .order("created_at", { ascending: false }),
     supabase
       .schema("conteudo")

@@ -6,6 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_MODEL_ID } from "@/lib/ai/model";
 import { generateShortCode } from "@/lib/short-code";
+import { fetchLinkPreview } from "@/lib/conteudo/link-preview";
 import type { IdeiaOrigem, IdeiaStatus } from "@/types/database";
 
 export type ConfigResult = { success: true } | { success: false; error: string };
@@ -75,11 +76,15 @@ export async function createIdeiaFromLink(input: z.infer<typeof createFromLinkSc
   if (!auth.success) return { success: false, error: auth.error };
 
   const raw = parsed.data.url;
-  const titulo = raw.length > 80 ? `${raw.slice(0, 77)}…` : raw;
+  const isUrl = /^https?:\/\//i.test(raw);
+  const preview = isUrl ? await fetchLinkPreview(raw) : { titulo: null, resumo: null, imagemUrl: null };
+  const titulo = preview.titulo ?? (raw.length > 80 ? `${raw.slice(0, 77)}…` : raw);
 
   const { error } = await auth.supabase.schema("conteudo").from("ideia").insert({
     titulo,
     notas: raw,
+    resumo: preview.resumo,
+    imagem_preview_url: preview.imagemUrl,
     origem: "import" satisfies IdeiaOrigem,
     created_by: auth.userId,
   });
