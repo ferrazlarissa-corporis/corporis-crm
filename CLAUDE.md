@@ -533,4 +533,14 @@ Ordem sugerida de evolução:
 
 ---
 
+## 19. Contrato do cliente (Corporis OS)
+
+- Modelo (`vendas.contrato_modelo.corpo`) usa campos `{{cliente}}`, `{{cpf}}`, `{{plano}}`, `{{valor}}`, `{{vigencia}}`… — lista canônica em `src/lib/contrato/merge.ts`. Campo conhecido sem dado vira linha em branco; desconhecido fica como escrito.
+- `gerarCorpoContrato` (`src/lib/contrato/gerar.ts`) mescla e grava `corpo_gerado` ao gerar o rascunho (aba Contrato e `criarVenda`). Regerável enquanto `rascunho`.
+- Fluxo manual (fase 1): rascunho → entregue (`enviado`) → assinado, com anexo da via assinada no bucket `clinico` (`<pessoa>/contratos/…`). `via_assinada_url` guarda caminho do bucket **ou** URL http (ZapSign).
+- Exportação: rota `/contrato/[contratoId]` (grupo `(print)`, sem sidebar, A4) + `window.print()` → "Salvar como PDF".
+- Fase 2 (pendente): integração ZapSign (`zapsign_doc_id`, webhook de assinado, reenviar/revogar).
+
+---
+
 *Corporis CRM · CLAUDE.md v2.0 · Documento vivo — versionar junto com o código.*

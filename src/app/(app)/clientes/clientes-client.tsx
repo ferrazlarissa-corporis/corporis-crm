@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Users, UserCheck, AlertTriangle, Plus } from "lucide-react";
+import { Users, UserCheck, AlertTriangle, Plus, PauseCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,11 @@ import { StatCard } from "@/components/corporis/stat-card";
 import { PilarBadge } from "@/components/corporis/taxonomy-badges";
 import { cn } from "@/lib/utils";
 import { PERIODICIDADE_LABEL } from "@/lib/vendas-labels";
-import { PESSOA_STATUS_LABEL } from "@/lib/clientes-labels";
+import { CLIENTE_STATUS_LABEL } from "@/lib/clientes-labels";
 import type { ClienteListItem, ClienteStats } from "@/lib/queries/clientes";
 import type { Pilar } from "@/types/database";
 
-type StatusFilter = "todos" | "cliente_ativo" | "inativo";
+type StatusFilter = "todos" | "cliente_ativo" | "pausado" | "inativo";
 const DEFAULT_STATUS_FILTER: StatusFilter = "cliente_ativo";
 
 function initials(nome: string) {
@@ -61,8 +61,9 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
           </Button>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-4">
+        <div className="mt-6 grid grid-cols-4 gap-4">
           <StatCard label="Clientes ativos" value={stats.ativos} hint="em acompanhamento" icon={<UserCheck className="h-5 w-5" strokeWidth={1.5} />} />
+          <StatCard label="Pausados" value={stats.pausados} hint="plano congelado" icon={<PauseCircle className="h-5 w-5" strokeWidth={1.5} />} />
           <StatCard label="Inativos" value={stats.inativos} hint="sem plano vigente" icon={<Users className="h-5 w-5" strokeWidth={1.5} />} />
           <StatCard label="Com pendência" value={stats.inadimplentes} hint="lançamentos em atraso" icon={<AlertTriangle className="h-5 w-5" strokeWidth={1.5} />} />
         </div>
@@ -78,11 +79,11 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
           <option value="acupuntura">Acupuntura</option>
         </select>
         <div className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">
-          {(["todos", "cliente_ativo", "inativo"] as StatusFilter[]).map((s) => (
+          {(["todos", "cliente_ativo", "pausado", "inativo"] as StatusFilter[]).map((s) => (
             <button key={s} type="button" onClick={() => setStatus(s)}
               className={cn("rounded-[var(--radius-pill)] px-3 py-1 text-xs font-medium transition-colors",
                 status === s ? "bg-accent-soft text-text-primary" : "text-text-secondary hover:text-text-primary")}>
-              {s === "todos" ? "Todos" : PESSOA_STATUS_LABEL[s]}
+              {s === "todos" ? "Todos" : CLIENTE_STATUS_LABEL[s]}
             </button>
           ))}
         </div>
@@ -173,7 +174,7 @@ export function ClientesClient({ clientes, stats }: { clientes: ClienteListItem[
                     <td className="px-4 py-3">
                       <span className={cn("rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-medium",
                         c.status === "cliente_ativo" ? "bg-[var(--color-verde)]/15 text-[var(--color-verde)]" : "bg-accent-soft text-text-secondary")}>
-                        {PESSOA_STATUS_LABEL[c.status]}
+                        {CLIENTE_STATUS_LABEL[c.status]}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-text-secondary">

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const { data: matriculas } = await supabase
     .schema("vendas").from("matricula")
-    .select("id, pessoa_id, inicio, dia_vencimento, tipo, periodicidade, valor, fim, cobranca_modo, plano:plano_id(nome)")
+    .select("id, pessoa_id, inicio, dia_vencimento, tipo, periodicidade, valor, fim, cobranca_modo, dias_pausados, plano:plano_id(nome)")
     .eq("status", "ativa");
 
   let created = 0;
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Meses 1..periodicidade-1 geram parcelas futuras; ao completar a vigência, conclui.
     const inicio = new Date(`${m.inicio}T00:00:00`);
+    inicio.setDate(inicio.getDate() + (m.dias_pausados ?? 0)); // pausa estende a vigência
     const mesesDesdeInicio = (ano - inicio.getFullYear()) * 12 + (mes - inicio.getMonth());
     if (mesesDesdeInicio < 0) continue;
     const periodo = PERIODICIDADE_MESES[periodicidade];

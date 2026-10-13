@@ -11,6 +11,7 @@ function firstError(error: z.ZodError): string {
 }
 
 const PILAR = z.enum(["pilates", "fisio_pelvica", "acupuntura"]);
+const ORIGEM = z.enum(["indicacao", "instagram", "google", "parceiro", "whatsapp", "outro"]);
 
 const optionalText = (max: number) => z.string().trim().max(max).optional().or(z.literal("")).transform((v) => v || null);
 
@@ -23,6 +24,8 @@ const clienteSchema = z.object({
   genero: optionalText(30),
   profissao: optionalText(120),
   pilar_principal: PILAR.nullable().default(null),
+  origem: ORIGEM.nullable().default(null),
+  origem_detalhe: optionalText(160).optional(),
   // endereço
   cep: optionalText(15),
   logradouro: optionalText(160),
@@ -37,6 +40,11 @@ const clienteSchema = z.object({
   // consentimento
   consentimento: z.boolean().default(false),
 });
+
+/** O detalhe (quem indicou / parceiro) só vale para essas duas origens. */
+function detalheDaOrigem(origem: string | null, detalhe: string | null | undefined): string | null {
+  return (origem === "indicacao" || origem === "parceiro") && detalhe ? detalhe : null;
+}
 
 export type ClienteInput = z.infer<typeof clienteSchema>;
 
@@ -60,6 +68,8 @@ export async function createCliente(input: ClienteInput): Promise<ClienteResult>
       genero: d.genero,
       profissao: d.profissao,
       pilar_principal: d.pilar_principal,
+      origem: d.origem,
+      origem_detalhe: detalheDaOrigem(d.origem, d.origem_detalhe),
       status: "cliente_ativo",
       responsavel_id: auth.profile.id,
       consentimento_lgpd_at: d.consentimento ? new Date().toISOString() : null,
@@ -100,6 +110,16 @@ const updateSchema = z.object({
   genero: optionalText(30),
   profissao: optionalText(120),
   pilar_principal: PILAR.nullable().default(null),
+  origem: ORIGEM.nullable().default(null),
+  origem_detalhe: optionalText(160).optional(),
+  // endereço (omitido = não mexe no endereço)
+  cep: optionalText(15).optional(),
+  logradouro: optionalText(160).optional(),
+  numero: optionalText(20).optional(),
+  complemento: optionalText(120).optional(),
+  bairro: optionalText(120).optional(),
+  cidade: optionalText(120).optional(),
+  uf: optionalText(2).optional(),
 });
 
 export type ClienteUpdateInput = z.infer<typeof updateSchema>;
@@ -112,8 +132,23 @@ export async function updateCliente(id: string, input: ClienteUpdateInput): Prom
   const auth = await requireActiveStaff();
   if (!auth.success) return { success: false, error: auth.error };
 
-  const { error } = await auth.supabase.schema("core").from("pessoa").update(parsed.data).eq("id", id);
+  const { cep, logradouro, numero, complemento, bairro, cidade, uf, origem_detalhe, ...pessoaData } = parsed.data;
+  const { error } = await auth.supabase.schema("core").from("pessoa")
+    .update({ ...pessoaData, origem_detalhe: detalheDaOrigem(pessoaData.origem, origem_detalhe) }).eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  if ([cep, logradouro, numero, complemento, bairro, cidade, uf].some((v) => v !== undefined)) {
+    const endereco = {
+      cep: cep ?? null, logradouro: logradouro ?? null, numero: numero ?? null, complemento: complemento ?? null,
+      bairro: bairro ?? null, cidade: cidade ?? null, uf: uf ? uf.toUpperCase() : null,
+    };
+    const { data: atual } = await auth.supabase.schema("core").from("endereco")
+      .select("id").eq("pessoa_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { error: endError } = atual
+      ? await auth.supabase.schema("core").from("endereco").update(endereco).eq("id", atual.id)
+      : await auth.supabase.schema("core").from("endereco").insert({ pessoa_id: id, ...endereco });
+    if (endError) return { success: false, error: endError.message };
+  }
 
   revalidatePath(`/clientes/${id}`);
   revalidatePath("/clientes");

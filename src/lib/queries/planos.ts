@@ -82,7 +82,8 @@ export function getPlanoStats(planos: PlanoRow[]): PlanoStats {
     if (p.tipo === "fixo" && p.precos.length > 0) {
       return p.precos.filter((preco) => preco.ativo).map((preco) => preco.valor_total / meses);
     }
-    return [p.valor / meses];
+    // Pacote por sessão não tem valor de referência (valor 0): fora do ticket médio.
+    return p.valor > 0 ? [p.valor / meses] : [];
   });
   const ticketMedio = mensais.length ? mensais.reduce((a, b) => a + b, 0) / mensais.length : 0;
   return { total: planos.length, fixosAtivos, ticketMedio };

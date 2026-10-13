@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Pencil, CalendarPlus, FileSignature, MessageCircle, Phone, Mail, MapPin,
-  CheckCircle2, Circle, Upload, Download, Link2, Copy, FileText,
+  CheckCircle2, Circle, Upload, Download, Link2, Copy, FileText, Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,14 +19,15 @@ import { PilarBadge, colorTokenForPlano, taxonomyAccentStyle } from "@/component
 import { cn } from "@/lib/utils";
 import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
 import { PERIODICIDADE_LABEL, PLANO_TIPO_LABEL, formatBRL, MATRICULA_STATUS_LABEL } from "@/lib/vendas-labels";
-import { PESSOA_STATUS_LABEL } from "@/lib/clientes-labels";
+import { PESSOA_STATUS_LABEL, PESSOA_ORIGEM_OPTIONS, ORIGEM_DETALHE_LABEL } from "@/lib/clientes-labels";
 import type { FichaCliente } from "@/lib/queries/ficha-cliente";
-import type { Pilar, LancamentoStatus, ContratoStatus, DocumentoTipo } from "@/types/database";
+import type { Pilar, PessoaOrigem, LancamentoStatus, ContratoStatus, DocumentoTipo } from "@/types/database";
 import { updateCliente, type ClienteUpdateInput } from "../actions";
 import {
   marcarLancamentoRecebido, adicionarEvolucao, uploadDocumento,
-  getDocumentoUrl, gerarContrato, cancelarMatricula,
+  getDocumentoUrl, gerarContrato, cancelarMatricula, pausarMatricula, retomarMatricula,
   gerarLinkAnamnese, getAnamnesePdfUrl,
+  regenerarContrato, atualizarStatusContrato, anexarViaAssinada, getViaAssinadaUrl,
 } from "./ficha-actions";
 
 type Tab = "visao" | "dados" | "plano" | "financeiro" | "anamnese" | "prontuario" | "documentos" | "contrato";
@@ -79,8 +80,8 @@ export function FichaClienteClient({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-[28px] leading-none text-text-primary">{pessoa.nome}</h1>
-              <Badge tone={pessoa.status === "cliente_ativo" ? "verde" : "neutro"}>
-                {PESSOA_STATUS_LABEL[pessoa.status]}
+              <Badge tone={pessoa.status === "cliente_ativo" && ficha.matricula?.status !== "pausada" ? "verde" : "neutro"}>
+                {ficha.matricula?.status === "pausada" ? "Pausado" : PESSOA_STATUS_LABEL[pessoa.status]}
               </Badge>
               {pessoa.pilar_principal ? <PilarBadge pilar={pessoa.pilar_principal} /> : null}
             </div>
@@ -291,6 +292,15 @@ function DadosPessoais({ ficha }: { ficha: FichaCliente }) {
     genero: pessoa.genero,
     profissao: pessoa.profissao,
     pilar_principal: pessoa.pilar_principal,
+    origem: pessoa.origem,
+    origem_detalhe: pessoa.origem_detalhe ?? "",
+    cep: endereco?.cep ?? "",
+    logradouro: endereco?.logradouro ?? "",
+    numero: endereco?.numero ?? "",
+    complemento: endereco?.complemento ?? "",
+    bairro: endereco?.bairro ?? "",
+    cidade: endereco?.cidade ?? "",
+    uf: endereco?.uf ?? "",
   });
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -316,6 +326,17 @@ function DadosPessoais({ ficha }: { ficha: FichaCliente }) {
           <Field label="E-mail"><Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
           <Field label="Gênero"><Input value={form.genero ?? ""} onChange={(e) => setForm({ ...form, genero: e.target.value })} /></Field>
           <Field label="Profissão"><Input value={form.profissao ?? ""} onChange={(e) => setForm({ ...form, profissao: e.target.value })} /></Field>
+          <Field label="Onde nos conheceu?">
+            <Select value={form.origem ?? ""} onChange={(e) => setForm({ ...form, origem: (e.target.value || null) as PessoaOrigem | null })}>
+              <option value="">Não informado</option>
+              {PESSOA_ORIGEM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </Select>
+          </Field>
+          {form.origem && ORIGEM_DETALHE_LABEL[form.origem] ? (
+            <Field label={ORIGEM_DETALHE_LABEL[form.origem]!}>
+              <Input value={form.origem_detalhe ?? ""} onChange={(e) => setForm({ ...form, origem_detalhe: e.target.value })} placeholder="Nome" />
+            </Field>
+          ) : null}
           <Field label="Pilar principal">
             <Select value={form.pilar_principal ?? ""} onChange={(e) => setForm({ ...form, pilar_principal: (e.target.value || null) as Pilar | null })}>
               <option value="">A definir</option>
@@ -324,15 +345,23 @@ function DadosPessoais({ ficha }: { ficha: FichaCliente }) {
           </Field>
         </div>
 
-        {endereco ? (
-          <div className="mt-6 border-t border-border pt-4">
-            <SectionTitle>Endereço</SectionTitle>
-            <p className="mt-2 text-sm text-text-secondary">
-              {[endereco.logradouro, endereco.numero, endereco.bairro, endereco.cidade, endereco.uf].filter(Boolean).join(", ") || "Não informado"}
-              {endereco.cep ? ` · CEP ${endereco.cep}` : ""}
-            </p>
+        <div className="mt-6 border-t border-border pt-4">
+          <SectionTitle>Endereço</SectionTitle>
+          <p className="mt-1 text-xs text-text-secondary">Usado nos contratos. Confira CEP e número antes de imprimir.</p>
+          <div className="mt-3 grid grid-cols-[160px_1fr] gap-4">
+            <Field label="CEP"><Input value={form.cep ?? ""} onChange={(e) => setForm({ ...form, cep: e.target.value })} placeholder="89820-000" /></Field>
+            <Field label="Logradouro"><Input value={form.logradouro ?? ""} onChange={(e) => setForm({ ...form, logradouro: e.target.value })} placeholder="Rua / Av." /></Field>
           </div>
-        ) : null}
+          <div className="mt-4 grid grid-cols-[120px_1fr] gap-4">
+            <Field label="Número"><Input value={form.numero ?? ""} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></Field>
+            <Field label="Complemento"><Input value={form.complemento ?? ""} onChange={(e) => setForm({ ...form, complemento: e.target.value })} placeholder="Apto, bloco…" /></Field>
+          </div>
+          <div className="mt-4 grid grid-cols-[1fr_1fr_80px] gap-4">
+            <Field label="Bairro"><Input value={form.bairro ?? ""} onChange={(e) => setForm({ ...form, bairro: e.target.value })} /></Field>
+            <Field label="Cidade"><Input value={form.cidade ?? ""} onChange={(e) => setForm({ ...form, cidade: e.target.value })} /></Field>
+            <Field label="UF"><Input value={form.uf ?? ""} maxLength={2} onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase().slice(0, 2) })} /></Field>
+          </div>
+        </div>
 
         <div className="mt-6 flex items-center justify-end gap-3 border-t border-border pt-4">
           {msg ? <span className="text-xs text-text-secondary">{msg}</span> : null}
@@ -356,6 +385,16 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
     if (!confirm("Cancelar o plano ativo desta cliente?")) return;
     startTransition(async () => {
       await cancelarMatricula(m.id, ficha.pessoa.id);
+      router.refresh();
+    });
+  }
+
+  function alternarPausa() {
+    if (!m) return;
+    const pausada = m.status === "pausada";
+    if (!confirm(pausada ? "Retomar o plano? O término será estendido pelos dias pausados." : "Pausar o plano? O prazo fica congelado até retomar.")) return;
+    startTransition(async () => {
+      await (pausada ? retomarMatricula : pausarMatricula)(m.id, ficha.pessoa.id);
       router.refresh();
     });
   }
@@ -396,7 +435,7 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
 
         <div className="mt-5 grid grid-cols-3 gap-4">
           <Mini label="Início" value={fmt(m.inicio)} />
-          <Mini label="Término" value={fmt(m.fim)} />
+          <Mini label="Término" value={m.status === "pausada" ? `${fmt(m.fim)} · congelado desde ${fmt(m.pausada_em)}` : fmt(m.fim)} />
           <Mini label="Vencimento" value={m.dia_vencimento ? `dia ${m.dia_vencimento}` : "—"} />
           <Mini label="Frequência" value={m.sessoes_semana ? `${m.sessoes_semana}x/semana` : "—"} />
           <Mini label="Pagamento" value={m.forma_pagamento ?? "—"} />
@@ -406,6 +445,9 @@ function PlanoAtivo({ ficha }: { ficha: FichaCliente }) {
         <div className="mt-6 flex gap-3 border-t border-border pt-4">
           <Button size="sm" asChild>
             <Link href={`/clientes/${ficha.pessoa.id}/nova-venda`}>Trocar / renovar</Link>
+          </Button>
+          <Button size="sm" variant="secondary" onClick={alternarPausa} disabled={pending}>
+            {m.status === "pausada" ? "Retomar plano" : "Pausar plano"}
           </Button>
           <Button size="sm" variant="ghost" onClick={cancelar} disabled={pending}>
             {pending ? "Cancelando…" : "Cancelar plano"}
@@ -732,7 +774,13 @@ const CONTRATO_STYLE: Record<ContratoStatus, string> = {
   assinado: "bg-[var(--color-verde)]/15 text-[var(--color-verde)]",
   cancelado: "bg-error/10 text-error",
 };
-const CONTRATO_LABEL: Record<ContratoStatus, string> = { rascunho: "Rascunho", enviado: "Enviado", assinado: "Assinado", cancelado: "Cancelado" };
+const CONTRATO_LABEL: Record<ContratoStatus, string> = { rascunho: "Rascunho", enviado: "Entregue", assinado: "Assinado", cancelado: "Cancelado" };
+
+const CONTRATO_ETAPAS: { status: Exclude<ContratoStatus, "cancelado">; label: string }[] = [
+  { status: "rascunho", label: "Rascunho" },
+  { status: "enviado", label: "Entregue para assinatura" },
+  { status: "assinado", label: "Assinado" },
+];
 
 function Contrato({ ficha, modelos }: { ficha: FichaCliente; modelos: { id: string; nome: string }[] }) {
   const router = useRouter();
@@ -769,30 +817,151 @@ function Contrato({ ficha, modelos }: { ficha: FichaCliente; modelos: { id: stri
             </Button>
           </div>
         )}
+        <p className="mt-3 text-xs text-text-secondary">
+          Os campos do modelo são preenchidos com os dados da cliente, do plano e da matrícula. Revise antes de imprimir.
+        </p>
         {error ? <p className="mt-2 text-xs text-error">{error}</p> : null}
       </Card>
 
-      <div className="mt-4 flex flex-col gap-2">
+      <div className="mt-4 flex flex-col gap-3">
         {ficha.contratos.length === 0 ? (
           <p className="py-8 text-center text-sm text-text-secondary">Nenhum contrato gerado.</p>
-        ) : ficha.contratos.map((c) => (
-          <Card key={c.id} className="flex items-center justify-between p-4">
-            <div>
-              <p className="text-sm text-text-primary">{c.modelo?.nome ?? "Contrato"}</p>
-              <p className="text-xs text-text-secondary">Criado {fmt(c.created_at)}{c.assinado_at ? ` · assinado ${fmt(c.assinado_at)}` : ""}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              {c.via_assinada_url ? (
-                <a href={c.via_assinada_url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary hover:underline">Ver via</a>
-              ) : null}
-              <span className={cn("rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-medium", CONTRATO_STYLE[c.status])}>
-                {CONTRATO_LABEL[c.status]}
-              </span>
-            </div>
-          </Card>
-        ))}
+        ) : ficha.contratos.map((c) => <ContratoCard key={c.id} contrato={c} pessoaId={ficha.pessoa.id} />)}
       </div>
     </div>
+  );
+}
+
+function ContratoCard({ contrato: c, pessoaId }: { contrato: FichaCliente["contratos"][number]; pessoaId: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const cancelado = c.status === "cancelado";
+  const etapaAtual = CONTRATO_ETAPAS.findIndex((e) => e.status === c.status);
+  const datas: Record<string, string | null> = { rascunho: c.created_at, enviado: c.enviado_at, assinado: c.assinado_at };
+
+  function run(fn: () => Promise<{ success: boolean; error?: string }>) {
+    setError(null);
+    startTransition(async () => {
+      const r = await fn();
+      if (!r.success) { setError(r.error ?? "Não foi possível concluir."); return; }
+      router.refresh();
+    });
+  }
+
+  function cancelar() {
+    if (!window.confirm("Cancelar este contrato? Essa ação não pode ser desfeita.")) return;
+    run(() => atualizarStatusContrato(c.id, pessoaId, "cancelado"));
+  }
+
+  function anexar(file: File | undefined) {
+    if (!file) return;
+    const fd = new FormData();
+    fd.set("contrato_id", c.id);
+    fd.set("pessoa_id", pessoaId);
+    fd.set("file", file);
+    run(() => anexarViaAssinada(fd));
+  }
+
+  function verVia() {
+    startTransition(async () => {
+      const r = await getViaAssinadaUrl(c.id, pessoaId);
+      if (r.success) window.open(r.url, "_blank", "noopener");
+      else setError(r.error);
+    });
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm text-text-primary">{c.modelo?.nome ?? "Contrato"}</p>
+          <p className="text-xs text-text-secondary">Criado em {fmt(c.created_at)}</p>
+        </div>
+        <span className={cn("rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-medium", CONTRATO_STYLE[c.status])}>
+          {CONTRATO_LABEL[c.status]}
+        </span>
+      </div>
+
+      {!cancelado ? (
+        <ol className="mt-4 flex items-center gap-2">
+          {CONTRATO_ETAPAS.map((e, i) => {
+            const feito = i <= etapaAtual;
+            return (
+              <li key={e.status} className="flex flex-1 items-center gap-2">
+                {feito ? <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.5} /> : <Circle className="h-4 w-4 shrink-0 text-text-secondary" strokeWidth={1.5} />}
+                <div className="min-w-0">
+                  <p className={cn("text-xs", feito ? "text-text-primary" : "text-text-secondary")}>{e.label}</p>
+                  {datas[e.status] ? <p className="text-[11px] text-text-secondary">{fmt(datas[e.status], "dd/MM · HH:mm")}</p> : null}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
+
+      {c.corpo_gerado ? (
+        <details className="mt-4 rounded-[var(--radius-md)] border border-border bg-background">
+          <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-text-secondary">Pré-visualizar texto</summary>
+          <div className="max-h-80 overflow-y-auto whitespace-pre-wrap border-t border-border px-4 py-3 text-xs leading-relaxed text-text-primary">
+            {c.corpo_gerado}
+          </div>
+        </details>
+      ) : (
+        <p className="mt-4 text-xs text-text-secondary">Texto ainda não gerado para este contrato.</p>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="secondary" onClick={() => window.open(`/contrato/${c.id}`, "_blank", "noopener")} disabled={pending || !c.modelo}>
+          <Printer className="h-4 w-4" strokeWidth={1.5} />Imprimir / PDF
+        </Button>
+
+        {c.status === "rascunho" ? (
+          <>
+            <Button size="sm" variant="secondary" onClick={() => run(() => regenerarContrato(c.id, pessoaId))} disabled={pending}>
+              Atualizar com dados atuais
+            </Button>
+            <Button size="sm" onClick={() => run(() => atualizarStatusContrato(c.id, pessoaId, "enviado"))} disabled={pending}>
+              Marcar como entregue
+            </Button>
+          </>
+        ) : null}
+
+        {c.status === "enviado" ? (
+          <>
+            <label className={cn("inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] bg-primary px-3 text-xs font-medium text-[var(--color-fundo-claro)]", pending && "pointer-events-none opacity-60")}>
+              <Upload className="h-4 w-4" strokeWidth={1.5} />Anexar via assinada
+              <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only"
+                onChange={(e) => { anexar(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+            <Button size="sm" variant="secondary" onClick={() => run(() => atualizarStatusContrato(c.id, pessoaId, "assinado"))} disabled={pending}>
+              Marcar como assinado
+            </Button>
+          </>
+        ) : null}
+
+        {c.via_assinada_url ? (
+          <Button size="sm" variant="secondary" onClick={verVia} disabled={pending}>
+            <FileText className="h-4 w-4" strokeWidth={1.5} />Ver via assinada
+          </Button>
+        ) : null}
+
+        {c.status === "assinado" && !c.via_assinada_url ? (
+          <label className={cn("inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] border border-border px-3 text-xs font-medium text-text-primary", pending && "pointer-events-none opacity-60")}>
+            <Upload className="h-4 w-4" strokeWidth={1.5} />Anexar via assinada
+            <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only"
+              onChange={(e) => { anexar(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+        ) : null}
+
+        {c.status === "rascunho" || c.status === "enviado" ? (
+          <Button size="sm" variant="ghost" onClick={cancelar} disabled={pending} className="ml-auto text-error">
+            Cancelar contrato
+          </Button>
+        ) : null}
+      </div>
+      {error ? <p className="mt-2 text-xs text-error">{error}</p> : null}
+    </Card>
   );
 }
 

@@ -43,6 +43,7 @@ const ORIGIN_ICONS: Record<LeadOrigin, React.FC<React.SVGProps<SVGSVGElement>>> 
   instagram: InstagramGlyph,
   indicacao: UsersRound,
   google: Search,
+  parceiro: UsersRound,
   outro: Globe,
 };
 

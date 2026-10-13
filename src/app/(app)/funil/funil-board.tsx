@@ -39,7 +39,7 @@ import type { AppointmentType, LeadStage } from "@/types/database";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Interest = "pilates" | "pelvica" | "acupuntura";
-type Origin = "whatsapp" | "instagram" | "indicacao" | "google" | "site";
+type Origin = "whatsapp" | "instagram" | "indicacao" | "google" | "parceiro" | "site";
 type LastKind = "msg_ia" | "msg_hum" | "call" | "booked" | "no_show";
 type StageId =
   | "novo"
@@ -111,6 +111,7 @@ const ORIGIN_LABEL: Record<Origin, string> = {
   instagram: "Instagram",
   indicacao: "Indicação",
   google:    "Google",
+  parceiro:  "Parceiro",
   site:      "Site",
 };
 
@@ -259,6 +260,7 @@ function OriginIcon({ origin }: { origin: Origin }) {
     case "instagram": return <Aperture className={cls} style={style} />;
     case "indicacao": return <Users className={cls} style={style} />;
     case "google":    return <Search className={cls} style={style} />;
+    case "parceiro":  return <Users className={cls} style={style} />;
     case "site":      return <Globe className={cls} style={style} />;
   }
 }
@@ -707,6 +709,7 @@ function NewLeadModal({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [origemSel, setOrigemSel] = useState("whatsapp");
   const requiresScheduling = stageRequiresAppointment(initialStage);
   const creationStage: StageId = requiresScheduling ? "qual" : initialStage;
   const initialStageName = STAGES.find((stage) => stage.id === initialStage)?.name ?? "Novo";
@@ -792,17 +795,32 @@ function NewLeadModal({
           {/* Origem + Interesse */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
             {[
-              { name: "origem", label: "Origem", options: [["whatsapp","WhatsApp"],["instagram","Instagram"],["indicacao","Indicação"],["google","Google"],["outro","Outro"]] },
+              { name: "origem", label: "Origem", options: [["whatsapp","WhatsApp"],["instagram","Instagram"],["indicacao","Indicação"],["google","Google"],["parceiro","Parceiro"],["outro","Outro"]] },
               { name: "interesse", label: "Interesse", options: [["indefinido","Indefinido"],["pilates","Pilates"],["fisio_pelvica","Fisio pélvica"],["acupuntura","Acupuntura"]] },
             ].map(({ name, label, options }) => (
               <div key={name}>
                 <label style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: "6px" }}>{label}</label>
-                <select name={name} defaultValue={options[0][0]} style={{ width: "100%", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none" }}>
+                <select name={name} defaultValue={options[0][0]} onChange={name === "origem" ? (e) => setOrigemSel(e.target.value) : undefined} style={{ width: "100%", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none" }}>
                   {options.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                 </select>
               </div>
             ))}
           </div>
+
+          {(origemSel === "indicacao" || origemSel === "parceiro") && (
+            <div>
+              <label style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.4px", textTransform: "uppercase", color: "var(--color-texto-medio)", display: "block", marginBottom: "6px" }}>
+                {origemSel === "indicacao" ? "Quem indicou?" : "Qual parceiro?"}
+              </label>
+              <input
+                name="origem_detalhe"
+                type="text"
+                maxLength={160}
+                placeholder="Nome"
+                style={{ width: "100%", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "10px 12px", fontFamily: "var(--font-body)", fontSize: "14px", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+          )}
 
           {error && <p style={{ fontFamily: "var(--font-body)", fontSize: "13px", color: "var(--color-ui-error)" }}>{error}</p>}
 

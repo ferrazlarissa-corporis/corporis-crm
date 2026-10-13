@@ -1,12 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import type { PessoaStatus, Pilar, Periodicidade } from "@/types/database";
 
+export type ClienteListStatus = PessoaStatus | "pausado";
+
 export type ClienteFinanceiroStatus = "sem_plano" | "em_dia" | "atrasado";
 
 export type ClienteListItem = {
   id: string;
   nome: string;
-  status: PessoaStatus;
+  status: ClienteListStatus;
   pilar_principal: Pilar | null;
   created_at: string;
   planoNome: string | null;
@@ -21,6 +23,7 @@ export type ClienteListItem = {
 
 export type ClienteStats = {
   ativos: number;
+  pausados: number;
   inativos: number;
   inadimplentes: number;
 };
@@ -36,8 +39,8 @@ export async function getClientes(): Promise<ClienteListItem[]> {
   const [pessoasRes, matriculasRes, lancamentosRes] = await Promise.all([
     supabase.schema("core").from("pessoa").select("id, nome, cpf, nascimento, telefone, email, genero, status, pilar_principal, created_at")
       .is("archived_at", null).neq("status", "lead").order("nome", { ascending: true }),
-    supabase.schema("vendas").from("matricula").select("pessoa_id, periodicidade, sessoes_semana, plano:plano_id(nome)")
-      .eq("status", "ativa"),
+    supabase.schema("vendas").from("matricula").select("pessoa_id, periodicidade, sessoes_semana, status, plano:plano_id(nome)")
+      .in("status", ["ativa", "pausada"]),
     supabase.schema("financeiro").from("lancamento").select("pessoa_id, status, vencimento")
       .neq("status", "recebido"),
   ]);
@@ -45,9 +48,13 @@ export async function getClientes(): Promise<ClienteListItem[]> {
   const pessoas = pessoasRes.data ?? [];
 
   const planoByPessoa = new Map<string, { nome: string; periodicidade: Periodicidade | null; sessoes_semana: number | null }>();
-  for (const m of (matriculasRes.data ?? []) as { pessoa_id: string; periodicidade: Periodicidade | null; sessoes_semana: number | null; plano: unknown }[]) {
+  const planoPausado = new Set<string>();
+  const rows = (matriculasRes.data ?? []) as { pessoa_id: string; periodicidade: Periodicidade | null; sessoes_semana: number | null; status: string; plano: unknown }[];
+  // Matrícula ativa tem precedência sobre pausada.
+  for (const m of [...rows].sort((a, b) => Number(b.status === "ativa") - Number(a.status === "ativa"))) {
     const plano = one(m.plano) as { nome: string } | null;
     if (plano && !planoByPessoa.has(m.pessoa_id)) {
+      if (m.status === "pausada") planoPausado.add(m.pessoa_id);
       planoByPessoa.set(m.pessoa_id, { nome: plano.nome, periodicidade: m.periodicidade, sessoes_semana: m.sessoes_semana });
     }
   }
@@ -79,7 +86,9 @@ export async function getClientes(): Promise<ClienteListItem[]> {
     return {
       id: p.id,
       nome: p.nome,
-      status: p.status,
+      status: planoPausado.has(p.id)
+        ? "pausado"
+        : semPlanoAtivo && p.status === "cliente_ativo" ? "inativo" : p.status,
       pilar_principal: p.pilar_principal,
       created_at: p.created_at,
       planoNome: plano?.nome ?? null,
@@ -97,6 +106,7 @@ export async function getClientes(): Promise<ClienteListItem[]> {
 export function getClienteStats(clientes: ClienteListItem[]): ClienteStats {
   return {
     ativos: clientes.filter((c) => c.status === "cliente_ativo").length,
+    pausados: clientes.filter((c) => c.status === "pausado").length,
     inativos: clientes.filter((c) => c.status === "inativo").length,
     inadimplentes: clientes.filter((c) => c.lancamentosAtrasados > 0).length,
   };

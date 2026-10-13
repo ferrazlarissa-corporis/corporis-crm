@@ -22,6 +22,7 @@ export type LeadOrigin =
   | "instagram"
   | "indicacao"
   | "google"
+  | "parceiro"
   | "outro";
 
 export type LeadInterest =
@@ -90,6 +91,7 @@ export type TipoFonteReferencia = "instagram" | "reels" | "tiktok" | "artigo" | 
 
 export type PessoaTipo = "aluna" | "paciente" | "ambos";
 export type PessoaStatus = "lead" | "cliente_ativo" | "inativo";
+export type PessoaOrigem = "indicacao" | "instagram" | "google" | "parceiro" | "whatsapp" | "outro";
 export type Pilar = "pilates" | "fisio_pelvica" | "acupuntura";
 export type AgendaCategoria = "avaliacao" | "sessao" | "experimental";
 export type PlanoTipo = "fixo" | "personalizado" | "avulso";
@@ -138,6 +140,7 @@ export interface Database {
           email: string | null;
           estagio: LeadStage;
           origem: LeadOrigin;
+          origem_detalhe: string | null;
           interesse: LeadInterest;
           gestante: boolean;
           motivo_perda: string | null;
@@ -157,6 +160,7 @@ export interface Database {
           email?: string | null;
           estagio?: LeadStage;
           origem?: LeadOrigin;
+          origem_detalhe?: string | null;
           interesse?: LeadInterest;
           gestante?: boolean;
           motivo_perda?: string | null;
@@ -449,6 +453,8 @@ export interface Database {
           tipo: PessoaTipo;
           status: PessoaStatus;
           pilar_principal: Pilar | null;
+          origem: PessoaOrigem | null;
+          origem_detalhe: string | null;
           responsavel_id: string | null;
           consentimento_lgpd_at: string | null;
           archived_at: string | null;
@@ -467,6 +473,8 @@ export interface Database {
           tipo?: PessoaTipo;
           status?: PessoaStatus;
           pilar_principal?: Pilar | null;
+          origem?: PessoaOrigem | null;
+          origem_detalhe?: string | null;
           responsavel_id?: string | null;
           consentimento_lgpd_at?: string | null;
           archived_at?: string | null;
@@ -599,6 +607,8 @@ export interface Database {
           sessoes_semana: number | null;
           servicos: Json;
           pilar: Pilar | null;
+          valor_sessao_pilates: number | null;
+          valor_sessao_fisio_pelvica: number | null;
           ativo: boolean;
           created_at: string;
           updated_at: string;
@@ -612,6 +622,8 @@ export interface Database {
           sessoes_semana?: number | null;
           servicos?: Json;
           pilar?: Pilar | null;
+          valor_sessao_pilates?: number | null;
+          valor_sessao_fisio_pelvica?: number | null;
           ativo?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -682,7 +694,11 @@ export interface Database {
           cobranca_modo: CobrancaModo | null;
           sessoes_semana: number | null;
           total_sessoes: number | null;
+          sessoes_pilates: number | null;
+          sessoes_fisio_pelvica: number | null;
           fim: string | null;
+          pausada_em: string | null;
+          dias_pausados: number;
           created_at: string;
           updated_at: string;
         };
@@ -703,7 +719,11 @@ export interface Database {
           cobranca_modo?: CobrancaModo | null;
           sessoes_semana?: number | null;
           total_sessoes?: number | null;
+          sessoes_pilates?: number | null;
+          sessoes_fisio_pelvica?: number | null;
           fim?: string | null;
+          pausada_em?: string | null;
+          dias_pausados?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -782,6 +802,8 @@ export interface Database {
           p_total_sessoes: number | null;
           p_forma_pagamento: string;
           p_cobranca_modo: CobrancaModo;
+          p_sessoes_pilates?: number | null;
+          p_sessoes_fisio_pelvica?: number | null;
         };
         Returns: string;
       };
@@ -1033,6 +1055,8 @@ export interface Database {
           origem: IdeiaOrigem;
           status: IdeiaStatus;
           notas: string | null;
+          imagem_preview_url: string | null;
+          resumo: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -1046,6 +1070,8 @@ export interface Database {
           origem?: IdeiaOrigem;
           status?: IdeiaStatus;
           notas?: string | null;
+          imagem_preview_url?: string | null;
+          resumo?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;

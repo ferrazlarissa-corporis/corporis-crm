@@ -10,8 +10,8 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { PILAR_OPTIONS } from "@/lib/cadastros-labels";
-import { GENERO_OPTIONS } from "@/lib/clientes-labels";
-import type { Pilar } from "@/types/database";
+import { GENERO_OPTIONS, PESSOA_ORIGEM_OPTIONS, ORIGEM_DETALHE_LABEL } from "@/lib/clientes-labels";
+import type { Pilar, PessoaOrigem } from "@/types/database";
 import { createCliente, type ClienteInput } from "../actions";
 
 const STEPS = [
@@ -22,14 +22,14 @@ const STEPS = [
 ];
 
 type Form = {
-  nome: string; nascimento: string; cpf: string; telefone: string; email: string; genero: string; profissao: string;
+  nome: string; nascimento: string; cpf: string; telefone: string; email: string; genero: string; profissao: string; origem: "" | PessoaOrigem; origem_detalhe: string;
   cep: string; logradouro: string; numero: string; complemento: string; bairro: string; cidade: string; uf: string;
   pilar_principal: "" | Pilar; queixa: string; objetivo: string;
   consentimento: boolean;
 };
 
 const EMPTY: Form = {
-  nome: "", nascimento: "", cpf: "", telefone: "", email: "", genero: "feminino", profissao: "",
+  nome: "", nascimento: "", cpf: "", telefone: "", email: "", genero: "feminino", profissao: "", origem: "", origem_detalhe: "",
   cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
   pilar_principal: "", queixa: "", objetivo: "", consentimento: false,
 };
@@ -56,6 +56,7 @@ export function CadastroClienteClient() {
     const input: ClienteInput = {
       ...form,
       pilar_principal: form.pilar_principal === "" ? null : form.pilar_principal,
+      origem: form.origem === "" ? null : form.origem,
     } as ClienteInput;
     startTransition(async () => {
       const r = await createCliente(input);
@@ -139,6 +140,22 @@ export function CadastroClienteClient() {
                 <Field label="Profissão">
                   <Input value={form.profissao} onChange={(e) => set("profissao", e.target.value)} placeholder="Ex: professora, empresária, médica" />
                 </Field>
+                <Field label="Onde nos conheceu?">
+                  <div className="flex flex-wrap gap-2">
+                    {PESSOA_ORIGEM_OPTIONS.map((o) => (
+                      <button key={o.value} type="button" onClick={() => set("origem", form.origem === o.value ? "" : o.value)}
+                        className={cn("rounded-[var(--radius-md)] border px-4 py-2 text-sm transition-colors",
+                          form.origem === o.value ? "border-primary bg-accent-soft text-text-primary" : "border-border text-text-secondary hover:bg-accent-soft")}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+                {form.origem && ORIGEM_DETALHE_LABEL[form.origem] ? (
+                  <Field label={ORIGEM_DETALHE_LABEL[form.origem]!}>
+                    <Input value={form.origem_detalhe} onChange={(e) => set("origem_detalhe", e.target.value)} placeholder="Nome" />
+                  </Field>
+                ) : null}
               </Section>
             ) : null}
 

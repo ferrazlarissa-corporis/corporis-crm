@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireActiveStaff } from "@/lib/auth/staff";
 import { postAccrual } from "@/lib/finance/post-income";
+import { gerarCorpoContrato } from "@/lib/contrato/gerar";
 import {
   CLINIC_CONFIG_ID,
   normalizeClinicHours,
@@ -55,6 +56,8 @@ const planoSchema = z.object({
   precos: z.array(planoPrecoSchema).max(14).default([]),
   servicos: z.array(z.string().uuid()).max(50).default([]),
   pilar: PILAR.nullable().default(null),
+  valor_sessao_pilates: z.coerce.number().min(0).max(1_000_000).nullable().default(null),
+  valor_sessao_fisio_pelvica: z.coerce.number().min(0).max(1_000_000).nullable().default(null),
   ativo: z.boolean().default(true),
 }).superRefine((data, ctx) => {
   if (data.tipo !== "fixo") return;
@@ -101,6 +104,9 @@ function planoDbPayload(data: PlanoInput) {
     sessoes_semana: data.tipo === "fixo" ? null : data.sessoes_semana,
     servicos: data.servicos,
     pilar: data.pilar,
+    // Valor por sessão só faz sentido em pacote personalizado (ex.: Mamãe ativa).
+    valor_sessao_pilates: data.tipo === "personalizado" ? data.valor_sessao_pilates : null,
+    valor_sessao_fisio_pelvica: data.tipo === "personalizado" ? data.valor_sessao_fisio_pelvica : null,
     ativo: data.ativo,
   };
 }
@@ -201,6 +207,8 @@ const adesaoSchema = z
     periodicidade: PERIODICIDADE.nullable().default(null),
     sessoes_semana: z.coerce.number().int().min(0).max(14).nullable().default(null),
     total_sessoes: z.coerce.number().int().min(1).max(500).nullable().default(null),
+    sessoes_pilates: z.coerce.number().int().min(0).max(500).nullable().default(null),
+    sessoes_fisio_pelvica: z.coerce.number().int().min(0).max(500).nullable().default(null),
     forma_pagamento: z.string().trim().min(1).max(80),
     cobranca_modo: COBRANCA_MODO,
   })
@@ -244,12 +252,25 @@ export async function criarVenda(input: AdesaoInput): Promise<VendaResult> {
     p_periodicidade: parsed.data.periodicidade,
     p_sessoes_semana: parsed.data.sessoes_semana,
     p_total_sessoes: parsed.data.total_sessoes,
+    p_sessoes_pilates: parsed.data.tipo === "personalizado" ? parsed.data.sessoes_pilates : null,
+    p_sessoes_fisio_pelvica: parsed.data.tipo === "personalizado" ? parsed.data.sessoes_fisio_pelvica : null,
     p_forma_pagamento: parsed.data.forma_pagamento,
     p_cobranca_modo: parsed.data.cobranca_modo as CobrancaModo,
   });
 
   if (error) return { success: false, error: error.message };
   const vendaId = typeof data === "string" ? data : undefined;
+
+  // Contrato em rascunho criado pela RPC: mescla o modelo com os dados da venda. Best-effort.
+  if (vendaId && parsed.data.modelo_contrato_id) {
+    try {
+      const { data: contrato } = await auth.supabase.schema("vendas").from("contrato")
+        .select("id").eq("venda_id", vendaId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (contrato) await gerarCorpoContrato(auth.supabase, contrato.id);
+    } catch {
+      // o rascunho pode ser regerado na aba Contrato da ficha
+    }
+  }
 
   // Ponte Finance: reconhece (accrual) o 1º lançamento criado pela RPC. Não bloqueia a venda.
   try {

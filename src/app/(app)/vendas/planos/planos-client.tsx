@@ -42,6 +42,8 @@ type FormState = {
   precos: PrecoForm[];
   pilar: "" | Pilar;
   servicos: string[];
+  valorSessaoPilates: string;
+  valorSessaoFisioPelvica: string;
   ativo: boolean;
 };
 
@@ -56,7 +58,8 @@ function emptyPrecos(): PrecoForm[] {
 
 const EMPTY: FormState = {
   nome: "", tipo: "fixo", valor: "", periodicidade: "mensal",
-  sessoes_semana: "", precos: emptyPrecos(), pilar: "", servicos: [], ativo: true,
+  sessoes_semana: "", precos: emptyPrecos(), pilar: "", servicos: [],
+  valorSessaoPilates: "", valorSessaoFisioPelvica: "", ativo: true,
 };
 
 // Periodicidades válidas para plano fixo (a matriz comercial não usa anual/avulso).
@@ -82,6 +85,13 @@ function precosFromPlano(p: PlanoRow): PrecoForm[] {
   });
 }
 
+// Pacote por sessão (ex.: Mamãe ativa): o valor de referência deixa de existir.
+function valorPorSessaoForm(f: FormState, servicoById: Map<string, ServicoOption>): boolean {
+  if (f.tipo !== "personalizado") return false;
+  const pilares = [f.pilar || null, ...f.servicos.map((id) => servicoById.get(id)?.pilar ?? null)];
+  return pilares.some((x) => x === "pilates" || x === "fisio_pelvica");
+}
+
 export function PlanosClient({
   planos,
   servicos,
@@ -93,7 +103,7 @@ export function PlanosClient({
 }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("todos");
+  const [status, setStatus] = useState<StatusFilter>("ativos");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PlanoRow | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -124,6 +134,8 @@ export function PlanosClient({
       precos: p.tipo === "fixo" ? precosFromPlano(p) : emptyPrecos(),
       pilar: p.pilar ?? "",
       servicos: p.servicos,
+      valorSessaoPilates: p.valor_sessao_pilates != null ? String(p.valor_sessao_pilates) : "",
+      valorSessaoFisioPelvica: p.valor_sessao_fisio_pelvica != null ? String(p.valor_sessao_fisio_pelvica) : "",
       ativo: p.ativo,
     });
     setError(null); setOpen(true);
@@ -133,7 +145,7 @@ export function PlanosClient({
     return {
       nome: f.nome,
       tipo: f.tipo,
-      valor: f.tipo === "fixo" ? 0 : Number(f.valor),
+      valor: f.tipo === "fixo" || valorPorSessaoForm(f, servicoById) ? 0 : Number(f.valor),
       periodicidade: f.periodicidade,
       sessoes_semana: f.tipo === "fixo" || f.sessoes_semana === "" ? null : Number(f.sessoes_semana),
       precos: f.tipo === "fixo"
@@ -147,6 +159,8 @@ export function PlanosClient({
         : [],
       servicos: f.servicos,
       pilar: f.pilar === "" ? null : f.pilar,
+      valor_sessao_pilates: f.tipo === "personalizado" && f.valorSessaoPilates !== "" ? Number(f.valorSessaoPilates) : null,
+      valor_sessao_fisio_pelvica: f.tipo === "personalizado" && f.valorSessaoFisioPelvica !== "" ? Number(f.valorSessaoFisioPelvica) : null,
       ativo: f.ativo,
     };
   }
@@ -178,7 +192,12 @@ export function PlanosClient({
     setForm((f) => ({ ...f, precos: f.precos.map((preco, i) => (i === index ? { ...preco, ...patch } : preco)) }));
   }
 
-  const filtersActive = busca !== "" || status !== "todos";
+  const pilaresSelecionados = new Set<Pilar>(
+    [form.pilar || null, ...form.servicos.map((id) => servicoById.get(id)?.pilar ?? null)].filter((x): x is Pilar => Boolean(x)),
+  );
+  const valorPorSessao =
+    form.tipo === "personalizado" && (pilaresSelecionados.has("pilates") || pilaresSelecionados.has("fisio_pelvica"));
+  const filtersActive = busca !== "" || status !== "ativos";
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -219,7 +238,7 @@ export function PlanosClient({
           ))}
         </div>
         {filtersActive ? (
-          <button type="button" onClick={() => { setBusca(""); setStatus("todos"); }}
+          <button type="button" onClick={() => { setBusca(""); setStatus("ativos"); }}
             className="text-xs text-text-secondary underline-offset-2 hover:text-text-primary hover:underline">
             Limpar filtros
           </button>
@@ -281,10 +300,27 @@ export function PlanosClient({
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 flex items-baseline gap-2">
-                      <span className="font-display text-[28px] leading-none text-text-primary">{formatBRL(p.valor)}</span>
-                      <span className="text-xs text-text-secondary">{p.tipo === "avulso" ? "por sessão" : "referência"}</span>
-                    </div>
+                    p.tipo === "personalizado" && (p.valor_sessao_pilates != null || p.valor_sessao_fisio_pelvica != null) ? (
+                      <div className="mt-3 divide-y divide-border rounded-[var(--radius-md)] border border-border">
+                        {p.valor_sessao_pilates != null ? (
+                          <div className="flex items-baseline justify-between px-3 py-2 text-sm">
+                            <span className="text-text-secondary">Sessão de Pilates</span>
+                            <span className="font-medium text-text-primary">{formatBRL(p.valor_sessao_pilates)}</span>
+                          </div>
+                        ) : null}
+                        {p.valor_sessao_fisio_pelvica != null ? (
+                          <div className="flex items-baseline justify-between px-3 py-2 text-sm">
+                            <span className="text-text-secondary">Sessão de Fisio Pélvica</span>
+                            <span className="font-medium text-text-primary">{formatBRL(p.valor_sessao_fisio_pelvica)}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex items-baseline gap-2">
+                        <span className="font-display text-[28px] leading-none text-text-primary">{formatBRL(p.valor)}</span>
+                        <span className="text-xs text-text-secondary">{p.tipo === "avulso" ? "por sessão" : "referência"}</span>
+                      </div>
+                    )
                   )}
 
                   {p.servicos.length > 0 ? (
@@ -372,7 +408,7 @@ export function PlanosClient({
                 ))}
               </div>
             </FormField>
-          ) : (
+          ) : valorPorSessao ? null : (
             <div className="grid grid-cols-2 gap-4">
               <FormField label={valorLabel(form.tipo)}>
                 <Input type="number" min={0} step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="420,00" />
@@ -384,6 +420,25 @@ export function PlanosClient({
             <p className="-mt-2 text-xs text-text-secondary">
               Plano personalizado: o número de sessões e o valor final são definidos por cliente na adesão.
             </p>
+          ) : null}
+          {valorPorSessao ? (
+            <div>
+              <div className="grid grid-cols-2 gap-4">
+                {pilaresSelecionados.has("pilates") ? (
+                  <FormField label="Valor da sessão · Pilates (R$)">
+                    <Input type="number" min={0} step="0.01" value={form.valorSessaoPilates} onChange={(e) => setForm({ ...form, valorSessaoPilates: e.target.value })} placeholder="45,00" />
+                  </FormField>
+                ) : <div />}
+                {pilaresSelecionados.has("fisio_pelvica") ? (
+                  <FormField label="Valor da sessão · Fisio Pélvica (R$)">
+                    <Input type="number" min={0} step="0.01" value={form.valorSessaoFisioPelvica} onChange={(e) => setForm({ ...form, valorSessaoFisioPelvica: e.target.value })} placeholder="150,00" />
+                  </FormField>
+                ) : <div />}
+              </div>
+              <p className="mt-2 text-xs text-text-secondary">
+                Valor praticado dentro deste plano. Na venda, o valor do pacote é calculado pelas sessões × estes valores.
+              </p>
+            </div>
           ) : null}
 
           <FormField label="Pilar principal">

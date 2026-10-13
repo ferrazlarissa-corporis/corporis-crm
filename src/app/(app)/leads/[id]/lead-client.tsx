@@ -28,7 +28,7 @@ import type { ActivityRow } from "@/lib/queries/activities";
 import type { AppointmentRow } from "@/lib/queries/appointments";
 import type { ActivityType, LeadInterest, LeadOrigin, LeadStage, AppointmentType } from "@/types/database";
 import { CONTEXTO_FIELDS, hasContexto, type ContextoAvaliacao } from "@/lib/ai/contexto";
-import { addNote, updateLeadStage, archiveLead, gerarResumoContexto } from "../actions";
+import { addNote, updateLeadStage, updateLeadData, archiveLead, gerarResumoContexto } from "../actions";
 
 // ─── Label maps ──────────────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ const INTEREST_STYLE: Record<LeadInterest, { bg: string; color: string }> = {
 };
 
 const ORIGIN_LABEL: Record<LeadOrigin, string> = {
-  whatsapp: "WhatsApp", instagram: "Instagram", indicacao: "Indicação", google: "Google", outro: "Outro",
+  whatsapp: "WhatsApp", instagram: "Instagram", indicacao: "Indicação", google: "Google", parceiro: "Parceiro", outro: "Outro",
 };
 
 const TIPO_LABEL: Record<AppointmentType, string> = {
@@ -286,8 +286,26 @@ export default function LeadClient({ lead, activities, appointments }: LeadClien
   const [stageLoading, setStageLoading] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [origemEditing, setOrigemEditing] = useState(false);
+  const [origemSel, setOrigemSel] = useState<LeadOrigin>(lead.origem);
+  const [origemDetalhe, setOrigemDetalhe] = useState(lead.origem_detalhe ?? "");
+  const [origemSaving, setOrigemSaving] = useState(false);
+  const [origemError, setOrigemError] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
+
+  const handleSaveOrigem = async () => {
+    setOrigemSaving(true);
+    setOrigemError(null);
+    const result = await updateLeadData({ id: lead.id, origem: origemSel, origem_detalhe: origemDetalhe });
+    setOrigemSaving(false);
+    if (result.success) {
+      setOrigemEditing(false);
+      router.refresh();
+    } else {
+      setOrigemError(result.error);
+    }
+  };
 
   const handleMoveStage = async (newStage: LeadStage) => {
     if (newStage === lead.estagio) { setStageOpen(false); return; }
@@ -594,7 +612,7 @@ export default function LeadClient({ lead, activities, appointments }: LeadClien
               <h3 style={{ fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 500, letterSpacing: "1.8px", textTransform: "uppercase", color: "var(--color-bege)", margin: "0 0 16px" }}>Dados</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 18px" }}>
                 {[
-                  { label: "Origem",      value: ORIGIN_LABEL[lead.origem] },
+                  { label: "Origem",      value: lead.origem_detalhe ? `${ORIGIN_LABEL[lead.origem]} · ${lead.origem_detalhe}` : ORIGIN_LABEL[lead.origem] },
                   { label: "Interesse",   value: INTEREST_LABEL[lead.interesse] },
                   { label: "Entrou em",   value: format(new Date(lead.created_at), "d MMM · HH:mm", { locale: ptBR }) },
                   { label: "Responsável", value: lead.responsavel?.nome ?? "— Agente IA" },
@@ -606,6 +624,61 @@ export default function LeadClient({ lead, activities, appointments }: LeadClien
                     <div style={{ fontFamily: "var(--font-body)", fontSize: "13.5px", color: "var(--color-texto-escuro)", lineHeight: 1.3, wordBreak: "break-word" }}>{value}</div>
                   </div>
                 ))}
+              </div>
+
+              <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "0.6px solid var(--color-cinza)" }}>
+                {origemEditing ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <label style={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 500, letterSpacing: "1.6px", textTransform: "uppercase", color: "var(--color-texto-medio)" }}>
+                      Onde nos conheceu?
+                      <select
+                        value={origemSel}
+                        onChange={(e) => setOrigemSel(e.target.value as LeadOrigin)}
+                        style={{ display: "block", width: "100%", marginTop: "6px", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "9px 12px", fontFamily: "var(--font-body)", fontSize: "13.5px", letterSpacing: 0, textTransform: "none", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none" }}
+                      >
+                        {(Object.keys(ORIGIN_LABEL) as LeadOrigin[]).map((o) => <option key={o} value={o}>{ORIGIN_LABEL[o]}</option>)}
+                      </select>
+                    </label>
+                    {(origemSel === "indicacao" || origemSel === "parceiro") && (
+                      <label style={{ fontFamily: "var(--font-body)", fontSize: "10px", fontWeight: 500, letterSpacing: "1.6px", textTransform: "uppercase", color: "var(--color-texto-medio)" }}>
+                        {origemSel === "indicacao" ? "Quem indicou?" : "Qual parceiro?"}
+                        <input
+                          value={origemDetalhe}
+                          onChange={(e) => setOrigemDetalhe(e.target.value)}
+                          maxLength={160}
+                          placeholder="Nome"
+                          style={{ display: "block", width: "100%", boxSizing: "border-box", marginTop: "6px", border: "0.6px solid var(--color-cinza)", borderRadius: "var(--radius-md)", padding: "9px 12px", fontFamily: "var(--font-body)", fontSize: "13.5px", letterSpacing: 0, textTransform: "none", color: "var(--color-texto-escuro)", background: "var(--bg-1)", outline: "none" }}
+                        />
+                      </label>
+                    )}
+                    {origemError && <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--color-ui-error)" }}>{origemError}</p>}
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => { setOrigemEditing(false); setOrigemSel(lead.origem); setOrigemDetalhe(lead.origem_detalhe ?? ""); setOrigemError(null); }}
+                        style={{ appearance: "none", border: "0.6px solid var(--color-cinza)", background: "var(--bg-card)", color: "var(--color-texto-escuro)", borderRadius: "var(--radius-pill)", padding: "7px 14px", fontFamily: "var(--font-body)", fontSize: "12px", fontWeight: 500, cursor: "pointer" }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveOrigem}
+                        disabled={origemSaving}
+                        style={{ appearance: "none", border: 0, background: "var(--color-alaranjado)", color: "var(--color-fundo-claro)", borderRadius: "var(--radius-pill)", padding: "7px 14px", fontFamily: "var(--font-body)", fontSize: "12px", fontWeight: 500, cursor: origemSaving ? "wait" : "pointer", opacity: origemSaving ? 0.7 : 1 }}
+                      >
+                        {origemSaving ? "Salvando…" : "Salvar origem"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setOrigemEditing(true)}
+                    style={{ appearance: "none", border: 0, background: "transparent", padding: 0, fontFamily: "var(--font-body)", fontSize: "12px", fontWeight: 500, color: "var(--color-alaranjado)", cursor: "pointer" }}
+                  >
+                    Editar origem
+                  </button>
+                )}
               </div>
             </section>
 

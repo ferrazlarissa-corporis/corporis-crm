@@ -59,6 +59,7 @@ const ORIGIN_META: Record<LeadOrigin, { label: string; color: string }> = {
   instagram: { label: "Instagram", color: "var(--color-bege)" },
   indicacao: { label: "Indicação", color: "var(--color-tangerina)" },
   google: { label: "Google", color: "var(--color-texto-medio)" },
+  parceiro: { label: "Parceiro", color: "var(--color-bege-claro)" },
   outro: { label: "Outro", color: "var(--color-cinza)" },
 };
 

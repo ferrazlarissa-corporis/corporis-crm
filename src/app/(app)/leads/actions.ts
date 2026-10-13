@@ -45,7 +45,8 @@ const createLeadSchema = z.object({
   telefone:     z.string().regex(/^\+55\d{10,11}$/),
   email:        z.string().email().optional().or(z.literal("")),
   estagio:      z.enum(LEAD_STAGE_VALUES).default("novo"),
-  origem:       z.enum(["whatsapp","instagram","indicacao","google","outro"]).default("whatsapp"),
+  origem:       z.enum(["whatsapp","instagram","indicacao","google","parceiro","outro"]).default("whatsapp"),
+  origem_detalhe: z.string().trim().max(160).optional(),
   interesse:    z.enum(["pilates","fisio_pelvica","acupuntura","indefinido"]).default("indefinido"),
   gestante:     z.boolean().default(false),
   data_entrada: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -73,6 +74,7 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
     email:        formData.get("email") ?? "",
     estagio:      formData.get("estagio") ?? "novo",
     origem:       formData.get("origem") ?? "whatsapp",
+    origem_detalhe: (formData.get("origem_detalhe") as string | null) || undefined,
     interesse:    formData.get("interesse") ?? "indefinido",
     data_entrada: formData.get("data_entrada") || undefined,
   };
@@ -121,6 +123,7 @@ export async function createLead(formData: FormData): Promise<CreateLeadResult> 
     email:     parsed.data.email || null,
     estagio:   parsed.data.estagio as LeadStage,
     origem:    parsed.data.origem as LeadOrigin,
+    origem_detalhe: (parsed.data.origem === "indicacao" || parsed.data.origem === "parceiro") ? parsed.data.origem_detalhe || null : null,
     interesse: parsed.data.interesse as LeadInterest,
     ...(entradaAt ? { created_at: entradaAt, ultima_interacao_at: entradaAt } : {}),
   }).select(FUNIL_LEAD_SELECT).single();
@@ -161,6 +164,8 @@ type ConvertedLeadSource = {
   telefone: string;
   email: string | null;
   interesse: LeadInterest;
+  origem: LeadOrigin;
+  origem_detalhe: string | null;
   responsavel_id: string | null;
 };
 
@@ -235,6 +240,14 @@ async function ensureConvertedLeadPessoa(
 
   if (!pessoaId) return { success: false, error: "Falha ao vincular cliente convertido." };
 
+  // Copia a origem do lead só se a cliente ainda não tem uma (não sobrescreve o que a recepção preencheu).
+  const { error: origemError } = await core
+    .from("pessoa")
+    .update({ origem: lead.origem, origem_detalhe: lead.origem === "indicacao" || lead.origem === "parceiro" ? lead.origem_detalhe : null })
+    .eq("id", pessoaId)
+    .is("origem", null);
+  if (origemError) return { success: false, error: origemError.message };
+
   const { error: leadError } = await crm.from("leads").update({ pessoa_id: pessoaId }).eq("id", lead.id);
   if (leadError) return { success: false, error: leadError.message };
 
@@ -257,7 +270,7 @@ export async function updateLeadStage(input: z.infer<typeof updateStageSchema>):
   // Fetch current stage for activity log and transition guards.
   const { data: current, error: currentError } = await db
     .from("leads")
-    .select("estagio, nome, telefone, email, interesse, responsavel_id, pessoa_id")
+    .select("estagio, nome, telefone, email, interesse, origem, origem_detalhe, responsavel_id, pessoa_id")
     .eq("id", parsed.data.id)
     .single();
   if (currentError || !current) return { success: false, error: currentError?.message ?? "Lead não encontrada." };
@@ -285,6 +298,8 @@ export async function updateLeadStage(input: z.infer<typeof updateStageSchema>):
       telefone: current.telefone,
       email: current.email,
       interesse: current.interesse as LeadInterest,
+      origem: current.origem as LeadOrigin,
+      origem_detalhe: current.origem_detalhe,
       responsavel_id: current.responsavel_id,
     });
     if (!conversion.success) return { success: false, error: conversion.error };
@@ -357,6 +372,8 @@ const updateLeadDataSchema = z.object({
   interesse: z.enum(["pilates","fisio_pelvica","acupuntura","indefinido"]).optional(),
   gestante: z.boolean().optional(),
   responsavel_id: z.string().uuid().optional().nullable(),
+  origem: z.enum(["whatsapp","instagram","indicacao","google","parceiro","outro"]).optional(),
+  origem_detalhe: z.string().trim().max(160).optional().nullable(),
 });
 
 export async function updateLeadData(input: z.infer<typeof updateLeadDataSchema>): Promise<UpdateStageResult> {
@@ -373,6 +390,12 @@ export async function updateLeadData(input: z.infer<typeof updateLeadDataSchema>
   if (fields.interesse) updatePayload.interesse = fields.interesse;
   if ("gestante" in fields) updatePayload.gestante = fields.gestante;
   if ("responsavel_id" in fields) updatePayload.responsavel_id = fields.responsavel_id;
+  if (fields.origem) {
+    updatePayload.origem = fields.origem;
+    // O detalhe (quem indicou / qual parceiro) só vale para essas duas origens.
+    updatePayload.origem_detalhe =
+      (fields.origem === "indicacao" || fields.origem === "parceiro") ? fields.origem_detalhe || null : null;
+  }
 
   const { error } = await db.from("leads").update(updatePayload).eq("id", id);
   if (error) return { success: false, error: error.message };

@@ -22,6 +22,7 @@ export type FichaMatricula = {
   sessoes_semana: number | null;
   total_sessoes: number | null;
   fim: string | null;
+  pausada_em: string | null;
   plano: { nome: string; periodicidade: Periodicidade; tipo: PlanoTipo; pilar: Pilar | null } | null;
 };
 
@@ -40,8 +41,8 @@ export type FichaDocumento = {
 };
 
 export type FichaContrato = {
-  id: string; status: ContratoStatus; created_at: string; assinado_at: string | null;
-  via_assinada_url: string | null; modelo: { nome: string } | null;
+  id: string; status: ContratoStatus; created_at: string; enviado_at: string | null; assinado_at: string | null;
+  via_assinada_url: string | null; corpo_gerado: string | null; modelo: { nome: string } | null;
 };
 
 export type FichaAgendamento = { id: string; inicio: string; fim: string; tipo: string; categoria: string };
@@ -89,8 +90,8 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
       ? supabase.schema("crm").from("profiles").select("nome").eq("id", pessoa.responsavel_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.schema("vendas").from("matricula")
-      .select("id, inicio, renovacao, dia_vencimento, status, tipo, periodicidade, valor, valor_total, forma_pagamento, cobranca_modo, sessoes_semana, total_sessoes, fim, plano:plano_id(nome, periodicidade, tipo, pilar)")
-      .eq("pessoa_id", id).eq("status", "ativa").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      .select("id, inicio, renovacao, dia_vencimento, status, tipo, periodicidade, valor, valor_total, forma_pagamento, cobranca_modo, sessoes_semana, total_sessoes, fim, pausada_em, plano:plano_id(nome, periodicidade, tipo, pilar)")
+      .eq("pessoa_id", id).in("status", ["ativa", "pausada"]).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.schema("financeiro").from("lancamento")
       .select("id, competencia, descricao, valor, vencimento, status, recebido_at")
       .eq("pessoa_id", id).order("competencia", { ascending: false }),
@@ -103,7 +104,7 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
     supabase.schema("clinico").from("documento").select("id, tipo, nome, storage_path, tamanho, created_at")
       .eq("pessoa_id", id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.schema("vendas").from("contrato")
-      .select("id, status, created_at, assinado_at, via_assinada_url, modelo:modelo_id(nome)")
+      .select("id, status, created_at, enviado_at, assinado_at, via_assinada_url, corpo_gerado, modelo:modelo_id(nome)")
       .eq("pessoa_id", id).order("created_at", { ascending: false }),
     supabase.schema("crm").from("appointments").select("id, inicio, fim, tipo, categoria")
       .eq("pessoa_id", id).gte("inicio", nowIso).in("status", ["agendado", "confirmado"]).order("inicio", { ascending: true }).limit(5),

@@ -40,6 +40,7 @@ export type LeadDetail = {
   email: string | null;
   estagio: LeadStage;
   origem: LeadOrigin;
+  origem_detalhe: string | null;
   interesse: LeadInterest;
   score_qualificacao: number | null;
   motivo_perda: string | null;
@@ -114,6 +115,7 @@ export async function getLeadById(id: string): Promise<LeadDetail | null> {
     email: data.email,
     estagio: data.estagio,
     origem: data.origem,
+    origem_detalhe: data.origem_detalhe ?? null,
     interesse: data.interesse,
     score_qualificacao: data.score_qualificacao,
     motivo_perda: data.motivo_perda,

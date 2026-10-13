@@ -25,27 +25,34 @@ import {
   updateContratoModelo,
   type ContratoModeloInput,
 } from "../actions";
+import { CONTRATO_CAMPOS, mesclarContrato } from "@/lib/contrato/merge";
 
-const MERGE_FIELDS = [
-  { token: "{{cliente}}", label: "Cliente" },
-  { token: "{{plano}}", label: "Plano" },
-  { token: "{{valor}}", label: "Valor" },
-  { token: "{{vigencia}}", label: "Vigência" },
-  { token: "{{servicos}}", label: "Serviços" },
-  { token: "{{clinica}}", label: "Clínica" },
-];
+const MERGE_FIELDS = CONTRATO_CAMPOS;
 
 const PREVIEW_SAMPLE: Record<string, string> = {
-  "{{cliente}}": "Marina Lopes",
-  "{{plano}}": "Pilates Duplo Semanal",
-  "{{valor}}": "R$ 520,00 mensais",
-  "{{vigencia}}": "12 meses, a partir de 15/07/2026",
-  "{{servicos}}": "Pilates em aparelhos, avaliação inicial",
-  "{{clinica}}": "Corporis Fisioterapia e Pilates",
+  cliente: "Marina Lopes",
+  cpf: "000.000.000-00",
+  profissao: "Advogada",
+  objeto_plano: "PLANO SEMESTRAL DE PILATES, totalizando 24 (vinte e quatro) sessões, na frequência de 1 (uma) sessão por semana, a serem realizadas dentro do período de vigência de 6 (seis) meses, de 10/01/2026 até 10/07/2026",
+  condicao_pagamento: "a importância de R$ 1.170,00 (mil cento e setenta reais), a ser paga em 6 (seis) parcelas mensais de R$ 195,00 (cento e noventa e cinco reais), com vencimento da primeira parcela em 10 (dez) de janeiro de 2026",
+  data_inicio: "10/01/2026",
+  clinica_email: "contato@corporisxre.com.br",
+  endereco_cliente: "Rua das Flores, 120 — Centro — Xanxerê/SC",
+  plano: "Pilates Duplo Semanal",
+  valor: "R$ 520,00 mensais",
+  sessoes: "2 sessão(ões) por semana",
+  vigencia: "a partir de 15/07/2026",
+  dia_vencimento: "dia 10 de cada mês",
+  forma_pagamento: "Pix",
+  servicos: "Pilates em aparelhos e avaliação inicial",
+  clinica: "Corporis Fisioterapia e Pilates LTDA",
+  clinica_documento: "CNPJ 00.000.000/0001-00",
+  clinica_endereco: "Rua Coronel Santos Marinho, 347 — Xanxerê/SC",
+  data: "15 de julho de 2026",
 };
 
 function applyPreview(corpo: string): string {
-  return corpo.replace(/\{\{\s*\w+\s*\}\}/g, (m) => PREVIEW_SAMPLE[m.replace(/\s/g, "")] ?? m);
+  return mesclarContrato(corpo, PREVIEW_SAMPLE);
 }
 
 type StatusFilter = "todos" | "ativos" | "inativos";

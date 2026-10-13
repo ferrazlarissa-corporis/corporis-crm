@@ -22,5 +22,5 @@ export default async function FichaClientePage({
   if (!ficha) notFound();
 
   const modelosAtivos = modelos.filter((m) => m.ativo).map((m) => ({ id: m.id, nome: m.nome }));
-  return <FichaClienteClient ficha={ficha} modelos={modelosAtivos} initialTab={tab === "plano" ? "plano" : "visao"} />;
+  return <FichaClienteClient ficha={ficha} modelos={modelosAtivos} initialTab={tab === "plano" || tab === "contrato" ? tab : "visao"} />;
 }

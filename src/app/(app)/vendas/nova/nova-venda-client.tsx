@@ -61,9 +61,22 @@ type CreatedSale = {
   sessoesSemana: number;
 };
 
+function pacoteMisto(
+  pilates: string,
+  fisio: string,
+  precoPilates: number,
+  precoFisio: number,
+): { total: number; valor: number } {
+  const p = Math.max(0, Math.floor(Number(pilates) || 0));
+  const f = Math.max(0, Math.floor(Number(fisio) || 0));
+  return { total: p + f, valor: p * precoPilates + f * precoFisio };
+}
+
 const FORMA_CREDITO_TOTAL = "Crédito total do plano";
 const FORMA_DINHEIRO = "Dinheiro";
-const FORMAS = ["Pix recorrente", "Cartão recorrente", FORMA_CREDITO_TOTAL, "Boleto", "Dinheiro"];
+const FORMA_PIX_TOTAL = "Pix (total)";
+const FORMAS = ["Pix recorrente", "Cartão recorrente", FORMA_PIX_TOTAL, FORMA_CREDITO_TOTAL, "Boleto", FORMA_DINHEIRO];
+const FORMAS_TOTAIS = [FORMA_PIX_TOTAL, FORMA_CREDITO_TOTAL, FORMA_DINHEIRO];
 const STEPS = ["Cliente", "Plano", "Condições", "Revisão"];
 type CobrancaModo = "unica" | "parcelada_mensal";
 
@@ -91,7 +104,7 @@ function valorTotalPlano(_tipo: PlanoTipo, _periodicidade: Periodicidade, valor:
 
 function cobrancaModoForForma(tipo: PlanoTipo, forma: string): CobrancaModo {
   if (tipo !== "fixo") return "unica";
-  return forma === FORMA_CREDITO_TOTAL || forma === FORMA_DINHEIRO ? "unica" : "parcelada_mensal";
+  return FORMAS_TOTAIS.includes(forma) ? "unica" : "parcelada_mensal";
 }
 
 function parcelasDoPlano(tipo: PlanoTipo, periodicidade: Periodicidade, forma: string): number {
@@ -128,6 +141,8 @@ export function NovaVendaClient({
   const [periodicidade, setPeriodicidade] = useState<Periodicidade>("mensal");
   const [sessoesSemana, setSessoesSemana] = useState("");
   const [totalSessoes, setTotalSessoes] = useState("");
+  const [sessoesPilates, setSessoesPilates] = useState("");
+  const [sessoesFisio, setSessoesFisio] = useState("");
   const [forma, setForma] = useState(FORMAS[0]);
   const [modeloId, setModeloId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
@@ -155,6 +170,14 @@ export function NovaVendaClient({
     if (!plano) return [];
     return Array.from(new Set([plano.pilar, ...plano.servicosMeta.map((s) => s.pilar)].filter(Boolean) as Pilar[]));
   }, [plano]);
+  const pacoteMistoAtivo = tipo === "personalizado" && planoPilares.includes("pilates") && planoPilares.includes("fisio_pelvica");
+  const precoSessaoPilates = plano?.valor_sessao_pilates ?? 0;
+  const precoSessaoFisio = plano?.valor_sessao_fisio_pelvica ?? 0;
+  // Pacote de um só pilar: valor da sessão cadastrado no plano (fallback: valor do plano).
+  const precoSessaoUnico =
+    planoPilares.includes("fisio_pelvica") && !planoPilares.includes("pilates")
+      ? precoSessaoFisio || precoSessaoPilates || plano?.valor || 0
+      : precoSessaoPilates || precoSessaoFisio || plano?.valor || 0;
 
   const pessoasFiltradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -185,6 +208,20 @@ export function NovaVendaClient({
     setPeriodicidade(p.periodicidade === "anual" || p.periodicidade === "avulso" ? "mensal" : p.periodicidade);
     setSessoesSemana(p.tipo === "fixo" && firstPreco ? String(firstPreco.sessoes_semana) : "");
     setTotalSessoes("");
+    setSessoesPilates("");
+    setSessoesFisio("");
+  }
+  function setTotalSessoesPacote(v: string) {
+    setTotalSessoes(v);
+    const n = Math.max(0, Math.floor(Number(v) || 0));
+    if (precoSessaoUnico > 0) setValor(n > 0 ? String(Math.round(n * precoSessaoUnico * 100) / 100) : "");
+  }
+  function setSessoesMistas(pilates: string, fisio: string) {
+    setSessoesPilates(pilates);
+    setSessoesFisio(fisio);
+    const { total, valor: v } = pacoteMisto(pilates, fisio, precoSessaoPilates, precoSessaoFisio);
+    setTotalSessoes(total > 0 ? String(total) : "");
+    setValor(v > 0 ? String(v) : "");
   }
   function selectFrequenciaPlano(value: string) {
     setSessoesSemana(value);
@@ -222,6 +259,8 @@ export function NovaVendaClient({
         periodicidade: tipo === "fixo" ? periodicidade : null,
         sessoes_semana: tipo === "fixo" && sessoesSemana !== "" ? Number(sessoesSemana) : null,
         total_sessoes: tipo !== "fixo" && totalSessoes !== "" ? Number(totalSessoes) : null,
+        sessoes_pilates: pacoteMistoAtivo ? Number(sessoesPilates) || 0 : null,
+        sessoes_fisio_pelvica: pacoteMistoAtivo ? Number(sessoesFisio) || 0 : null,
         forma_pagamento: forma,
         cobranca_modo: cobrancaModo,
       });
@@ -296,7 +335,10 @@ export function NovaVendaClient({
                 periodicidade={periodicidade} setPeriodicidade={setPeriodicidade}
                 sessoesSemana={sessoesSemana} setSessoesSemana={selectFrequenciaPlano}
                 precos={precosDisponiveis}
-                totalSessoes={totalSessoes} setTotalSessoes={setTotalSessoes}
+                totalSessoes={totalSessoes} setTotalSessoes={setTotalSessoesPacote} precoSessaoUnico={precoSessaoUnico}
+                pacoteMisto={pacoteMistoAtivo}
+                precoSessaoPilates={precoSessaoPilates} precoSessaoFisio={precoSessaoFisio}
+                sessoesPilates={sessoesPilates} sessoesFisio={sessoesFisio} setSessoesMistas={setSessoesMistas}
                 forma={forma} setForma={setForma}
               />
             ) : null}
@@ -534,6 +576,11 @@ function Step3(props: {
   sessoesSemana: string; setSessoesSemana: (v: string) => void;
   precos: PlanoRow["precos"];
   totalSessoes: string; setTotalSessoes: (v: string) => void;
+  precoSessaoUnico: number;
+  pacoteMisto: boolean;
+  precoSessaoPilates: number; precoSessaoFisio: number;
+  sessoesPilates: string; sessoesFisio: string;
+  setSessoesMistas: (pilates: string, fisio: string) => void;
   forma: string; setForma: (v: string) => void;
 }) {
   const { tipo } = props;
@@ -574,12 +621,34 @@ function Step3(props: {
           </Labeled>
         </div>
       ) : tipo === "personalizado" ? (
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          <Labeled label="Total de sessões">
-            <Input type="number" min={1} max={500} value={props.totalSessoes} onChange={(e) => props.setTotalSessoes(e.target.value)} placeholder="12" />
-          </Labeled>
-          <div />
-        </div>
+        props.pacoteMisto ? (
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <Labeled label="Sessões de Pilates">
+              <Input type="number" min={0} max={500} value={props.sessoesPilates} onChange={(e) => props.setSessoesMistas(e.target.value, props.sessoesFisio)} placeholder="0" />
+              <p className="mt-1.5 text-xs text-text-secondary">{formatBRL(props.precoSessaoPilates)} por sessão</p>
+            </Labeled>
+            <Labeled label="Sessões de Fisio Pélvica">
+              <Input type="number" min={0} max={500} value={props.sessoesFisio} onChange={(e) => props.setSessoesMistas(props.sessoesPilates, e.target.value)} placeholder="0" />
+              <p className="mt-1.5 text-xs text-text-secondary">{formatBRL(props.precoSessaoFisio)} por sessão</p>
+            </Labeled>
+            <p className="col-span-2 text-xs text-text-secondary">
+              Total: {props.totalSessoes || 0} sessões. O valor do pacote é calculado pelas sessões e pode ser ajustado.
+              {props.precoSessaoPilates <= 0 || props.precoSessaoFisio <= 0
+                ? " Defina o valor por sessão no cadastro do plano para o cálculo automático."
+                : ""}
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <Labeled label="Total de sessões">
+              <Input type="number" min={1} max={500} value={props.totalSessoes} onChange={(e) => props.setTotalSessoes(e.target.value)} />
+              {props.precoSessaoUnico > 0 ? (
+                <p className="mt-1.5 text-xs text-text-secondary">{formatBRL(props.precoSessaoUnico)} por sessão · o valor do pacote é calculado pelas sessões e pode ser ajustado.</p>
+              ) : null}
+            </Labeled>
+            <div />
+          </div>
+        )
       ) : null}
 
       <div className="mt-4 grid grid-cols-2 gap-4">
@@ -650,7 +719,7 @@ function Step4({
         />
         <RevRow
           label="Condição"
-          value={`${formatBRL(total)} · ${parcelasLabel(numeroParcelas)} · ${forma === FORMA_CREDITO_TOTAL ? FORMA_CREDITO_TOTAL : `vencimento dia ${diaVencimento}`} · início ${inicio}`}
+          value={`${formatBRL(total)} · ${parcelasLabel(numeroParcelas)} · ${FORMAS_TOTAIS.includes(forma) ? forma : `vencimento dia ${diaVencimento}`} · início ${inicio}`}
         />
       </div>
 
